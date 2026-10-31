@@ -15,12 +15,22 @@ def plot(value: Any, params: dict[str, Any], node_id: str) -> dict[str, Any]:
     kind = str(params.get('chart_type', 'line'))
     if kind not in ('line', 'area', 'bar'):
         raise ValueError('Plot chart type must be line, area or bar.')
+    if isinstance(value, dict) and value.get('study'):
+        index = int(params.get('study_chart', 0))
+        charts = value['charts']
+        if not 0 <= index < len(charts):
+            raise ValueError(f'Experiment chart index must be 0–{len(charts)-1}.')
+        chosen = charts[index]
+        mode = 'study'
+        kind = str(params.get('chart_type', chosen['chart_type']))
     if mode == 'auto':
         mode = 'columns' if isinstance(value, pd.DataFrame) else 'decomposition' if isinstance(value, PreparedData) else 'predictions' if isinstance(value, ModelResult) else 'asset_prices' if isinstance(value, PortfolioData) else 'equity' if isinstance(value, (PortfolioResult, RiskAnalysis)) else 'backtest'
     rows: list[dict[str, Any]]
     defaults: list[str]
     x_key = 'date'
-    if mode == 'asset_prices' and isinstance(value, (PortfolioData, PortfolioResult)):
+    if mode == 'study' and isinstance(value, dict) and value.get('study'):
+        rows, defaults, x_key = chosen['rows'], chosen['series'], chosen['x_key']
+    elif mode == 'asset_prices' and isinstance(value, (PortfolioData, PortfolioResult)):
         data = value.data if isinstance(value, PortfolioResult) else value
         rows = [{'date':str(date.date()), **{str(k):float(v) for k,v in row.items()}} for date,row in data.prices.iterrows()]
         defaults = list(data.prices.columns)[:12]

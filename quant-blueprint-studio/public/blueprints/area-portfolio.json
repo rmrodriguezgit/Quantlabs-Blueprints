@@ -1,0 +1,96 @@
+{
+  "format": "quantlabs-blueprint-library",
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "area-portfolio",
+      "title": "Portafolio · Markowitz y riesgo completo",
+      "area": "Portafolios y riesgo",
+      "description": "ROI, CAGR, VaR, CVaR, Sharpe, Sortino, OLS α/β, volatilidad y drawdown para activos y estrategias.",
+      "instructions": [
+        "Carga y ejecuta. Selecciona cada nodo para modificar sus parámetros.",
+        "Datos sintéticos de demostración; cambia la fuente a yfinance para cotizaciones reales."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "prices",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 180
+            },
+            "data": {
+              "kind": "portfolio_data",
+              "label": "Six-asset portfolio",
+              "params": {
+                "source": "synthetic",
+                "tickers": "SPY,SAN,JPM,HWM,WM,PLTR",
+                "benchmark": "SPY",
+                "years": 5,
+                "seed": 42
+              }
+            }
+          },
+          {
+            "id": "portfolio",
+            "type": "blueprint",
+            "position": {
+              "x": 350,
+              "y": 180
+            },
+            "data": {
+              "kind": "portfolio",
+              "label": "Markowitz · out of sample",
+              "params": {
+                "train_fraction": 0.65,
+                "risk_free_rate": 0,
+                "confidence": 0.95,
+                "periods_per_year": 252,
+                "max_weight": 1,
+                "weights": ""
+              }
+            }
+          },
+          {
+            "id": "plot",
+            "type": "blueprint",
+            "position": {
+              "x": 700,
+              "y": 180
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Holdout portfolio equity",
+              "params": {
+                "title": "Equal weight / maximum Sharpe / minimum variance",
+                "plot_source": "equity",
+                "plot_columns": "",
+                "chart_type": "line",
+                "color": "Mint"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "prices-portfolio",
+            "source": "prices",
+            "target": "portfolio",
+            "sourceHandle": "portfolio",
+            "targetHandle": "portfolio",
+            "animated": true
+          },
+          {
+            "id": "portfolio-plot",
+            "source": "portfolio",
+            "target": "plot",
+            "sourceHandle": "portfolio",
+            "targetHandle": "portfolio",
+            "animated": true
+          }
+        ]
+      }
+    }
+  ]
+}

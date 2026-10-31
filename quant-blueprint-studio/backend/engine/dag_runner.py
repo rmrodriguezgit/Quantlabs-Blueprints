@@ -4,6 +4,7 @@ from typing import Any, Callable
 import numpy as np
 import pandas as pd
 import torch
+from .nodes.study_nodes import study
 from .nodes.data_nodes import source, features, merge_features
 from .nodes.stats_nodes import PreparedData, prepare
 from .nodes.dl_nodes import ModelResult, NetworkSpec, train
@@ -12,13 +13,14 @@ from .nodes.plot_nodes import plot
 from .nodes.metrics_nodes import RiskAnalysis, analyze, frame_returns
 from .nodes.portfolio_nodes import PortfolioData, PortfolioResult, portfolio_data, build_portfolio
 
-PINS = {'source': (None, 'frame'), 'features': ('frame', 'frame'), 'prepare': ('frame', 'tensor'),
+PINS = {'study': ('frame', 'tensor'), 'source': (None, 'frame'), 'features': ('frame', 'frame'), 'prepare': ('frame', 'tensor'),
         'model': ('tensor', 'tensor'), 'backtest': ('tensor', None), 'config': (None, 'config'),
         'network_input': (None, 'network'), 'layer': ('network', 'network'),
         'network_output': ('network', 'network'), 'merge': ('frame', 'frame'), 'plot': (None, None), 'portfolio_data': (None, 'portfolio'), 'portfolio': ('portfolio', 'portfolio'), 'risk': (None, 'portfolio')}
 INPUTS = {kind: ({pin: pin} if pin else {}) for kind, (pin, _) in PINS.items()}
 for kind in ('features', 'prepare', 'model', 'backtest'):
     INPUTS[kind]['config'] = 'config'
+INPUTS['study'].update({'asset_b':'frame','asset_c':'frame'})
 INPUTS['model']['network'] = 'network'
 INPUTS['merge']['frame_b'] = 'frame'
 INPUTS['plot'] = {'frame': 'frame', 'tensor': 'tensor', 'portfolio': 'portfolio'}
@@ -84,7 +86,7 @@ class DAGRunner:
         return order
 
     def execute(self, progress: Callable[[dict[str, Any]], None] | None = None) -> dict[str, Any]:
-        report: dict[str, Any] = {'decomposition': [], 'predictions': [], 'backtest': [], 'metrics': {}, 'history': [], 'nodes': [], 'plots': [], 'portfolios': [], 'risk_reports': []}
+        report: dict[str, Any] = {'decomposition': [], 'predictions': [], 'backtest': [], 'metrics': {}, 'history': [], 'nodes': [], 'plots': [], 'portfolios': [], 'risk_reports': [], 'studies': []}
         order = self.topological_sort()
         for key in order:
             node = self.nodes[key]
@@ -179,6 +181,9 @@ class DAGRunner:
                         output = NetworkSpec(upstream.input_features, upstream.mode, [*upstream.layers, params])
                 elif kind == 'merge' and isinstance(upstream, pd.DataFrame) and isinstance(inputs.get('frame_b'), pd.DataFrame):
                     output = merge_features(upstream, inputs['frame_b'])
+                elif kind == 'study' and isinstance(upstream, pd.DataFrame):
+                    output = study(upstream, params, (lambda event: progress({'node': key, 'status': 'epoch', **event})) if progress else None, [inputs[k] for k in ('asset_b','asset_c') if k in inputs])
+                    report['studies'].append({'id': key, 'title': node['data'].get('label', 'Experiment'), **output})
                 elif kind == 'features'  and isinstance(upstream, pd.DataFrame):
                     output = features(upstream, params)
                 elif kind == 'prepare' and isinstance(upstream, pd.DataFrame):

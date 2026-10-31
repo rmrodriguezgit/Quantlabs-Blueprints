@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.5.0 — 2026-10-31
+
+- Biblioteca integrada con diez infografías originales y 15 blueprints ejecutables, organizados por área.
+- Cargar/editar/ejecutar, guardar copias personales, archivar el diseño anterior e importar/exportar un diseño o la colección completa; formato JSON versionado compatible con grafos anteriores.
+- Nodo Learning Experiment: comparación de SGD/RMSprop/AdamW, regularización/dirección, HPO temporal, CNN de dos capas, LSTM/GRU/bidireccionales, PCA/AE/DAE, CVAE/cGAN/cDCGAN multiactivo y Double DQN.
+- Protocolos intradía en bps separados del objetivo close-to-close anterior; selección por validación, costes explícitos y aislamiento de test.
+- Informes por experimento con tablas, métricas y gráficos seleccionables desde Plot; dimensiones de entrada visibles y derivadas de características.
+- Corrección de los estados finales bidireccionales en el entrenador general.
+- Guía de uso, alcance y procedencia; hashes SHA256 de imágenes, pruebas de todas las plantillas, persistencia/importación y ausencia de selección con test.
+
+
 ## v0.4.1 — 2026-10-31
 
 - Panel de indicadores del portafolio completo con 11 tarjetas y selector de cartera; pesos y referencia visibles.

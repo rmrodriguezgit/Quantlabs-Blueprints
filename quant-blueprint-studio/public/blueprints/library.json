@@ -1,0 +1,2337 @@
+{
+  "format": "quantlabs-blueprint-library",
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "unit-2",
+      "title": "Unidad 2 · Feedforward 11 → 64 → 32 → 1",
+      "area": "Redes feedforward",
+      "description": "MLP con objetivo intradía en puntos básicos, Kaiming, selección por validación y comparación con Ridge.",
+      "instructions": [
+        "Carga la plantilla. Pulsa Execute Blueprint para ver progreso, selección, métricas y gráficos debajo del lienzo.",
+        "Predeterminada: serie sintética reproducible, sin internet. Para datos reales, selecciona yfinance en SPY / Market Data.",
+        "Selecciona Learning Experiment para cambiar características, ventanas, épocas, costes y otras opciones. Las dimensiones de entrada se derivan de las características seleccionadas.",
+        "Guarda una copia en Personal o exporta JSON. Al importar se recuperan nodos, conexiones y parámetros; al ejecutar se reentrena."
+      ],
+      "infographic": "unidad-2.png",
+      "graph": {
+        "nodes": [
+          {
+            "id": "data",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 180
+            },
+            "data": {
+              "kind": "source",
+              "label": "SPY · synthetic / yfinance",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 5
+              }
+            }
+          },
+          {
+            "id": "features",
+            "type": "blueprint",
+            "position": {
+              "x": 300,
+              "y": 180
+            },
+            "data": {
+              "kind": "features",
+              "label": "11 causal indicators",
+              "params": {
+                "lags": 0,
+                "use_rsi": true,
+                "use_ema": true,
+                "use_sma": true,
+                "use_macd": true,
+                "use_vwap": true,
+                "use_bb": true
+              }
+            }
+          },
+          {
+            "id": "experiment",
+            "type": "blueprint",
+            "position": {
+              "x": 620,
+              "y": 180
+            },
+            "data": {
+              "kind": "study",
+              "label": "Unidad 2 · Feedforward 11 → 64 → 32 → 1",
+              "params": {
+                "topic": "feedforward",
+                "feature_columns": "LogReturn,Volatility,RSI,EMA,SMA,VWAP,MACD,MACDSignal,BBUpper,BBMiddle,BBLower",
+                "widths": "64,32",
+                "lookback": 1,
+                "train_ratio": 0.65,
+                "val_ratio": 0.15,
+                "epochs": 12,
+                "patience": 5,
+                "batch_size": 64,
+                "lr": 0.001,
+                "trials": 6,
+                "latent_dim": 3,
+                "horizon": 16,
+                "cost_bps": 5,
+                "threshold_bps": 0,
+                "seed": 42
+              }
+            }
+          },
+          {
+            "id": "chart-0",
+            "type": "blueprint",
+            "position": {
+              "x": 950,
+              "y": 0
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Resultado fuera de muestra",
+              "params": {
+                "title": "Resultado fuera de muestra",
+                "plot_source": "auto",
+                "plot_columns": "",
+                "chart_type": "line",
+                "color": "Mint",
+                "study_chart": 0
+              }
+            }
+          },
+          {
+            "id": "chart-1",
+            "type": "blueprint",
+            "position": {
+              "x": 950,
+              "y": 200
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Validación / distribución",
+              "params": {
+                "title": "Validación / distribución",
+                "plot_source": "auto",
+                "plot_columns": "",
+                "chart_type": "line",
+                "color": "Violet",
+                "study_chart": 1
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "data-features",
+            "source": "data",
+            "target": "features",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "features-experiment",
+            "source": "features",
+            "target": "experiment",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "experiment-chart-0",
+            "source": "experiment",
+            "target": "chart-0",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          },
+          {
+            "id": "experiment-chart-1",
+            "source": "experiment",
+            "target": "chart-1",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "unit-3",
+      "title": "Unidad 3 · SGD / RMSprop / AdamW",
+      "area": "Entrenamiento",
+      "description": "Mismos pesos iniciales y arquitectura para comparar optimizadores; el test evalúa únicamente al ganador.",
+      "instructions": [
+        "Carga la plantilla. Pulsa Execute Blueprint para ver progreso, selección, métricas y gráficos debajo del lienzo.",
+        "Predeterminada: serie sintética reproducible, sin internet. Para datos reales, selecciona yfinance en SPY / Market Data.",
+        "Selecciona Learning Experiment para cambiar características, ventanas, épocas, costes y otras opciones. Las dimensiones de entrada se derivan de las características seleccionadas.",
+        "Guarda una copia en Personal o exporta JSON. Al importar se recuperan nodos, conexiones y parámetros; al ejecutar se reentrena."
+      ],
+      "infographic": "unidad-3.png",
+      "graph": {
+        "nodes": [
+          {
+            "id": "data",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 180
+            },
+            "data": {
+              "kind": "source",
+              "label": "SPY · synthetic / yfinance",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 5
+              }
+            }
+          },
+          {
+            "id": "features",
+            "type": "blueprint",
+            "position": {
+              "x": 300,
+              "y": 180
+            },
+            "data": {
+              "kind": "features",
+              "label": "11 causal indicators",
+              "params": {
+                "lags": 0,
+                "use_rsi": true,
+                "use_ema": true,
+                "use_sma": true,
+                "use_macd": true,
+                "use_vwap": true,
+                "use_bb": true
+              }
+            }
+          },
+          {
+            "id": "experiment",
+            "type": "blueprint",
+            "position": {
+              "x": 620,
+              "y": 180
+            },
+            "data": {
+              "kind": "study",
+              "label": "Unidad 3 · SGD / RMSprop / AdamW",
+              "params": {
+                "topic": "optimizers",
+                "feature_columns": "LogReturn,Volatility,RSI,EMA,SMA,VWAP,MACD,MACDSignal,BBUpper,BBMiddle,BBLower",
+                "widths": "64,32",
+                "lookback": 1,
+                "train_ratio": 0.65,
+                "val_ratio": 0.15,
+                "epochs": 12,
+                "patience": 5,
+                "batch_size": 64,
+                "lr": 0.001,
+                "trials": 6,
+                "latent_dim": 3,
+                "horizon": 16,
+                "cost_bps": 5,
+                "threshold_bps": 0,
+                "seed": 42
+              }
+            }
+          },
+          {
+            "id": "chart-0",
+            "type": "blueprint",
+            "position": {
+              "x": 950,
+              "y": 0
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Resultado fuera de muestra",
+              "params": {
+                "title": "Resultado fuera de muestra",
+                "plot_source": "auto",
+                "plot_columns": "",
+                "chart_type": "line",
+                "color": "Mint",
+                "study_chart": 0
+              }
+            }
+          },
+          {
+            "id": "chart-1",
+            "type": "blueprint",
+            "position": {
+              "x": 950,
+              "y": 200
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Validación / distribución",
+              "params": {
+                "title": "Validación / distribución",
+                "plot_source": "auto",
+                "plot_columns": "",
+                "chart_type": "line",
+                "color": "Violet",
+                "study_chart": 1
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "data-features",
+            "source": "data",
+            "target": "features",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "features-experiment",
+            "source": "features",
+            "target": "experiment",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "experiment-chart-0",
+            "source": "experiment",
+            "target": "chart-0",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          },
+          {
+            "id": "experiment-chart-1",
+            "source": "experiment",
+            "target": "chart-1",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "unit-4",
+      "title": "Unidad 4 · Regularización y dirección",
+      "area": "Regularización",
+      "description": "Comparación de BCE de datos para baseline, Dropout, L1, L2 y BatchNorm; salida sigmoid y umbral fijo .5.",
+      "instructions": [
+        "Carga la plantilla. Pulsa Execute Blueprint para ver progreso, selección, métricas y gráficos debajo del lienzo.",
+        "Predeterminada: serie sintética reproducible, sin internet. Para datos reales, selecciona yfinance en SPY / Market Data.",
+        "Selecciona Learning Experiment para cambiar características, ventanas, épocas, costes y otras opciones. Las dimensiones de entrada se derivan de las características seleccionadas.",
+        "Guarda una copia en Personal o exporta JSON. Al importar se recuperan nodos, conexiones y parámetros; al ejecutar se reentrena."
+      ],
+      "infographic": "unidad-4.png",
+      "graph": {
+        "nodes": [
+          {
+            "id": "data",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 180
+            },
+            "data": {
+              "kind": "source",
+              "label": "SPY · synthetic / yfinance",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 5
+              }
+            }
+          },
+          {
+            "id": "features",
+            "type": "blueprint",
+            "position": {
+              "x": 300,
+              "y": 180
+            },
+            "data": {
+              "kind": "features",
+              "label": "11 causal indicators",
+              "params": {
+                "lags": 0,
+                "use_rsi": true,
+                "use_ema": true,
+                "use_sma": true,
+                "use_macd": true,
+                "use_vwap": true,
+                "use_bb": true
+              }
+            }
+          },
+          {
+            "id": "experiment",
+            "type": "blueprint",
+            "position": {
+              "x": 620,
+              "y": 180
+            },
+            "data": {
+              "kind": "study",
+              "label": "Unidad 4 · Regularización y dirección",
+              "params": {
+                "topic": "regularization",
+                "feature_columns": "LogReturn,Volatility,RSI,EMA,SMA,VWAP,MACD,MACDSignal,BBUpper,BBMiddle,BBLower",
+                "widths": "64,32",
+                "lookback": 1,
+                "train_ratio": 0.65,
+                "val_ratio": 0.15,
+                "epochs": 12,
+                "patience": 5,
+                "batch_size": 64,
+                "lr": 0.001,
+                "trials": 6,
+                "latent_dim": 3,
+                "horizon": 16,
+                "cost_bps": 5,
+                "threshold_bps": 0,
+                "seed": 42
+              }
+            }
+          },
+          {
+            "id": "chart-0",
+            "type": "blueprint",
+            "position": {
+              "x": 950,
+              "y": 0
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Resultado fuera de muestra",
+              "params": {
+                "title": "Resultado fuera de muestra",
+                "plot_source": "auto",
+                "plot_columns": "",
+                "chart_type": "line",
+                "color": "Mint",
+                "study_chart": 0
+              }
+            }
+          },
+          {
+            "id": "chart-1",
+            "type": "blueprint",
+            "position": {
+              "x": 950,
+              "y": 200
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Validación / distribución",
+              "params": {
+                "title": "Validación / distribución",
+                "plot_source": "auto",
+                "plot_columns": "",
+                "chart_type": "line",
+                "color": "Violet",
+                "study_chart": 1
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "data-features",
+            "source": "data",
+            "target": "features",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "features-experiment",
+            "source": "features",
+            "target": "experiment",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "experiment-chart-0",
+            "source": "experiment",
+            "target": "chart-0",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          },
+          {
+            "id": "experiment-chart-1",
+            "source": "experiment",
+            "target": "chart-1",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "unit-5",
+      "title": "Unidad 5 · Búsqueda temporal",
+      "area": "Hiperparámetros",
+      "description": "Búsqueda aleatoria con dos folds expansivos dentro de TR; escalas nuevas por fold, selección por RMSE en bps.",
+      "instructions": [
+        "Carga la plantilla. Pulsa Execute Blueprint para ver progreso, selección, métricas y gráficos debajo del lienzo.",
+        "Predeterminada: serie sintética reproducible, sin internet. Para datos reales, selecciona yfinance en SPY / Market Data.",
+        "Selecciona Learning Experiment para cambiar características, ventanas, épocas, costes y otras opciones. Las dimensiones de entrada se derivan de las características seleccionadas.",
+        "Guarda una copia en Personal o exporta JSON. Al importar se recuperan nodos, conexiones y parámetros; al ejecutar se reentrena.",
+        "6 pruebas × 2 folds por defecto; reduce trials o epochs para una demostración rápida. VA exterior fija el checkpoint y TE se consulta al final."
+      ],
+      "infographic": "unidad-5.png",
+      "graph": {
+        "nodes": [
+          {
+            "id": "data",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 180
+            },
+            "data": {
+              "kind": "source",
+              "label": "SPY · synthetic / yfinance",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 5
+              }
+            }
+          },
+          {
+            "id": "features",
+            "type": "blueprint",
+            "position": {
+              "x": 300,
+              "y": 180
+            },
+            "data": {
+              "kind": "features",
+              "label": "11 causal indicators",
+              "params": {
+                "lags": 0,
+                "use_rsi": true,
+                "use_ema": true,
+                "use_sma": true,
+                "use_macd": true,
+                "use_vwap": true,
+                "use_bb": true
+              }
+            }
+          },
+          {
+            "id": "experiment",
+            "type": "blueprint",
+            "position": {
+              "x": 620,
+              "y": 180
+            },
+            "data": {
+              "kind": "study",
+              "label": "Unidad 5 · Búsqueda temporal",
+              "params": {
+                "topic": "hyperparameters",
+                "feature_columns": "LogReturn,Volatility,RSI,EMA,SMA,VWAP,MACD,MACDSignal,BBUpper,BBMiddle,BBLower",
+                "widths": "64,32",
+                "lookback": 1,
+                "train_ratio": 0.65,
+                "val_ratio": 0.15,
+                "epochs": 12,
+                "patience": 5,
+                "batch_size": 64,
+                "lr": 0.001,
+                "trials": 6,
+                "latent_dim": 3,
+                "horizon": 16,
+                "cost_bps": 5,
+                "threshold_bps": 0,
+                "seed": 42
+              }
+            }
+          },
+          {
+            "id": "chart-0",
+            "type": "blueprint",
+            "position": {
+              "x": 950,
+              "y": 0
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Resultado fuera de muestra",
+              "params": {
+                "title": "Resultado fuera de muestra",
+                "plot_source": "auto",
+                "plot_columns": "",
+                "chart_type": "line",
+                "color": "Mint",
+                "study_chart": 0
+              }
+            }
+          },
+          {
+            "id": "chart-1",
+            "type": "blueprint",
+            "position": {
+              "x": 950,
+              "y": 200
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Validación / distribución",
+              "params": {
+                "title": "Validación / distribución",
+                "plot_source": "auto",
+                "plot_columns": "",
+                "chart_type": "line",
+                "color": "Violet",
+                "study_chart": 1
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "data-features",
+            "source": "data",
+            "target": "features",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "features-experiment",
+            "source": "features",
+            "target": "experiment",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "experiment-chart-0",
+            "source": "experiment",
+            "target": "chart-0",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          },
+          {
+            "id": "experiment-chart-1",
+            "source": "experiment",
+            "target": "chart-1",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "unit-6",
+      "title": "Unidad 6 · CNN 1D",
+      "area": "Redes convolucionales",
+      "description": "Conv1D 11→32→64, ReLU, pooling global y salida escalar; comparación con MLP de la misma ventana.",
+      "instructions": [
+        "Carga la plantilla. Pulsa Execute Blueprint para ver progreso, selección, métricas y gráficos debajo del lienzo.",
+        "Predeterminada: serie sintética reproducible, sin internet. Para datos reales, selecciona yfinance en SPY / Market Data.",
+        "Selecciona Learning Experiment para cambiar características, ventanas, épocas, costes y otras opciones. Las dimensiones de entrada se derivan de las características seleccionadas.",
+        "Guarda una copia en Personal o exporta JSON. Al importar se recuperan nodos, conexiones y parámetros; al ejecutar se reentrena."
+      ],
+      "infographic": "unidad-6.png",
+      "graph": {
+        "nodes": [
+          {
+            "id": "data",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 180
+            },
+            "data": {
+              "kind": "source",
+              "label": "SPY · synthetic / yfinance",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 5
+              }
+            }
+          },
+          {
+            "id": "features",
+            "type": "blueprint",
+            "position": {
+              "x": 300,
+              "y": 180
+            },
+            "data": {
+              "kind": "features",
+              "label": "11 causal indicators",
+              "params": {
+                "lags": 0,
+                "use_rsi": true,
+                "use_ema": true,
+                "use_sma": true,
+                "use_macd": true,
+                "use_vwap": true,
+                "use_bb": true
+              }
+            }
+          },
+          {
+            "id": "experiment",
+            "type": "blueprint",
+            "position": {
+              "x": 620,
+              "y": 180
+            },
+            "data": {
+              "kind": "study",
+              "label": "Unidad 6 · CNN 1D",
+              "params": {
+                "topic": "cnn",
+                "feature_columns": "LogReturn,Volatility,RSI,EMA,SMA,VWAP,MACD,MACDSignal,BBUpper,BBMiddle,BBLower",
+                "widths": "64,32",
+                "lookback": 20,
+                "train_ratio": 0.65,
+                "val_ratio": 0.15,
+                "epochs": 12,
+                "patience": 5,
+                "batch_size": 64,
+                "lr": 0.001,
+                "trials": 6,
+                "latent_dim": 3,
+                "horizon": 16,
+                "cost_bps": 5,
+                "threshold_bps": 0,
+                "seed": 42
+              }
+            }
+          },
+          {
+            "id": "chart-0",
+            "type": "blueprint",
+            "position": {
+              "x": 950,
+              "y": 0
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Resultado fuera de muestra",
+              "params": {
+                "title": "Resultado fuera de muestra",
+                "plot_source": "auto",
+                "plot_columns": "",
+                "chart_type": "line",
+                "color": "Mint",
+                "study_chart": 0
+              }
+            }
+          },
+          {
+            "id": "chart-1",
+            "type": "blueprint",
+            "position": {
+              "x": 950,
+              "y": 200
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Validación / distribución",
+              "params": {
+                "title": "Validación / distribución",
+                "plot_source": "auto",
+                "plot_columns": "",
+                "chart_type": "line",
+                "color": "Violet",
+                "study_chart": 1
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "data-features",
+            "source": "data",
+            "target": "features",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "features-experiment",
+            "source": "features",
+            "target": "experiment",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "experiment-chart-0",
+            "source": "experiment",
+            "target": "chart-0",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          },
+          {
+            "id": "experiment-chart-1",
+            "source": "experiment",
+            "target": "chart-1",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "unit-7",
+      "title": "Unidad 7 · LSTM / GRU / bidireccional",
+      "area": "Redes recurrentes",
+      "description": "Compara LSTM, GRU, BiLSTM y BiGRU. Une los estados finales de ambas direcciones dentro de la ventana histórica.",
+      "instructions": [
+        "Carga la plantilla. Pulsa Execute Blueprint para ver progreso, selección, métricas y gráficos debajo del lienzo.",
+        "Predeterminada: serie sintética reproducible, sin internet. Para datos reales, selecciona yfinance en SPY / Market Data.",
+        "Selecciona Learning Experiment para cambiar características, ventanas, épocas, costes y otras opciones. Las dimensiones de entrada se derivan de las características seleccionadas.",
+        "Guarda una copia en Personal o exporta JSON. Al importar se recuperan nodos, conexiones y parámetros; al ejecutar se reentrena."
+      ],
+      "infographic": "unidad-7.png",
+      "graph": {
+        "nodes": [
+          {
+            "id": "data",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 180
+            },
+            "data": {
+              "kind": "source",
+              "label": "SPY · synthetic / yfinance",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 5
+              }
+            }
+          },
+          {
+            "id": "features",
+            "type": "blueprint",
+            "position": {
+              "x": 300,
+              "y": 180
+            },
+            "data": {
+              "kind": "features",
+              "label": "11 causal indicators",
+              "params": {
+                "lags": 0,
+                "use_rsi": true,
+                "use_ema": true,
+                "use_sma": true,
+                "use_macd": true,
+                "use_vwap": true,
+                "use_bb": true
+              }
+            }
+          },
+          {
+            "id": "experiment",
+            "type": "blueprint",
+            "position": {
+              "x": 620,
+              "y": 180
+            },
+            "data": {
+              "kind": "study",
+              "label": "Unidad 7 · LSTM / GRU / bidireccional",
+              "params": {
+                "topic": "recurrent",
+                "feature_columns": "LogReturn,Volatility,RSI,EMA,SMA,VWAP,MACD,MACDSignal,BBUpper,BBMiddle,BBLower",
+                "widths": "64,32",
+                "lookback": 20,
+                "train_ratio": 0.65,
+                "val_ratio": 0.15,
+                "epochs": 12,
+                "patience": 5,
+                "batch_size": 64,
+                "lr": 0.001,
+                "trials": 6,
+                "latent_dim": 3,
+                "horizon": 16,
+                "cost_bps": 5,
+                "threshold_bps": 0,
+                "seed": 42
+              }
+            }
+          },
+          {
+            "id": "chart-0",
+            "type": "blueprint",
+            "position": {
+              "x": 950,
+              "y": 0
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Resultado fuera de muestra",
+              "params": {
+                "title": "Resultado fuera de muestra",
+                "plot_source": "auto",
+                "plot_columns": "",
+                "chart_type": "line",
+                "color": "Mint",
+                "study_chart": 0
+              }
+            }
+          },
+          {
+            "id": "chart-1",
+            "type": "blueprint",
+            "position": {
+              "x": 950,
+              "y": 200
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Validación / distribución",
+              "params": {
+                "title": "Validación / distribución",
+                "plot_source": "auto",
+                "plot_columns": "",
+                "chart_type": "line",
+                "color": "Violet",
+                "study_chart": 1
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "data-features",
+            "source": "data",
+            "target": "features",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "features-experiment",
+            "source": "features",
+            "target": "experiment",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "experiment-chart-0",
+            "source": "experiment",
+            "target": "chart-0",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          },
+          {
+            "id": "experiment-chart-1",
+            "source": "experiment",
+            "target": "chart-1",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "unit-8",
+      "title": "Unidad 8 · PCA / AE / DAE",
+      "area": "Representaciones",
+      "description": "Reconstrucción sin objetivo supervisado: PCA y AE/DAE de tres factores; Ridge posterior evalúa utilidad predictiva.",
+      "instructions": [
+        "Carga la plantilla. Pulsa Execute Blueprint para ver progreso, selección, métricas y gráficos debajo del lienzo.",
+        "Predeterminada: serie sintética reproducible, sin internet. Para datos reales, selecciona yfinance en SPY / Market Data.",
+        "Selecciona Learning Experiment para cambiar características, ventanas, épocas, costes y otras opciones. Las dimensiones de entrada se derivan de las características seleccionadas.",
+        "Guarda una copia en Personal o exporta JSON. Al importar se recuperan nodos, conexiones y parámetros; al ejecutar se reentrena."
+      ],
+      "infographic": "unidad-8.png",
+      "graph": {
+        "nodes": [
+          {
+            "id": "data",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 180
+            },
+            "data": {
+              "kind": "source",
+              "label": "SPY · synthetic / yfinance",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 5
+              }
+            }
+          },
+          {
+            "id": "features",
+            "type": "blueprint",
+            "position": {
+              "x": 300,
+              "y": 180
+            },
+            "data": {
+              "kind": "features",
+              "label": "11 causal indicators",
+              "params": {
+                "lags": 0,
+                "use_rsi": true,
+                "use_ema": true,
+                "use_sma": true,
+                "use_macd": true,
+                "use_vwap": true,
+                "use_bb": true
+              }
+            }
+          },
+          {
+            "id": "experiment",
+            "type": "blueprint",
+            "position": {
+              "x": 620,
+              "y": 180
+            },
+            "data": {
+              "kind": "study",
+              "label": "Unidad 8 · PCA / AE / DAE",
+              "params": {
+                "topic": "autoencoders",
+                "feature_columns": "LogReturn,Volatility,RSI,EMA,SMA,VWAP,MACD,MACDSignal,BBUpper,BBMiddle,BBLower",
+                "widths": "64,32",
+                "lookback": 1,
+                "train_ratio": 0.65,
+                "val_ratio": 0.15,
+                "epochs": 12,
+                "patience": 5,
+                "batch_size": 64,
+                "lr": 0.001,
+                "trials": 6,
+                "latent_dim": 3,
+                "horizon": 16,
+                "cost_bps": 5,
+                "threshold_bps": 0,
+                "seed": 42
+              }
+            }
+          },
+          {
+            "id": "chart-0",
+            "type": "blueprint",
+            "position": {
+              "x": 950,
+              "y": 0
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Resultado fuera de muestra",
+              "params": {
+                "title": "Resultado fuera de muestra",
+                "plot_source": "auto",
+                "plot_columns": "",
+                "chart_type": "line",
+                "color": "Mint",
+                "study_chart": 0
+              }
+            }
+          },
+          {
+            "id": "chart-1",
+            "type": "blueprint",
+            "position": {
+              "x": 950,
+              "y": 200
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Validación / distribución",
+              "params": {
+                "title": "Validación / distribución",
+                "plot_source": "auto",
+                "plot_columns": "",
+                "chart_type": "line",
+                "color": "Violet",
+                "study_chart": 1
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "data-features",
+            "source": "data",
+            "target": "features",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "features-experiment",
+            "source": "features",
+            "target": "experiment",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "experiment-chart-0",
+            "source": "experiment",
+            "target": "chart-0",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          },
+          {
+            "id": "experiment-chart-1",
+            "source": "experiment",
+            "target": "chart-1",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "unit-9",
+      "title": "Unidad 9 · CVAE / cGAN",
+      "area": "Modelos generativos",
+      "description": "Ventanas futuras de 16 retornos; condición de volatilidad causal. Purga ventanas que cruzan cortes; ruido fijo en validación.",
+      "instructions": [
+        "Carga la plantilla. Pulsa Execute Blueprint para ver progreso, selección, métricas y gráficos debajo del lienzo.",
+        "Predeterminada: serie sintética reproducible, sin internet. Para datos reales, selecciona yfinance en SPY / Market Data.",
+        "Selecciona Learning Experiment para cambiar características, ventanas, épocas, costes y otras opciones. Las dimensiones de entrada se derivan de las características seleccionadas.",
+        "Guarda una copia en Personal o exporta JSON. Al importar se recuperan nodos, conexiones y parámetros; al ejecutar se reentrena."
+      ],
+      "infographic": "unidad-9.png",
+      "graph": {
+        "nodes": [
+          {
+            "id": "data",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 180
+            },
+            "data": {
+              "kind": "source",
+              "label": "SPY · synthetic / yfinance",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 5
+              }
+            }
+          },
+          {
+            "id": "features",
+            "type": "blueprint",
+            "position": {
+              "x": 300,
+              "y": 180
+            },
+            "data": {
+              "kind": "features",
+              "label": "11 causal indicators",
+              "params": {
+                "lags": 0,
+                "use_rsi": true,
+                "use_ema": true,
+                "use_sma": true,
+                "use_macd": true,
+                "use_vwap": true,
+                "use_bb": true
+              }
+            }
+          },
+          {
+            "id": "experiment",
+            "type": "blueprint",
+            "position": {
+              "x": 620,
+              "y": 180
+            },
+            "data": {
+              "kind": "study",
+              "label": "Unidad 9 · CVAE / cGAN",
+              "params": {
+                "topic": "generative",
+                "feature_columns": "LogReturn,Volatility,RSI,EMA,SMA,VWAP,MACD,MACDSignal,BBUpper,BBMiddle,BBLower",
+                "widths": "64,32",
+                "lookback": 1,
+                "train_ratio": 0.65,
+                "val_ratio": 0.15,
+                "epochs": 12,
+                "patience": 5,
+                "batch_size": 64,
+                "lr": 0.001,
+                "trials": 6,
+                "latent_dim": 4,
+                "horizon": 16,
+                "cost_bps": 5,
+                "threshold_bps": 0,
+                "seed": 42
+              }
+            }
+          },
+          {
+            "id": "chart-0",
+            "type": "blueprint",
+            "position": {
+              "x": 950,
+              "y": 0
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Resultado fuera de muestra",
+              "params": {
+                "title": "Resultado fuera de muestra",
+                "plot_source": "auto",
+                "plot_columns": "",
+                "chart_type": "line",
+                "color": "Mint",
+                "study_chart": 0
+              }
+            }
+          },
+          {
+            "id": "chart-1",
+            "type": "blueprint",
+            "position": {
+              "x": 950,
+              "y": 200
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Validación / distribución",
+              "params": {
+                "title": "Validación / distribución",
+                "plot_source": "auto",
+                "plot_columns": "",
+                "chart_type": "line",
+                "color": "Violet",
+                "study_chart": 1
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "data-features",
+            "source": "data",
+            "target": "features",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "features-experiment",
+            "source": "features",
+            "target": "experiment",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "experiment-chart-0",
+            "source": "experiment",
+            "target": "chart-0",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          },
+          {
+            "id": "experiment-chart-1",
+            "source": "experiment",
+            "target": "chart-1",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "unit-9-cdcgan",
+      "title": "Unidad 9 ampliación · cDCGAN 1D",
+      "area": "Modelos generativos",
+      "description": "Generador ConvTranspose1D y discriminador Conv1D con volatilidad, momentum y volumen causales; comparación de regímenes con idéntico ruido.",
+      "instructions": [
+        "Carga la plantilla. Pulsa Execute Blueprint para ver progreso, selección, métricas y gráficos debajo del lienzo.",
+        "Predeterminada: serie sintética reproducible, sin internet. Para datos reales, selecciona yfinance en SPY / Market Data.",
+        "Selecciona Learning Experiment para cambiar características, ventanas, épocas, costes y otras opciones. Las dimensiones de entrada se derivan de las características seleccionadas.",
+        "Guarda una copia en Personal o exporta JSON. Al importar se recuperan nodos, conexiones y parámetros; al ejecutar se reentrena.",
+        "SPY, SAN y JPM se entrenan conjuntamente; asset_b y asset_c son entradas opcionales para otros activos, alineados por fecha. Cambia cada fuente a yfinance para cotizaciones reales."
+      ],
+      "infographic": "unidad-9-cdcgan.png",
+      "graph": {
+        "nodes": [
+          {
+            "id": "data",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 180
+            },
+            "data": {
+              "kind": "source",
+              "label": "SPY · synthetic / yfinance",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 5
+              }
+            }
+          },
+          {
+            "id": "features",
+            "type": "blueprint",
+            "position": {
+              "x": 300,
+              "y": 180
+            },
+            "data": {
+              "kind": "features",
+              "label": "11 causal indicators",
+              "params": {
+                "lags": 0,
+                "use_rsi": true,
+                "use_ema": true,
+                "use_sma": true,
+                "use_macd": true,
+                "use_vwap": true,
+                "use_bb": true
+              }
+            }
+          },
+          {
+            "id": "experiment",
+            "type": "blueprint",
+            "position": {
+              "x": 620,
+              "y": 180
+            },
+            "data": {
+              "kind": "study",
+              "label": "Unidad 9 ampliación · cDCGAN 1D",
+              "params": {
+                "topic": "cdcgan",
+                "feature_columns": "LogReturn,Volatility,RSI,EMA,SMA,VWAP,MACD,MACDSignal,BBUpper,BBMiddle,BBLower",
+                "widths": "64,32",
+                "lookback": 1,
+                "train_ratio": 0.65,
+                "val_ratio": 0.15,
+                "epochs": 12,
+                "patience": 5,
+                "batch_size": 64,
+                "lr": 0.001,
+                "trials": 6,
+                "latent_dim": 4,
+                "horizon": 16,
+                "cost_bps": 5,
+                "threshold_bps": 0,
+                "seed": 42
+              }
+            }
+          },
+          {
+            "id": "chart-0",
+            "type": "blueprint",
+            "position": {
+              "x": 950,
+              "y": 0
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Resultado fuera de muestra",
+              "params": {
+                "title": "Resultado fuera de muestra",
+                "plot_source": "auto",
+                "plot_columns": "",
+                "chart_type": "line",
+                "color": "Mint",
+                "study_chart": 0
+              }
+            }
+          },
+          {
+            "id": "chart-1",
+            "type": "blueprint",
+            "position": {
+              "x": 950,
+              "y": 200
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Validación / distribución",
+              "params": {
+                "title": "Validación / distribución",
+                "plot_source": "auto",
+                "plot_columns": "",
+                "chart_type": "line",
+                "color": "Violet",
+                "study_chart": 1
+              }
+            }
+          },
+          {
+            "id": "asset-0",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 450
+            },
+            "data": {
+              "kind": "source",
+              "label": "SAN",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SAN",
+                "years": 5,
+                "seed": 43
+              }
+            }
+          },
+          {
+            "id": "features-0",
+            "type": "blueprint",
+            "position": {
+              "x": 300,
+              "y": 450
+            },
+            "data": {
+              "kind": "features",
+              "label": "SAN indicators",
+              "params": {
+                "lags": 0,
+                "use_rsi": true,
+                "use_ema": true,
+                "use_sma": true,
+                "use_macd": true,
+                "use_vwap": true,
+                "use_bb": true
+              }
+            }
+          },
+          {
+            "id": "asset-1",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 670
+            },
+            "data": {
+              "kind": "source",
+              "label": "JPM",
+              "params": {
+                "source": "synthetic",
+                "ticker": "JPM",
+                "years": 5,
+                "seed": 44
+              }
+            }
+          },
+          {
+            "id": "features-1",
+            "type": "blueprint",
+            "position": {
+              "x": 300,
+              "y": 670
+            },
+            "data": {
+              "kind": "features",
+              "label": "JPM indicators",
+              "params": {
+                "lags": 0,
+                "use_rsi": true,
+                "use_ema": true,
+                "use_sma": true,
+                "use_macd": true,
+                "use_vwap": true,
+                "use_bb": true
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "data-features",
+            "source": "data",
+            "target": "features",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "features-experiment",
+            "source": "features",
+            "target": "experiment",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "experiment-chart-0",
+            "source": "experiment",
+            "target": "chart-0",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          },
+          {
+            "id": "experiment-chart-1",
+            "source": "experiment",
+            "target": "chart-1",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          },
+          {
+            "id": "asset-0-features-0",
+            "source": "asset-0",
+            "target": "features-0",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "conditional-0",
+            "source": "features-0",
+            "target": "experiment",
+            "sourceHandle": "frame",
+            "targetHandle": "asset_b"
+          },
+          {
+            "id": "asset-1-features-1",
+            "source": "asset-1",
+            "target": "features-1",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "conditional-1",
+            "source": "features-1",
+            "target": "experiment",
+            "sourceHandle": "frame",
+            "targetHandle": "asset_c"
+          }
+        ]
+      }
+    },
+    {
+      "id": "unit-10",
+      "title": "Unidad 10 · Double DQN",
+      "area": "Aprendizaje por refuerzo",
+      "description": "Estado de 11 características más posición. Replay TR, máscara terminal, online elige / target evalúa, costes y gap; compara Q-learning, largo y efectivo.",
+      "instructions": [
+        "Carga la plantilla. Pulsa Execute Blueprint para ver progreso, selección, métricas y gráficos debajo del lienzo.",
+        "Predeterminada: serie sintética reproducible, sin internet. Para datos reales, selecciona yfinance en SPY / Market Data.",
+        "Selecciona Learning Experiment para cambiar características, ventanas, épocas, costes y otras opciones. Las dimensiones de entrada se derivan de las características seleccionadas.",
+        "Guarda una copia en Personal o exporta JSON. Al importar se recuperan nodos, conexiones y parámetros; al ejecutar se reentrena."
+      ],
+      "infographic": "unidad-10.png",
+      "graph": {
+        "nodes": [
+          {
+            "id": "data",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 180
+            },
+            "data": {
+              "kind": "source",
+              "label": "SPY · synthetic / yfinance",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 5
+              }
+            }
+          },
+          {
+            "id": "features",
+            "type": "blueprint",
+            "position": {
+              "x": 300,
+              "y": 180
+            },
+            "data": {
+              "kind": "features",
+              "label": "11 causal indicators",
+              "params": {
+                "lags": 0,
+                "use_rsi": true,
+                "use_ema": true,
+                "use_sma": true,
+                "use_macd": true,
+                "use_vwap": true,
+                "use_bb": true
+              }
+            }
+          },
+          {
+            "id": "experiment",
+            "type": "blueprint",
+            "position": {
+              "x": 620,
+              "y": 180
+            },
+            "data": {
+              "kind": "study",
+              "label": "Unidad 10 · Double DQN",
+              "params": {
+                "topic": "double_dqn",
+                "feature_columns": "LogReturn,Volatility,RSI,EMA,SMA,VWAP,MACD,MACDSignal,BBUpper,BBMiddle,BBLower",
+                "widths": "64,32",
+                "lookback": 1,
+                "train_ratio": 0.65,
+                "val_ratio": 0.15,
+                "epochs": 12,
+                "patience": 5,
+                "batch_size": 64,
+                "lr": 0.001,
+                "trials": 6,
+                "latent_dim": 3,
+                "horizon": 16,
+                "cost_bps": 5,
+                "threshold_bps": 0,
+                "seed": 42
+              }
+            }
+          },
+          {
+            "id": "chart-0",
+            "type": "blueprint",
+            "position": {
+              "x": 950,
+              "y": 0
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Resultado fuera de muestra",
+              "params": {
+                "title": "Resultado fuera de muestra",
+                "plot_source": "auto",
+                "plot_columns": "",
+                "chart_type": "line",
+                "color": "Mint",
+                "study_chart": 0
+              }
+            }
+          },
+          {
+            "id": "chart-1",
+            "type": "blueprint",
+            "position": {
+              "x": 950,
+              "y": 200
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Validación / distribución",
+              "params": {
+                "title": "Validación / distribución",
+                "plot_source": "auto",
+                "plot_columns": "",
+                "chart_type": "line",
+                "color": "Violet",
+                "study_chart": 1
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "data-features",
+            "source": "data",
+            "target": "features",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "features-experiment",
+            "source": "features",
+            "target": "experiment",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "experiment-chart-0",
+            "source": "experiment",
+            "target": "chart-0",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          },
+          {
+            "id": "experiment-chart-1",
+            "source": "experiment",
+            "target": "chart-1",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "area-returns",
+      "title": "Retornos diarios y acumulados",
+      "area": "Datos e indicadores",
+      "description": "Indicadores seleccionables y gráficos con leyendas y colores.",
+      "instructions": [
+        "Carga y ejecuta. Selecciona cada nodo para modificar sus parámetros.",
+        "Datos sintéticos de demostración; cambia la fuente a yfinance para cotizaciones reales."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "data",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 180
+            },
+            "data": {
+              "kind": "source",
+              "label": "Market Data",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 3
+              }
+            }
+          },
+          {
+            "id": "features",
+            "type": "blueprint",
+            "position": {
+              "x": 290,
+              "y": 180
+            },
+            "data": {
+              "kind": "features",
+              "label": "Technical Features",
+              "params": {
+                "lags": 5,
+                "use_rsi": true,
+                "use_ema": true,
+                "use_sma": true,
+                "use_macd": true,
+                "use_vwap": true,
+                "use_bb": true
+              }
+            }
+          },
+          {
+            "id": "plot",
+            "type": "blueprint",
+            "position": {
+              "x": 600,
+              "y": 180
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Retornos diarios y acumulados",
+              "params": {
+                "title": "Retornos diarios y acumulados",
+                "plot_source": "columns",
+                "plot_columns": "LogReturn,CumulativeLogReturn",
+                "chart_type": "line",
+                "color": "Blue"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "data-features",
+            "source": "data",
+            "target": "features",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "features-plot",
+            "source": "features",
+            "target": "plot",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "area-indicators",
+      "title": "VWAP / MACD / EMA / SMA / BB",
+      "area": "Datos e indicadores",
+      "description": "Indicadores seleccionables y gráficos con leyendas y colores.",
+      "instructions": [
+        "Carga y ejecuta. Selecciona cada nodo para modificar sus parámetros.",
+        "Datos sintéticos de demostración; cambia la fuente a yfinance para cotizaciones reales."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "data",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 180
+            },
+            "data": {
+              "kind": "source",
+              "label": "Market Data",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 3
+              }
+            }
+          },
+          {
+            "id": "features",
+            "type": "blueprint",
+            "position": {
+              "x": 290,
+              "y": 180
+            },
+            "data": {
+              "kind": "features",
+              "label": "Technical Features",
+              "params": {
+                "lags": 5,
+                "use_rsi": true,
+                "use_ema": true,
+                "use_sma": true,
+                "use_macd": true,
+                "use_vwap": true,
+                "use_bb": true
+              }
+            }
+          },
+          {
+            "id": "plot",
+            "type": "blueprint",
+            "position": {
+              "x": 600,
+              "y": 180
+            },
+            "data": {
+              "kind": "plot",
+              "label": "VWAP / MACD / EMA / SMA / BB",
+              "params": {
+                "title": "VWAP / MACD / EMA / SMA / BB",
+                "plot_source": "columns",
+                "plot_columns": "Close,EMA,SMA,VWAP,BBUpper,BBLower",
+                "chart_type": "line",
+                "color": "Blue"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "data-features",
+            "source": "data",
+            "target": "features",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "features-plot",
+            "source": "features",
+            "target": "plot",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "area-stats",
+      "title": "Descomposición y escalado",
+      "area": "Estadística",
+      "description": "La descomposición es diagnóstica; nunca entra al modelo como información futura.",
+      "instructions": [
+        "Carga y ejecuta. Selecciona cada nodo para modificar sus parámetros.",
+        "Datos sintéticos de demostración; cambia la fuente a yfinance para cotizaciones reales."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "data",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 180
+            },
+            "data": {
+              "kind": "source",
+              "label": "Market Data",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 3
+              }
+            }
+          },
+          {
+            "id": "features",
+            "type": "blueprint",
+            "position": {
+              "x": 290,
+              "y": 180
+            },
+            "data": {
+              "kind": "features",
+              "label": "Technical Features",
+              "params": {
+                "lags": 5,
+                "use_rsi": true,
+                "use_ema": true,
+                "use_sma": true,
+                "use_macd": true,
+                "use_vwap": true,
+                "use_bb": true
+              }
+            }
+          },
+          {
+            "id": "prepare",
+            "type": "blueprint",
+            "position": {
+              "x": 590,
+              "y": 180
+            },
+            "data": {
+              "kind": "prepare",
+              "label": "Temporal split + train scaler",
+              "params": {
+                "feature_columns": "LogReturn,Volatility,RSI,EMA,SMA,VWAP,MACD,MACDSignal,BBUpper,BBMiddle,BBLower",
+                "target": "LogReturn",
+                "lookback": 20,
+                "train_ratio": 0.65,
+                "val_ratio": 0.15,
+                "period": 20,
+                "scaler": "standard"
+              }
+            }
+          },
+          {
+            "id": "plot",
+            "type": "blueprint",
+            "position": {
+              "x": 900,
+              "y": 180
+            },
+            "data": {
+              "kind": "plot",
+              "label": "TR / VA / TE",
+              "params": {
+                "title": "Decomposición: tendencia / estacionalidad / residuo",
+                "plot_source": "decomposition",
+                "plot_columns": "",
+                "chart_type": "line",
+                "color": "Mint"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "data-features",
+            "source": "data",
+            "target": "features",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "features-prepare",
+            "source": "features",
+            "target": "prepare",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "prepare-plot",
+            "source": "prepare",
+            "target": "plot",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "area-network",
+      "title": "Red modular · 11 → 64 → 32 → 1",
+      "area": "Arquitectura y backtest",
+      "description": "Capas y conexiones visibles y editables. Este ejemplo predice retorno entre cierres, distinto al intradía de las unidades.",
+      "instructions": [
+        "Carga y ejecuta. Selecciona cada nodo para modificar sus parámetros.",
+        "Datos sintéticos de demostración; cambia la fuente a yfinance para cotizaciones reales."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "data",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 180
+            },
+            "data": {
+              "kind": "source",
+              "label": "Market Data",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 3
+              }
+            }
+          },
+          {
+            "id": "features",
+            "type": "blueprint",
+            "position": {
+              "x": 290,
+              "y": 180
+            },
+            "data": {
+              "kind": "features",
+              "label": "Technical Features",
+              "params": {
+                "lags": 5,
+                "use_rsi": true,
+                "use_ema": true,
+                "use_sma": true,
+                "use_macd": true,
+                "use_vwap": true,
+                "use_bb": true
+              }
+            }
+          },
+          {
+            "id": "prepare",
+            "type": "blueprint",
+            "position": {
+              "x": 590,
+              "y": 180
+            },
+            "data": {
+              "kind": "prepare",
+              "label": "Temporal split + train scaler",
+              "params": {
+                "feature_columns": "LogReturn,Volatility,RSI,EMA,SMA,VWAP,MACD,MACDSignal,BBUpper,BBMiddle,BBLower",
+                "target": "LogReturn",
+                "lookback": 1,
+                "train_ratio": 0.65,
+                "val_ratio": 0.15,
+                "period": 20,
+                "scaler": "standard"
+              }
+            }
+          },
+          {
+            "id": "model",
+            "type": "blueprint",
+            "position": {
+              "x": 900,
+              "y": 180
+            },
+            "data": {
+              "kind": "model",
+              "label": "Custom trainer",
+              "params": {
+                "architecture": "Custom",
+                "epochs": 12,
+                "hidden": 64,
+                "layers": 2,
+                "dropout": 0,
+                "lr": 0.001,
+                "optimizer": "Adam",
+                "patience": 5,
+                "batch_size": 64,
+                "l1": 0,
+                "l2": 0
+              }
+            }
+          },
+          {
+            "id": "backtest",
+            "type": "blueprint",
+            "position": {
+              "x": 1200,
+              "y": 180
+            },
+            "data": {
+              "kind": "backtest",
+              "label": "Short / Cash / Long",
+              "params": {
+                "threshold": 0.001,
+                "fee_bps": 5,
+                "slippage_bps": 2
+              }
+            }
+          },
+          {
+            "id": "input",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": -140
+            },
+            "data": {
+              "kind": "network_input",
+              "label": "Input · 11 features",
+              "params": {
+                "input_features": 11,
+                "mode": "last"
+              }
+            }
+          },
+          {
+            "id": "dense64",
+            "type": "blueprint",
+            "position": {
+              "x": 290,
+              "y": -140
+            },
+            "data": {
+              "kind": "layer",
+              "label": "Dense 64 · ReLU",
+              "params": {
+                "layer_type": "Dense",
+                "units": 64,
+                "activation": "ReLU"
+              }
+            }
+          },
+          {
+            "id": "dense32",
+            "type": "blueprint",
+            "position": {
+              "x": 590,
+              "y": -140
+            },
+            "data": {
+              "kind": "layer",
+              "label": "Dense 32 · ReLU",
+              "params": {
+                "layer_type": "Dense",
+                "units": 32,
+                "activation": "ReLU"
+              }
+            }
+          },
+          {
+            "id": "output",
+            "type": "blueprint",
+            "position": {
+              "x": 900,
+              "y": -140
+            },
+            "data": {
+              "kind": "network_output",
+              "label": "Output · 1",
+              "params": {
+                "output_units": 1
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "data-features",
+            "source": "data",
+            "target": "features",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "features-prepare",
+            "source": "features",
+            "target": "prepare",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "prepare-model",
+            "source": "prepare",
+            "target": "model",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          },
+          {
+            "id": "model-backtest",
+            "source": "model",
+            "target": "backtest",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          },
+          {
+            "id": "input-dense64",
+            "source": "input",
+            "target": "dense64",
+            "sourceHandle": "network",
+            "targetHandle": "network",
+            "animated": true
+          },
+          {
+            "id": "dense64-dense32",
+            "source": "dense64",
+            "target": "dense32",
+            "sourceHandle": "network",
+            "targetHandle": "network",
+            "animated": true
+          },
+          {
+            "id": "dense32-output",
+            "source": "dense32",
+            "target": "output",
+            "sourceHandle": "network",
+            "targetHandle": "network",
+            "animated": true
+          },
+          {
+            "id": "network-model",
+            "source": "output",
+            "target": "model",
+            "sourceHandle": "network",
+            "targetHandle": "network"
+          }
+        ]
+      }
+    },
+    {
+      "id": "area-portfolio",
+      "title": "Portafolio · Markowitz y riesgo completo",
+      "area": "Portafolios y riesgo",
+      "description": "ROI, CAGR, VaR, CVaR, Sharpe, Sortino, OLS α/β, volatilidad y drawdown para activos y estrategias.",
+      "instructions": [
+        "Carga y ejecuta. Selecciona cada nodo para modificar sus parámetros.",
+        "Datos sintéticos de demostración; cambia la fuente a yfinance para cotizaciones reales."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "prices",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 180
+            },
+            "data": {
+              "kind": "portfolio_data",
+              "label": "Six-asset portfolio",
+              "params": {
+                "source": "synthetic",
+                "tickers": "SPY,SAN,JPM,HWM,WM,PLTR",
+                "benchmark": "SPY",
+                "years": 5,
+                "seed": 42
+              }
+            }
+          },
+          {
+            "id": "portfolio",
+            "type": "blueprint",
+            "position": {
+              "x": 350,
+              "y": 180
+            },
+            "data": {
+              "kind": "portfolio",
+              "label": "Markowitz · out of sample",
+              "params": {
+                "train_fraction": 0.65,
+                "risk_free_rate": 0,
+                "confidence": 0.95,
+                "periods_per_year": 252,
+                "max_weight": 1,
+                "weights": ""
+              }
+            }
+          },
+          {
+            "id": "plot",
+            "type": "blueprint",
+            "position": {
+              "x": 700,
+              "y": 180
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Holdout portfolio equity",
+              "params": {
+                "title": "Equal weight / maximum Sharpe / minimum variance",
+                "plot_source": "equity",
+                "plot_columns": "",
+                "chart_type": "line",
+                "color": "Mint"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "prices-portfolio",
+            "source": "prices",
+            "target": "portfolio",
+            "sourceHandle": "portfolio",
+            "targetHandle": "portfolio",
+            "animated": true
+          },
+          {
+            "id": "portfolio-plot",
+            "source": "portfolio",
+            "target": "plot",
+            "sourceHandle": "portfolio",
+            "targetHandle": "portfolio",
+            "animated": true
+          }
+        ]
+      }
+    }
+  ]
+}

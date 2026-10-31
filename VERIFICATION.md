@@ -1,8 +1,20 @@
-# Verificación del proyecto (v0.4.1)
+# Verificación del proyecto (v0.5.0)
 
 Fecha: 31 de octubre de 2026. Entorno local macOS, Python 3.12.12, Node.js 22.22.3, npm 10.9.8.
 
-## Comprobaciones
+## Biblioteca y experimentos (v0.5.0)
+
+- TypeScript estricto, build Vite/Electron y suites de grafos, portafolio UI y biblioteca: correctos.
+- 32 pruebas Python, incluyendo ejecución de las 15 plantillas con presupuesto abreviado (2 épocas / 2 trials), invariancia de selección frente a cambios sólo en test, alineación de objetivo intradía y dimensiones de cDCGAN/Double DQN.
+- Ejecución adicional de las 15 plantillas con sus parámetros predeterminados (12 épocas máximas, 6 trials HPO), completada con datos sintéticos y resultados JSON finitos.
+- Las 10 imágenes conservan los SHA256 originales. La colección integrada y los 15 archivos JSON individuales coinciden.
+- Interfaz web: carga/ejecución de Unidad 2 con 12 épocas, 11 entradas y 248 muestras TE; informe de selección, métricas y gráficos visible.
+- Exportación desde ficha a unit-2.json y reimportación a Personal verificadas desde la interfaz.
+- Electron compilado desde file://: biblioteca e imágenes disponibles sin fetch HTTP; cDCGAN ejecutada con 9 nodos, 3 activos y 699 ventanas TE; selección, métricas y gráficos visibles. El diseño previo quedó archivado en Personal.
+- Captura de biblioteca: docs/v0.5-library.png.
+- Datos sintéticos usados para los nuevos ejemplos; esta verificación no demuestra rendimiento predictivo en datos reales ni compatibilidad nativa de Windows.
+
+## Comprobaciones anteriores
 
 - TypeScript estricto y compilación Vite/Electron: correctos.
 - Suite unittest: 26 pruebas, con diez arquitecturas como subpruebas; correcta.

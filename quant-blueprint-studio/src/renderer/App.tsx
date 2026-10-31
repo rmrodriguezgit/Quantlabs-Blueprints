@@ -1,3 +1,13 @@
+import { BlueprintLibrary } from "./components/BlueprintLibrary";
+import { StudyDock } from "./components/StudyDock";
+import {
+  isGraph,
+  parseLibrary,
+  downloadLibrary,
+  readSaved,
+  storeSaved,
+  type LibraryEntry,
+} from "./library";
 import { version } from "../../package.json";
 import { useEffect, useRef, useState } from "react";
 import { ReactFlowProvider } from "@xyflow/react";
@@ -36,39 +46,6 @@ import {
   type Result,
   type Kind,
 } from "./types/blueprint";
-function isGraph(value: unknown): value is Graph {
-  if (typeof value !== "object" || value === null) return false;
-  const g = value as Partial<Graph>;
-  return (
-    Array.isArray(g.nodes) &&
-    g.nodes.length > 0 &&
-    g.nodes.length <= 50 &&
-    g.nodes.every(
-      (n) =>
-        typeof n.id === "string" &&
-        n.type === "blueprint" &&
-        n.data &&
-        Object.hasOwn(catalog, n.data.kind) &&
-        typeof n.data.params === "object" &&
-        n.data.params !== null &&
-        Object.values(n.data.params).every((v) =>
-          ["string", "number", "boolean"].includes(typeof v),
-        ) &&
-        n.position &&
-        Number.isFinite(n.position.x) &&
-        Number.isFinite(n.position.y),
-    ) &&
-    new Set(g.nodes.map((n) => n.id)).size === g.nodes.length &&
-    Array.isArray(g.edges) &&
-    g.edges.length <= 150 &&
-    g.edges.every(
-      (e) =>
-        typeof e.id === "string" &&
-        typeof e.source === "string" &&
-        typeof e.target === "string",
-    )
-  );
-}
 function isResult(value: unknown): value is Result {
   if (typeof value !== "object" || !value) return false;
   const r = value as Partial<Result>;
@@ -125,6 +102,13 @@ function loadGraph(): Graph {
   return defaultGraph();
 }
 export default function App() {
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [title, setTitle] = useState(
+    () => localStorage.getItem("quant-blueprint-title") ?? "Untitled research",
+  );
+  useEffect(() => {
+    localStorage.setItem("quant-blueprint-title", title);
+  }, [title]);
   const [graph, setGraph] = useState<Graph>(loadGraph);
   const [selected, setSelected] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
@@ -164,8 +148,10 @@ export default function App() {
       return next;
     });
   };
-  const execute = async () => {
-    const issue = bindings.find((binding) => binding.issue);
+  const execute = async (executionGraph: Graph = graph) => {
+    const issue = networkBindings(executionGraph).find(
+      (binding) => binding.issue,
+    );
     if (issue) {
       setError(true);
       setMessage(issue.issue ?? "Input configuration mismatch.");
@@ -180,9 +166,9 @@ export default function App() {
     setResult(null);
     setMessage("Executing DAG · preparing data and training model…");
     try {
-      const value = await executeGraph(graph, (event) => {
+      const value = await executeGraph(executionGraph, (event) => {
         const label =
-          graph.nodes.find((n) => n.id === event.node)?.data.label ??
+          executionGraph.nodes.find((n) => n.id === event.node)?.data.label ??
           event.node;
         setEntries((previous) => [
           ...previous,
@@ -198,27 +184,55 @@ export default function App() {
       setResult(value);
       setMessage(
         value.portfolios?.length
-          ? `Completed ${graph.nodes.length} nodes · ${value.portfolios.length} portfolio report(s) · ${value.portfolios[0].metrics[0]?.observations ?? 0} holdout observations`
-          : value.risk_reports?.length
-            ? `Completed ${graph.nodes.length} nodes · ${value.risk_reports.length} risk report(s)`
-            : `Completed ${graph.nodes.length} nodes · ${value.features?.length ?? "auto"} input features · ${value.predictions.length} out-of-sample observations`,
+          ? `Completed ${executionGraph.nodes.length} nodes · ${value.portfolios.length} portfolio report(s) · ${value.portfolios[0].metrics[0]?.observations ?? 0} holdout observations`
+          : value.studies?.length
+            ? `Completed ${executionGraph.nodes.length} nodes · ${value.studies[0].selected} selected · ${value.studies[0].splits.test} holdout samples`
+            : value.risk_reports?.length
+              ? `Completed ${executionGraph.nodes.length} nodes · ${value.risk_reports.length} risk report(s)`
+              : `Completed ${executionGraph.nodes.length} nodes · ${value.features?.length ?? "auto"} input features · ${value.predictions.length} out-of-sample observations`,
       );
     } catch (e) {
       setError(true);
       setMessage(e instanceof Error ? e.message : String(e));
     } finally {
+      setElapsed(Math.ceil((Date.now() - started.current) / 1000));
       setRunning(false);
     }
   };
-  const exportGraph = () => {
-    const url = URL.createObjectURL(
-      new Blob([JSON.stringify(graph, null, 2)], { type: "application/json" }),
-    );
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "research-blueprint.json";
-    a.click();
-    URL.revokeObjectURL(url);
+  const currentEntry = (): LibraryEntry => ({
+    id: crypto.randomUUID(),
+    title,
+    area: "Personal",
+    description: "Editable research blueprint",
+    instructions: ["Configure nodes and execute."],
+    graph: structuredClone(graph),
+  });
+  const exportGraph = () =>
+    downloadLibrary([currentEntry()], "research-blueprint.json");
+  const loadEntry = (entry: LibraryEntry, run: boolean) => {
+    try {
+      const previous = readSaved();
+      if (
+        !previous.some((e) => JSON.stringify(e.graph) === JSON.stringify(graph))
+      )
+        storeSaved([
+          ...previous,
+          {
+            ...currentEntry(),
+            title: `${title} · autosave ${new Date().toLocaleString()}`,
+          },
+        ]);
+      const next = syncNetworkInputs(structuredClone(entry.graph));
+      updateGraph(() => next);
+      setTitle(entry.title);
+      setSelected(null);
+      setLibraryOpen(false);
+      setMessage(`${entry.title}: loaded. Edit parameters or execute.`);
+      if (run) void execute(next);
+    } catch (e) {
+      setError(true);
+      setMessage(e instanceof Error ? e.message : String(e));
+    }
   };
   return (
     <div className="studio">
@@ -243,11 +257,14 @@ export default function App() {
       </header>
       <div className="toolbar">
         <div>
-          <strong>Untitled research</strong>
+          <strong>{title}</strong>
           <span className="toolbar-divider">/</span>
           <span>Blueprint graph</span>
         </div>
         <div className="toolbar-actions">
+          <button disabled={running} onClick={() => setLibraryOpen(true)}>
+            Biblioteca / ejemplos
+          </button>
           <button
             disabled={running}
             onClick={() => {
@@ -297,7 +314,7 @@ export default function App() {
           <button
             className="execute-button"
             disabled={running}
-            onClick={() => void execute()}
+            onClick={() => void execute(graph)}
           >
             <Play size={15} fill="currentColor" />
             {running ? "Executing…" : "Execute Blueprint"}
@@ -313,11 +330,24 @@ export default function App() {
             e.target.value = "";
             if (!file) return;
             try {
-              if (file.size > 1000000)
-                throw new Error("Graph file exceeds 1 MB.");
+              if (file.size > 10000000)
+                throw new Error("Blueprint file exceeds 10 MB.");
               const value: unknown = JSON.parse(await file.text());
-              if (!isGraph(value)) throw new Error("Invalid blueprint graph.");
-              updateGraph(() => value);
+              const imported = parseLibrary(value);
+              if (imported.length === 1) {
+                loadEntry(imported[0], false);
+                return;
+              } else {
+                storeSaved([
+                  ...readSaved(),
+                  ...imported.map((e) => ({
+                    ...e,
+                    id: crypto.randomUUID(),
+                    area: "Personal",
+                  })),
+                ]);
+                setLibraryOpen(true);
+              }
               setSelected(null);
               setError(false);
               setMessage("Blueprint imported.");
@@ -452,6 +482,15 @@ export default function App() {
             ?.scrollIntoView({ behavior: "smooth" });
         }}
       />
+      <StudyDock studies={result?.studies ?? []} onInspect={setSelected} />
+      {libraryOpen && (
+        <BlueprintLibrary
+          graph={graph}
+          title={title}
+          onClose={() => setLibraryOpen(false)}
+          onLoad={loadEntry}
+        />
+      )}
       <footer className={`status-bar ${error ? "error" : ""}`}>
         {error ? <CircleAlert size={13} /> : <CheckCircle2 size={13} />}
         <span>{message}</span>

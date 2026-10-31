@@ -2,6 +2,10 @@
 import asyncio
 import os
 import threading
+import torch
+
+# Small tabular networks benefit from bounded CPU parallelism on desktop hosts.
+torch.set_num_threads(max(1, min(4, os.cpu_count() or 1)))
 from typing import Any, Literal
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,7 +18,7 @@ except ImportError:
 
 class NodeData(BaseModel):
     model_config = ConfigDict(extra='ignore')
-    kind: Literal['source', 'features', 'prepare', 'model', 'backtest', 'config', 'network_input', 'layer', 'network_output', 'merge', 'plot', 'portfolio_data', 'portfolio', 'risk']
+    kind: Literal['source', 'features', 'prepare', 'model', 'backtest', 'config', 'network_input', 'layer', 'network_output', 'merge', 'plot', 'portfolio_data', 'portfolio', 'risk', 'study']
     label: str = ''
     params: dict[str, str | int | float | bool] = Field(default_factory=dict)
 
@@ -36,7 +40,7 @@ class Graph(BaseModel):
     edges: list[Edge] = Field(default_factory=list, max_length=150)
 
 
-app = FastAPI(title='Quant Blueprint Engine', version='0.4.1')
+app = FastAPI(title='Quant Blueprint Engine', version='0.5.0')
 app.add_middleware(CORSMiddleware, allow_origins=['http://127.0.0.1:5173', 'http://localhost:5173'],
                    allow_methods=['GET', 'POST'], allow_headers=['Content-Type'])
 execution_lock = threading.Lock()

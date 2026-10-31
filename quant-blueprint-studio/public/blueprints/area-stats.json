@@ -1,0 +1,124 @@
+{
+  "format": "quantlabs-blueprint-library",
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "area-stats",
+      "title": "Descomposición y escalado",
+      "area": "Estadística",
+      "description": "La descomposición es diagnóstica; nunca entra al modelo como información futura.",
+      "instructions": [
+        "Carga y ejecuta. Selecciona cada nodo para modificar sus parámetros.",
+        "Datos sintéticos de demostración; cambia la fuente a yfinance para cotizaciones reales."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "data",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 180
+            },
+            "data": {
+              "kind": "source",
+              "label": "Market Data",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 3
+              }
+            }
+          },
+          {
+            "id": "features",
+            "type": "blueprint",
+            "position": {
+              "x": 290,
+              "y": 180
+            },
+            "data": {
+              "kind": "features",
+              "label": "Technical Features",
+              "params": {
+                "lags": 5,
+                "use_rsi": true,
+                "use_ema": true,
+                "use_sma": true,
+                "use_macd": true,
+                "use_vwap": true,
+                "use_bb": true
+              }
+            }
+          },
+          {
+            "id": "prepare",
+            "type": "blueprint",
+            "position": {
+              "x": 590,
+              "y": 180
+            },
+            "data": {
+              "kind": "prepare",
+              "label": "Temporal split + train scaler",
+              "params": {
+                "feature_columns": "LogReturn,Volatility,RSI,EMA,SMA,VWAP,MACD,MACDSignal,BBUpper,BBMiddle,BBLower",
+                "target": "LogReturn",
+                "lookback": 20,
+                "train_ratio": 0.65,
+                "val_ratio": 0.15,
+                "period": 20,
+                "scaler": "standard"
+              }
+            }
+          },
+          {
+            "id": "plot",
+            "type": "blueprint",
+            "position": {
+              "x": 900,
+              "y": 180
+            },
+            "data": {
+              "kind": "plot",
+              "label": "TR / VA / TE",
+              "params": {
+                "title": "Decomposición: tendencia / estacionalidad / residuo",
+                "plot_source": "decomposition",
+                "plot_columns": "",
+                "chart_type": "line",
+                "color": "Mint"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "data-features",
+            "source": "data",
+            "target": "features",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "features-prepare",
+            "source": "features",
+            "target": "prepare",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "prepare-plot",
+            "source": "prepare",
+            "target": "plot",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          }
+        ]
+      }
+    }
+  ]
+}

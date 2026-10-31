@@ -1,0 +1,95 @@
+{
+  "format": "quantlabs-blueprint-library",
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "area-indicators",
+      "title": "VWAP / MACD / EMA / SMA / BB",
+      "area": "Datos e indicadores",
+      "description": "Indicadores seleccionables y gráficos con leyendas y colores.",
+      "instructions": [
+        "Carga y ejecuta. Selecciona cada nodo para modificar sus parámetros.",
+        "Datos sintéticos de demostración; cambia la fuente a yfinance para cotizaciones reales."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "data",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 180
+            },
+            "data": {
+              "kind": "source",
+              "label": "Market Data",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 3
+              }
+            }
+          },
+          {
+            "id": "features",
+            "type": "blueprint",
+            "position": {
+              "x": 290,
+              "y": 180
+            },
+            "data": {
+              "kind": "features",
+              "label": "Technical Features",
+              "params": {
+                "lags": 5,
+                "use_rsi": true,
+                "use_ema": true,
+                "use_sma": true,
+                "use_macd": true,
+                "use_vwap": true,
+                "use_bb": true
+              }
+            }
+          },
+          {
+            "id": "plot",
+            "type": "blueprint",
+            "position": {
+              "x": 600,
+              "y": 180
+            },
+            "data": {
+              "kind": "plot",
+              "label": "VWAP / MACD / EMA / SMA / BB",
+              "params": {
+                "title": "VWAP / MACD / EMA / SMA / BB",
+                "plot_source": "columns",
+                "plot_columns": "Close,EMA,SMA,VWAP,BBUpper,BBLower",
+                "chart_type": "line",
+                "color": "Blue"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "data-features",
+            "source": "data",
+            "target": "features",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "features-plot",
+            "source": "features",
+            "target": "plot",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          }
+        ]
+      }
+    }
+  ]
+}

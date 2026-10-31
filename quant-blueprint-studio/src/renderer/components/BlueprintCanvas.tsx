@@ -26,6 +26,7 @@ import {
   Settings2,
 } from "lucide-react";
 import {
+  studyArchitecture,
   catalog,
   createNode,
   inputHandles,
@@ -36,6 +37,7 @@ import {
 } from "../types/blueprint";
 import "@xyflow/react/dist/style.css";
 const icons = {
+  study: BrainCircuit,
   source: Database,
   features: SlidersHorizontal,
   prepare: Layers3,
@@ -54,6 +56,8 @@ const icons = {
 function nodeSummary(data: BlueprintNode["data"]): string {
   const p = data.params;
   switch (data.kind) {
+    case "study":
+      return studyArchitecture(p);
     case "source":
       return `${p.ticker} · ${p.years}Y · ${p.source}`;
     case "features":
@@ -126,41 +130,63 @@ function VisualNode({ data, selected }: NodeProps<BlueprintNode>) {
         <span>{def.input ?? "source"}</span>
         <span>{def.output ?? "report"}</span>
       </div>
-      {Object.entries(inputHandles(data.kind)).map(([id, type], i) => (
-        <div key={id}>
-          <Handle
-            type="target"
-            position={
-              id === "config" || id === "benchmark"
-                ? Position.Top
-                : id === "network" && data.kind === "model"
-                  ? Position.Bottom
-                  : Position.Left
-            }
-            id={id}
-            className={type}
-            style={
-              id === "config" ||
-              id === "benchmark" ||
-              (id === "network" && data.kind === "model")
-                ? {}
-                : {
-                    top: ["merge", "plot", "risk"].includes(data.kind)
-                      ? `${44 + i * 15}%`
-                      : "82%",
-                  }
-            }
-          />
-          {id === "benchmark" && (
-            <span className="config-label">benchmark</span>
-          )}
-          {id === "config" && <span className="config-label">config</span>}
-          {id === "network" && data.kind === "model" && (
-            <span className="network-label">network</span>
-          )}
-          {id === "frame_b" && <span className="second-input-label">B</span>}
-        </div>
-      ))}
+      {Object.entries(inputHandles(data.kind))
+        .filter(
+          ([id]) =>
+            data.kind !== "study" ||
+            data.params.topic === "cdcgan" ||
+            !id.startsWith("asset_"),
+        )
+        .map(([id, type], i) => (
+          <div key={id}>
+            <Handle
+              type="target"
+              position={
+                id === "config" || id === "benchmark"
+                  ? Position.Top
+                  : id === "network" && data.kind === "model"
+                    ? Position.Bottom
+                    : Position.Left
+              }
+              id={id}
+              className={type}
+              style={
+                id === "config" ||
+                id === "benchmark" ||
+                (id === "network" && data.kind === "model")
+                  ? {}
+                  : {
+                      top:
+                        ["merge", "plot", "risk"].includes(data.kind) ||
+                        (data.kind === "study" &&
+                          data.params.topic === "cdcgan")
+                          ? `${44 + i * 15}%`
+                          : "82%",
+                    }
+              }
+            />
+            {id === "benchmark" && (
+              <span className="config-label">benchmark</span>
+            )}
+            {id === "config" && <span className="config-label">config</span>}
+            {id === "network" && data.kind === "model" && (
+              <span className="network-label">network</span>
+            )}
+            {id === "frame_b" && <span className="second-input-label">B</span>}
+            {id.startsWith("asset_") && (
+              <span
+                style={{
+                  position: "absolute",
+                  left: 10,
+                  top: `${44 + i * 15}%`,
+                  fontSize: 9,
+                }}
+              >
+                {id}
+              </span>
+            )}
+          </div>
+        ))}
       {def.output && (
         <Handle
           type="source"

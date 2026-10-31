@@ -1,6 +1,6 @@
 {
   "name": "quant-blueprint-studio",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "private": true,
   "main": "dist/main/main.js",
   "scripts": {
@@ -12,7 +12,8 @@
     "electron:start": "electron . --production",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"*.{json,ts,html}\"",
     "test:graph": "node scripts/test_graph.cjs",
-    "test:portfolio-ui": "node scripts/test_portfolio_ui.cjs"
+    "test:portfolio-ui": "node scripts/test_portfolio_ui.cjs",
+    "test:library": "node scripts/test_library.cjs"
   },
   "dependencies": {
     "@xyflow/react": "^12.9.0",

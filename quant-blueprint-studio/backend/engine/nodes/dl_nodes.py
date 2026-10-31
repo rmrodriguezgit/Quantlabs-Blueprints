@@ -126,8 +126,9 @@ class SequenceNet(nn.Module):
         if self.kind in ('CNN', 'CNN-LSTM'):
             x = self.conv(x.transpose(1, 2)).transpose(1, 2)
         if self.recurrent is not None:
-            x, _ = self.recurrent(x)
-            x = x[:, -1, :]
+            _, state = self.recurrent(x)
+            hidden = state[0] if isinstance(state, tuple) else state
+            x = torch.cat([hidden[-2], hidden[-1]], dim=1) if self.recurrent.bidirectional else hidden[-1]
         else:
             x = self.encoder(x)
         return self.dropout(self.norm(x))

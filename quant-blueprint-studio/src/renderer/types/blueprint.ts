@@ -1,5 +1,6 @@
 import type { Edge, Node } from "@xyflow/react";
 export type Kind =
+  | "study"
   | "source"
   | "features"
   | "prepare"
@@ -23,6 +24,7 @@ export type BlueprintData = {
 export type BlueprintNode = Node<BlueprintData, "blueprint">;
 export type Graph = { nodes: BlueprintNode[]; edges: Edge[] };
 export interface Result {
+  studies?: StudyReport[];
   decomposition: { date: string; TR: number; VA: number; TE: number }[];
   predictions: { date: string; actual: number; predicted: number }[];
   backtest: {
@@ -46,6 +48,24 @@ export interface Result {
     turnover: number;
   };
 }
+export interface StudyReport {
+  id: string;
+  title: string;
+  topic: string;
+  selected: string;
+  features: string[];
+  splits: { train: number; validation: number; test: number };
+  notes: string[];
+  table: Record<string, string | number | null>[];
+  metrics: Record<string, number | null>;
+  charts: {
+    title: string;
+    rows: Record<string, string | number>[];
+    series: string[];
+    x_key: string;
+    chart_type: "line" | "area" | "bar";
+  }[];
+}
 export interface Field {
   key: string;
   label: string;
@@ -65,6 +85,127 @@ export interface Definition {
   fields: Field[];
 }
 export const catalog: Record<Kind, Definition> = {
+  study: {
+    label: "Learning Experiment",
+    subtitle: "Validation selection · isolated holdout",
+    category: "06 / EDUCATION",
+    color: "#ec9dd6",
+    input: "frame",
+    output: "tensor",
+    fields: [
+      {
+        key: "topic",
+        label: "Experiment",
+        value: "feedforward",
+        options: [
+          "feedforward",
+          "optimizers",
+          "regularization",
+          "hyperparameters",
+          "cnn",
+          "recurrent",
+          "autoencoders",
+          "generative",
+          "cdcgan",
+          "double_dqn",
+        ],
+      },
+      {
+        key: "feature_columns",
+        label: "Input feature columns",
+        value:
+          "LogReturn,Volatility,RSI,EMA,SMA,VWAP,MACD,MACDSignal,BBUpper,BBMiddle,BBLower",
+      },
+      {
+        key: "widths",
+        label: "MLP hidden widths (comma separated)",
+        value: "64,32",
+      },
+      {
+        key: "lookback",
+        label: "Historical sessions per sample",
+        value: 1,
+        min: 1,
+        max: 120,
+      },
+      {
+        key: "train_ratio",
+        label: "Training fraction",
+        value: 0.65,
+        min: 0.3,
+        max: 0.85,
+        step: 0.05,
+      },
+      {
+        key: "val_ratio",
+        label: "Validation fraction",
+        value: 0.15,
+        min: 0.05,
+        max: 0.5,
+        step: 0.05,
+      },
+      {
+        key: "epochs",
+        label: "Maximum epochs / RL episodes",
+        value: 12,
+        min: 1,
+        max: 300,
+      },
+      {
+        key: "patience",
+        label: "Early stopping patience",
+        value: 5,
+        min: 1,
+        max: 100,
+      },
+      { key: "batch_size", label: "Batch size", value: 64, min: 2, max: 1024 },
+      {
+        key: "lr",
+        label: "Learning rate",
+        value: 0.001,
+        min: 0.000001,
+        max: 0.1,
+        step: 0.0001,
+      },
+      {
+        key: "trials",
+        label: "HPO random trials / 2 expanding folds",
+        value: 6,
+        min: 1,
+        max: 30,
+      },
+      {
+        key: "latent_dim",
+        label: "Latent dimensions",
+        value: 3,
+        min: 1,
+        max: 32,
+      },
+      {
+        key: "horizon",
+        label: "Generative horizon (multiple of 4)",
+        value: 16,
+        min: 4,
+        max: 64,
+        step: 4,
+      },
+      {
+        key: "cost_bps",
+        label: "Cost per position unit / bps",
+        value: 5,
+        min: 0,
+        max: 100,
+      },
+      {
+        key: "threshold_bps",
+        label: "Regression decision threshold / bps",
+        value: 0,
+        min: -100,
+        max: 100,
+      },
+      { key: "seed", label: "Random seed", value: 42, min: 0, max: 2147483647 },
+    ],
+  },
   source: {
     label: "Market Data",
     subtitle: "OHLCV · daily bars",
@@ -406,6 +547,13 @@ export const catalog: Record<Kind, Definition> = {
     category: "05 / VISUALIZATION",
     color: "#ec9dd6",
     fields: [
+      {
+        key: "study_chart",
+        label: "Experiment chart index (starts at 0)",
+        value: 0,
+        min: 0,
+        max: 10,
+      },
       { key: "title", label: "Chart title", value: "Custom plot" },
       {
         key: "color",
@@ -818,6 +966,10 @@ export function inputHandles(kind: Kind): Record<string, string> {
   const handles: Record<string, string> = primary ? { [primary]: primary } : {};
   if (["features", "prepare", "model", "backtest"].includes(kind))
     handles.config = "config";
+  if (kind === "study") {
+    handles.asset_b = "frame";
+    handles.asset_c = "frame";
+  }
   if (kind === "model") handles.network = "network";
   if (kind === "merge") handles.frame_b = "frame";
   if (kind === "plot") {
@@ -871,10 +1023,55 @@ export function effectiveParams(
     ? { ...params, ...config.data.params }
     : params;
 }
+export function studyArchitecture(params: Record<string, Param>): string {
+  const count = String(params.feature_columns ?? "")
+    .split(",")
+    .filter((s) => s.trim()).length;
+  const mlp = `${count} × ${params.lookback ?? 1} → ${String(
+    params.widths ?? "64,32",
+  )
+    .split(",")
+    .join(" ReLU → ")} ReLU → 1`;
+  switch (params.topic) {
+    case "cnn":
+      return `${count} → Conv 32 → Conv 64 → pool → 1`;
+    case "recurrent":
+      return `${count} × ${params.lookback} → LSTM / GRU / Bi → 1`;
+    case "autoencoders":
+      return `${count} → 32 → ${params.latent_dim ?? 3} → 32 → ${count}`;
+    case "generative":
+    case "cdcgan":
+      return `z ${params.latent_dim} + condition → ${params.horizon} returns`;
+    case "double_dqn":
+      return `${count} + position → 64 ReLU → 32 ReLU → 3 Q`;
+    default:
+      return mlp;
+  }
+}
 export function networkBindings(graph: Graph): NetworkBinding[] {
   return graph.nodes
-    .filter((n) => n.data.kind === "model")
+    .filter((n) => n.data.kind === "model" || n.data.kind === "study")
     .map((trainer) => {
+      if (trainer.data.kind === "study") {
+        const selected = String(trainer.data.params.feature_columns ?? "")
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        const available = featureOptions(graph, trainer.id);
+        const unavailable = selected.filter((s) => !available.includes(s));
+        return {
+          trainerId: trainer.id,
+          selected,
+          unavailable,
+          declared: selected.length,
+          summary: studyArchitecture(trainer.data.params),
+          issue: !selected.length
+            ? "Select experiment input features."
+            : unavailable.length
+              ? `Unavailable selected features: ${unavailable.join(", ")}. Enable indicators or deselect them.`
+              : undefined,
+        };
+      }
       const prepEdge = graph.edges.find(
         (e) => e.target === trainer.id && e.targetHandle === "tensor",
       );

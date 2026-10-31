@@ -1,0 +1,251 @@
+{
+  "format": "quantlabs-blueprint-library",
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "area-network",
+      "title": "Red modular · 11 → 64 → 32 → 1",
+      "area": "Arquitectura y backtest",
+      "description": "Capas y conexiones visibles y editables. Este ejemplo predice retorno entre cierres, distinto al intradía de las unidades.",
+      "instructions": [
+        "Carga y ejecuta. Selecciona cada nodo para modificar sus parámetros.",
+        "Datos sintéticos de demostración; cambia la fuente a yfinance para cotizaciones reales."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "data",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 180
+            },
+            "data": {
+              "kind": "source",
+              "label": "Market Data",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 3
+              }
+            }
+          },
+          {
+            "id": "features",
+            "type": "blueprint",
+            "position": {
+              "x": 290,
+              "y": 180
+            },
+            "data": {
+              "kind": "features",
+              "label": "Technical Features",
+              "params": {
+                "lags": 5,
+                "use_rsi": true,
+                "use_ema": true,
+                "use_sma": true,
+                "use_macd": true,
+                "use_vwap": true,
+                "use_bb": true
+              }
+            }
+          },
+          {
+            "id": "prepare",
+            "type": "blueprint",
+            "position": {
+              "x": 590,
+              "y": 180
+            },
+            "data": {
+              "kind": "prepare",
+              "label": "Temporal split + train scaler",
+              "params": {
+                "feature_columns": "LogReturn,Volatility,RSI,EMA,SMA,VWAP,MACD,MACDSignal,BBUpper,BBMiddle,BBLower",
+                "target": "LogReturn",
+                "lookback": 1,
+                "train_ratio": 0.65,
+                "val_ratio": 0.15,
+                "period": 20,
+                "scaler": "standard"
+              }
+            }
+          },
+          {
+            "id": "model",
+            "type": "blueprint",
+            "position": {
+              "x": 900,
+              "y": 180
+            },
+            "data": {
+              "kind": "model",
+              "label": "Custom trainer",
+              "params": {
+                "architecture": "Custom",
+                "epochs": 12,
+                "hidden": 64,
+                "layers": 2,
+                "dropout": 0,
+                "lr": 0.001,
+                "optimizer": "Adam",
+                "patience": 5,
+                "batch_size": 64,
+                "l1": 0,
+                "l2": 0
+              }
+            }
+          },
+          {
+            "id": "backtest",
+            "type": "blueprint",
+            "position": {
+              "x": 1200,
+              "y": 180
+            },
+            "data": {
+              "kind": "backtest",
+              "label": "Short / Cash / Long",
+              "params": {
+                "threshold": 0.001,
+                "fee_bps": 5,
+                "slippage_bps": 2
+              }
+            }
+          },
+          {
+            "id": "input",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": -140
+            },
+            "data": {
+              "kind": "network_input",
+              "label": "Input · 11 features",
+              "params": {
+                "input_features": 11,
+                "mode": "last"
+              }
+            }
+          },
+          {
+            "id": "dense64",
+            "type": "blueprint",
+            "position": {
+              "x": 290,
+              "y": -140
+            },
+            "data": {
+              "kind": "layer",
+              "label": "Dense 64 · ReLU",
+              "params": {
+                "layer_type": "Dense",
+                "units": 64,
+                "activation": "ReLU"
+              }
+            }
+          },
+          {
+            "id": "dense32",
+            "type": "blueprint",
+            "position": {
+              "x": 590,
+              "y": -140
+            },
+            "data": {
+              "kind": "layer",
+              "label": "Dense 32 · ReLU",
+              "params": {
+                "layer_type": "Dense",
+                "units": 32,
+                "activation": "ReLU"
+              }
+            }
+          },
+          {
+            "id": "output",
+            "type": "blueprint",
+            "position": {
+              "x": 900,
+              "y": -140
+            },
+            "data": {
+              "kind": "network_output",
+              "label": "Output · 1",
+              "params": {
+                "output_units": 1
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "data-features",
+            "source": "data",
+            "target": "features",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "features-prepare",
+            "source": "features",
+            "target": "prepare",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "prepare-model",
+            "source": "prepare",
+            "target": "model",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          },
+          {
+            "id": "model-backtest",
+            "source": "model",
+            "target": "backtest",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          },
+          {
+            "id": "input-dense64",
+            "source": "input",
+            "target": "dense64",
+            "sourceHandle": "network",
+            "targetHandle": "network",
+            "animated": true
+          },
+          {
+            "id": "dense64-dense32",
+            "source": "dense64",
+            "target": "dense32",
+            "sourceHandle": "network",
+            "targetHandle": "network",
+            "animated": true
+          },
+          {
+            "id": "dense32-output",
+            "source": "dense32",
+            "target": "output",
+            "sourceHandle": "network",
+            "targetHandle": "network",
+            "animated": true
+          },
+          {
+            "id": "network-model",
+            "source": "output",
+            "target": "model",
+            "sourceHandle": "network",
+            "targetHandle": "network"
+          }
+        ]
+      }
+    }
+  ]
+}

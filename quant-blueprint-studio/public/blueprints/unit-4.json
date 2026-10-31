@@ -1,0 +1,165 @@
+{
+  "format": "quantlabs-blueprint-library",
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "unit-4",
+      "title": "Unidad 4 · Regularización y dirección",
+      "area": "Regularización",
+      "description": "Comparación de BCE de datos para baseline, Dropout, L1, L2 y BatchNorm; salida sigmoid y umbral fijo .5.",
+      "instructions": [
+        "Carga la plantilla. Pulsa Execute Blueprint para ver progreso, selección, métricas y gráficos debajo del lienzo.",
+        "Predeterminada: serie sintética reproducible, sin internet. Para datos reales, selecciona yfinance en SPY / Market Data.",
+        "Selecciona Learning Experiment para cambiar características, ventanas, épocas, costes y otras opciones. Las dimensiones de entrada se derivan de las características seleccionadas.",
+        "Guarda una copia en Personal o exporta JSON. Al importar se recuperan nodos, conexiones y parámetros; al ejecutar se reentrena."
+      ],
+      "infographic": "unidad-4.png",
+      "graph": {
+        "nodes": [
+          {
+            "id": "data",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 180
+            },
+            "data": {
+              "kind": "source",
+              "label": "SPY · synthetic / yfinance",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 5
+              }
+            }
+          },
+          {
+            "id": "features",
+            "type": "blueprint",
+            "position": {
+              "x": 300,
+              "y": 180
+            },
+            "data": {
+              "kind": "features",
+              "label": "11 causal indicators",
+              "params": {
+                "lags": 0,
+                "use_rsi": true,
+                "use_ema": true,
+                "use_sma": true,
+                "use_macd": true,
+                "use_vwap": true,
+                "use_bb": true
+              }
+            }
+          },
+          {
+            "id": "experiment",
+            "type": "blueprint",
+            "position": {
+              "x": 620,
+              "y": 180
+            },
+            "data": {
+              "kind": "study",
+              "label": "Unidad 4 · Regularización y dirección",
+              "params": {
+                "topic": "regularization",
+                "feature_columns": "LogReturn,Volatility,RSI,EMA,SMA,VWAP,MACD,MACDSignal,BBUpper,BBMiddle,BBLower",
+                "widths": "64,32",
+                "lookback": 1,
+                "train_ratio": 0.65,
+                "val_ratio": 0.15,
+                "epochs": 12,
+                "patience": 5,
+                "batch_size": 64,
+                "lr": 0.001,
+                "trials": 6,
+                "latent_dim": 3,
+                "horizon": 16,
+                "cost_bps": 5,
+                "threshold_bps": 0,
+                "seed": 42
+              }
+            }
+          },
+          {
+            "id": "chart-0",
+            "type": "blueprint",
+            "position": {
+              "x": 950,
+              "y": 0
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Resultado fuera de muestra",
+              "params": {
+                "title": "Resultado fuera de muestra",
+                "plot_source": "auto",
+                "plot_columns": "",
+                "chart_type": "line",
+                "color": "Mint",
+                "study_chart": 0
+              }
+            }
+          },
+          {
+            "id": "chart-1",
+            "type": "blueprint",
+            "position": {
+              "x": 950,
+              "y": 200
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Validación / distribución",
+              "params": {
+                "title": "Validación / distribución",
+                "plot_source": "auto",
+                "plot_columns": "",
+                "chart_type": "line",
+                "color": "Violet",
+                "study_chart": 1
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "data-features",
+            "source": "data",
+            "target": "features",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "features-experiment",
+            "source": "features",
+            "target": "experiment",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "experiment-chart-0",
+            "source": "experiment",
+            "target": "chart-0",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          },
+          {
+            "id": "experiment-chart-1",
+            "source": "experiment",
+            "target": "chart-1",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          }
+        ]
+      }
+    }
+  ]
+}
