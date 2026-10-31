@@ -2,7 +2,7 @@
 
 ![Quantlabs Blueprints](docs/banner.svg)
 
-[![Version](https://img.shields.io/github/v/tag/rmrodriguezgit/Quantlabs-Blueprints?label=version&color=6cc9ac)](https://github.com/rmrodriguezgit/Quantlabs-Blueprints/releases/tag/v0.4.0)
+[![Version](https://img.shields.io/github/v/tag/rmrodriguezgit/Quantlabs-Blueprints?label=version&color=6cc9ac)](https://github.com/rmrodriguezgit/Quantlabs-Blueprints/releases/tag/v0.4.1)
 ![Desktop](https://img.shields.io/badge/desktop-macOS%20%7C%20Windows-79b4ef)
 ![Electron](https://img.shields.io/badge/Electron-42-79b4ef)
 ![React](https://img.shields.io/badge/React-19-61dafb)
@@ -11,7 +11,7 @@
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.x-ee4c2c)
 ![Features](https://img.shields.io/badge/Blueprints-indicators%20%7C%20networks%20%7C%20Markowitz%20%7C%20risk-c49af8)
 
-**Versión actual: [v0.4.0](https://github.com/rmrodriguezgit/Quantlabs-Blueprints/releases/tag/v0.4.0)** · [Historial de cambios](CHANGELOG.md) · [Verificaciones](VERIFICATION.md)
+**Versión actual: [v0.4.1](https://github.com/rmrodriguezgit/Quantlabs-Blueprints/releases/tag/v0.4.1)** · [Historial de cambios](CHANGELOG.md) · [Verificaciones](VERIFICATION.md)
 
 Estudio de escritorio para investigación cuantitativa mediante un grafo visual de nodos: datos → indicadores → preparación temporal → aprendizaje profundo → backtest. Base funcional para macOS y Windows, con Electron, React y un motor Python local.
 
@@ -119,6 +119,10 @@ El botón **Portfolio / Markowitz example** carga un pipeline independiente del 
 - El panel **PORTFOLIO & RISK ANALYTICS** muestra ROI, CAGR, VaR, CVaR, Sharpe, Sortino, OLS alpha/beta, volatilidad anual, drawdown y pesos. Las fechas de estimación y evaluación aparecen por separado.
 - **Risk Metrics** permite obtener estas métricas sobre un activo (pin naranja), un backtest (azul) o un portafolio (amarillo). Su pin superior admite opcionalmente otro nodo de precios como benchmark. Conectar la salida del modelo mide el activo subyacente en fechas de prueba; para medir la estrategia de trading conectar **Market Backtest**.
 
+![Indicadores del portafolio completo](docs/v0.4.1-full-portfolio-metrics.jpg)
+
+Desde v0.4.1, **Indicadores del portafolio completo** presenta once tarjetas sin desplazamiento horizontal. **Cartera evaluada** permite elegir pesos iguales, personalizados, máximo Sharpe o mínima varianza. Las tarjetas corresponden al retorno agregado de esa cartera después de rebalanceo y costes, no al promedio de métricas de los activos. También muestran fechas, benchmark, pesos y razones de métricas no definidas. La tabla comparativa de activos/carteras permanece debajo.
+
 [Guía de parámetros, fórmulas y supuestos](docs/PORTFOLIOS.md).
 
 ## Identificar gráficos y elegir colores
@@ -191,6 +195,7 @@ Los autoencoders también devuelven `autoencoder.latent` y `autoencoder.reconstr
 cd quant-blueprint-studio
 npm run typecheck
 npm run test:graph
+npm run test:portfolio-ui
 npm run build
 .venv/bin/python -m unittest discover -s backend/tests -v
 # Windows: .venv\Scripts\python.exe -m unittest discover -s backend/tests -v

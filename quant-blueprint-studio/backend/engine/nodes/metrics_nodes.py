@@ -55,6 +55,17 @@ def performance(returns: pd.Series, benchmark: pd.Series | None, params: dict[st
                          sm.add_constant(aligned['benchmark'].to_numpy() - daily_rf)).fit()
             result.update({'alpha_daily': float(fit.params[0]), 'alpha': float(fit.params[0] * annual),
                            'beta': float(fit.params[1]), 'ols_r2': float(fit.rsquared) if float(aligned['asset'].std(ddof=1)) > 1e-12 and np.isfinite(fit.rsquared) else None})
+    notes: dict[str, str] = {}
+    if result['sharpe'] is None:
+        notes['sharpe'] = 'Retornos constantes: la volatilidad del denominador es cero.'
+    if result['sortino'] is None:
+        notes['sortino'] = 'No hay desviación negativa respecto a la tasa libre de riesgo.'
+    if result['beta'] is None:
+        reason = 'No hay benchmark conectado.' if benchmark is None else 'El benchmark no tiene suficientes observaciones comunes o su varianza es cero.'
+        notes.update({key: reason for key in ('alpha','alpha_daily','beta','ols_r2')})
+    elif result['ols_r2'] is None:
+        notes['ols_r2'] = 'La serie evaluada tiene varianza cero; R² no está definido.'
+    result['metric_notes'] = notes
     return result
 
 

@@ -987,6 +987,8 @@ export const plotPalette: Record<string, string> = {
   Cyan: "#56d9dd",
 };
 export interface MetricRow {
+  metric_notes?: Record<string, string>;
+  alpha_daily?: number | null;
   name: string;
   roi: number | null;
   cagr: number | null;
@@ -1015,6 +1017,9 @@ export interface RiskReport {
   metrics: MetricRow[];
 }
 export interface PortfolioReport extends RiskReport {
+  portfolio_metrics?: MetricRow[];
+  asset_metrics?: MetricRow[];
+  benchmark_metrics?: MetricRow;
   assets: string[];
   weights: Record<string, Record<string, number>>;
   estimation: {

@@ -1,11 +1,11 @@
-# Verificación del proyecto (v0.4.0)
+# Verificación del proyecto (v0.4.1)
 
 Fecha: 31 de octubre de 2026. Entorno local macOS, Python 3.12.12, Node.js 22.22.3, npm 10.9.8.
 
 ## Comprobaciones
 
 - TypeScript estricto y compilación Vite/Electron: correctos.
-- Suite unittest: 24 pruebas, con diez arquitecturas como subpruebas; correcta.
+- Suite unittest: 25 pruebas, con diez arquitecturas como subpruebas; correcta.
 - Dependencias Python: `pip check` sin incompatibilidades.
 - Pipeline desde la interfaz web: completado con datos sintéticos, 144 observaciones de prueba y early stopping en 7 epochs. Los cuatro paneles mostraron datos.
 - Arranque de Electron compilado en macOS: ventana nativa y renderer local verificados.
@@ -78,3 +78,9 @@ Consultar `quant-blueprint-studio/package-lock.json` para el árbol npm completo
 - Ejemplo visual ejecutado: tres activos sintéticos, 528 retornos de estimación y 227 de holdout, seis filas de métricas (activos más asignaciones), pesos y dos gráficos.
 - Color Coral y título SPY / QQQ / TLT · Holdout aplicados sin repetir ejecución; se conservaron las métricas.
 - Integración Yahoo real: SPY, QQQ y TLT de un año, 251 fechas comunes, benchmark SPY, optimización con límite de peso 60%, 75 observaciones holdout y seis filas de métricas.
+
+## v0.4.1
+
+- Métricas separadas de cartera, activos y benchmark comprobadas; retorno de cartera contrastado con composición diaria de los activos.
+- Renderizado de las once tarjetas, selección personalizada por defecto y compatibilidad con resultados anteriores mediante `npm run test:portfolio-ui`.
+- Comprobación visual: once métricas visibles, selector cambiado a mínima varianza, valores y pesos actualizados sin repetir ejecución. Compilación, 25 pruebas Python y pruebas de grafo/renderizado correctas.

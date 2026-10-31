@@ -1062,3 +1062,104 @@ i.portfolio {
 .weights-table {
   max-width: 100%;
 }
+.portfolio-summary {
+  margin: 18px 0 24px;
+  padding: 18px;
+  border: 1px solid #6cc9ac55;
+  border-radius: 7px;
+  background: #101d26;
+}
+.portfolio-summary-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.portfolio-summary-heading h4 {
+  margin: 0 0 7px;
+  font-size: 15px;
+  color: #d8e6f4;
+}
+.portfolio-summary-heading p {
+  color: #9fb6ce;
+  font-size: 11px;
+  margin: 0;
+}
+.portfolio-summary-heading > label {
+  color: #9fb6ce;
+  font-size: 10px;
+  min-width: 210px;
+}
+.portfolio-summary-heading select {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 8px;
+  background: #172433;
+  border: 1px solid #506579;
+  border-radius: 5px;
+  color: #d8e6f4;
+  font-size: 12px;
+}
+.portfolio-metric-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+  gap: 10px;
+  margin: 15px 0;
+}
+.portfolio-metric-card {
+  padding: 14px 12px;
+  border: 1px solid #2f4454;
+  border-radius: 6px;
+  background: #152431;
+  min-width: 0;
+}
+.portfolio-metric-card > span {
+  display: block;
+  font-size: 10px;
+  color: #a6bdd6;
+}
+.portfolio-metric-card > strong {
+  display: block;
+  color: #80d9be;
+  font-size: 23px;
+  font-family: monospace;
+  font-weight: 500;
+  margin: 9px 0;
+}
+.portfolio-metric-card > small {
+  display: block;
+  color: #7f9ab6;
+  font-size: 9px;
+  line-height: 1.7;
+}
+.portfolio-selected-weights {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 15px;
+}
+.portfolio-selected-weights > strong {
+  font-size: 10px;
+  color: #c0d0e1;
+  font-weight: 500;
+}
+.portfolio-selected-weights > span {
+  border: 1px solid #354c60;
+  background: #172837;
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 10px;
+  color: #95adc6;
+}
+.portfolio-selected-weights b {
+  color: #d5d77e;
+  font-weight: 500;
+  margin-left: 5px;
+}
+.portfolio-selected-weights > .weight-total {
+  color: #6cc9ac;
+  border-color: #6cc9ac66;
+}

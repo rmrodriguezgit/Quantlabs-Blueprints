@@ -70,3 +70,7 @@ Series de portafolio: `equal_weight,max_sharpe,min_variance,custom` (la última 
 - [SciPy: SLSQP y sus restricciones](https://docs.scipy.org/doc/scipy/reference/optimize.minimize-slsqp.html).
 - [statsmodels: OLS y término constante explícito](https://www.statsmodels.org/stable/generated/statsmodels.regression.linear_model.OLS.html).
 - [NumPy: cuantiles e interpolación lineal](https://numpy.org/doc/stable/reference/generated/numpy.quantile.html).
+
+## Panel de cartera completa (v0.4.1)
+
+Después de ejecutar Portfolio / Markowitz, el bloque **Indicadores del portafolio completo** aparece antes de la tabla comparativa. Elegir la asignación en **Cartera evaluada** actualiza once tarjetas (ROI, CAGR, VaR, CVaR, Sharpe, Sortino, alpha, beta, volatilidad, drawdown y R²), junto con pesos y benchmark. La opción personalizada aparece si se definieron pesos personalizados. Cada indicador corresponde al retorno de la cartera agregada tras costes, no a un promedio de indicadores individuales. Los valores no definidos explican su causa.

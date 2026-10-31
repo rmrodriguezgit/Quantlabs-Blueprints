@@ -40,6 +40,9 @@ class PortfolioTests(unittest.TestCase):
         self.assertIsNone(metrics['sharpe'])
         self.assertIsNone(metrics['sortino'])
         self.assertIsNone(metrics['beta'])
+        self.assertIn('sharpe',metrics['metric_notes'])
+        self.assertIn('sortino',metrics['metric_notes'])
+        self.assertIn('beta',metrics['metric_notes'])
         with self.assertRaisesRegex(ValueError,'finite simple'):
             performance(pd.Series([.1,-1.,.1]),None,{})
 
@@ -92,6 +95,21 @@ class PortfolioTests(unittest.TestCase):
         self.assertLess(result.report['estimation']['end'],result.report['start'])
         with self.assertRaisesRegex(ValueError,'sum to 1'):
             build_portfolio(data,{'weights':'.5,.5,.5'})
+
+    def test_complete_portfolio_metrics_are_not_asset_averages(self) -> None:
+        data=portfolio_data({'tickers':'AAA,BBB,CCC','benchmark':'REFERENCE','years':1})
+        result=build_portfolio(data,{'weights':'.5,.3,.2'})
+        report=result.report
+        self.assertEqual(len(report['portfolio_metrics']),4)
+        self.assertEqual(len(report['asset_metrics']),3)
+        expected_keys={'roi','cagr','var','cvar','sharpe','sortino','alpha','beta','volatility','max_drawdown','ols_r2'}
+        self.assertTrue(all(expected_keys<=row.keys() for row in report['portfolio_metrics']))
+        self.assertEqual(report['benchmark_metrics']['name'],'REFERENCE')
+        daily=data.prices.pct_change(fill_method=None).reindex(result.returns.index).to_numpy()@np.array([.5,.3,.2])
+        row=next(row for row in report['portfolio_metrics'] if row['name']=='custom')
+        self.assertAlmostEqual(row['roi'],float(np.prod(1+daily)-1))
+        averaged=float(np.array([metric['roi'] for metric in report['asset_metrics']])@np.array([.5,.3,.2]))
+        self.assertNotAlmostEqual(row['roi'],averaged,places=8)
 
     def test_common_dates_and_invalid_assets(self) -> None:
         with self.assertRaisesRegex(ValueError,'unique tickers'):

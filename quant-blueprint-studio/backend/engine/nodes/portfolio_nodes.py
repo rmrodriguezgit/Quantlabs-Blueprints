@@ -7,7 +7,7 @@ import pandas as pd
 from scipy.optimize import minimize
 from sklearn.covariance import LedoitWolf
 from .data_nodes import source
-from .metrics_nodes import analyze, RiskAnalysis, settings
+from .metrics_nodes import analyze, RiskAnalysis, settings, performance
 
 
 @dataclass
@@ -167,7 +167,11 @@ def build_portfolio(data: PortfolioData, params: dict[str, Any]) -> PortfolioRes
     benchmark_test = benchmark.reindex(test.index).rename(data.benchmark_name)
     analysis = analyze(pd.concat([test, strategy_returns], axis=1), benchmark_test, params,
                        str(params.get('title', 'Portfolio comparison')), 'holdout / out of sample')
-    report = {**analysis.report, 'assets': list(test.columns), 'benchmark': data.benchmark_name,
+    report = {**analysis.report,
+              'portfolio_metrics': [row for row in analysis.report['metrics'] if row['name'] in weights],
+              'asset_metrics': [row for row in analysis.report['metrics'] if row['name'] in test.columns],
+              'benchmark_metrics': {'name': data.benchmark_name, **performance(benchmark_test, benchmark_test, params)},
+              'assets': list(test.columns), 'benchmark': data.benchmark_name,
               'weights': {name: {ticker: float(w) for ticker, w in zip(test.columns, allocation)} for name, allocation in weights.items()},
               'estimation': {'start': str(train.index[0].date()), 'end': str(train.index[-1].date()), 'observations': len(train),
                              'covariance': covariance, 'long_only': True, 'max_weight': cap},

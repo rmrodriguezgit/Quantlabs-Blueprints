@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.4.1 — 2026-10-31
+
+- Panel de indicadores del portafolio completo con 11 tarjetas y selector de cartera; pesos y referencia visibles.
+- Métricas de cartera, activos y benchmark separadas en la API, conservando la tabla anterior y compatibilidad con resultados previos.
+- Explicaciones para Sharpe, Sortino y OLS no definidos.
+- Validación del retorno agregado frente a promedios incorrectos y prueba de renderizado de todas las tarjetas.
+
+
 ## v0.4.0 — 2026-10-31
 
 - Plot con títulos, origen, identificación de nodo, paleta de ocho colores, colores por serie y leyendas personalizadas. Cambios de presentación inmediatos sin reentrenar.
