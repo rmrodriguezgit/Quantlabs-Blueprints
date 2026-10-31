@@ -4,13 +4,20 @@ from typing import Any, Callable
 import numpy as np
 import pandas as pd
 import torch
-from .nodes.data_nodes import source, features
+from .nodes.data_nodes import source, features, merge_features
 from .nodes.stats_nodes import PreparedData, prepare
-from .nodes.dl_nodes import ModelResult, train
+from .nodes.dl_nodes import ModelResult, NetworkSpec, train
 from .nodes.backtest_nodes import backtest
 
 PINS = {'source': (None, 'frame'), 'features': ('frame', 'frame'), 'prepare': ('frame', 'tensor'),
-        'model': ('tensor', 'tensor'), 'backtest': ('tensor', None), 'config': (None, 'config')}
+        'model': ('tensor', 'tensor'), 'backtest': ('tensor', None), 'config': (None, 'config'),
+        'network_input': (None, 'network'), 'layer': ('network', 'network'),
+        'network_output': ('network', 'network'), 'merge': ('frame', 'frame')}
+INPUTS = {kind: ({pin: pin} if pin else {}) for kind, (pin, _) in PINS.items()}
+for kind in ('features', 'prepare', 'model', 'backtest'):
+    INPUTS[kind]['config'] = 'config'
+INPUTS['model']['network'] = 'network'
+INPUTS['merge']['frame_b'] = 'frame'
 
 
 def serialize(value: Any) -> Any:
@@ -46,10 +53,8 @@ class DAGRunner:
                 raise ValueError('Edge refers to a missing node.')
             src, dst = self.nodes[edge['source']]['data']['kind'], self.nodes[edge['target']]['data']['kind']
             out_pin, in_pin = edge.get('sourceHandle'), edge.get('targetHandle')
-            if out_pin != PINS[src][1] or (in_pin != PINS[dst][0] and not (in_pin == 'config' and dst in ('features', 'prepare', 'model', 'backtest'))):
+            if out_pin is None or out_pin != PINS[src][1] or INPUTS[dst].get(in_pin) != out_pin:
                 raise ValueError('Incompatible or missing pin handles.')
-            if out_pin != in_pin:
-                raise ValueError('Pin types must match.')
             if any(e.get('targetHandle') == in_pin for e in self.incoming[edge['target']]):
                 raise ValueError('Only one connection per input pin is allowed.')
             self.incoming[edge['target']].append(edge)
@@ -79,11 +84,13 @@ class DAGRunner:
             node = self.nodes[key]
             kind, params = node['data']['kind'], dict(node['data'].get('params', {}))
             upstream: Any = None
+            inputs: dict[str, Any] = {}
             for edge in self.incoming[key]:
                 value = self.outputs[edge['source']]
+                inputs[edge['targetHandle']] = value
                 if edge['targetHandle'] == 'config':
                     params.update(value)
-                else:
+                elif edge['targetHandle'] == PINS[kind][0]:
                     upstream = value
             if progress:
                 progress({'node': key, 'status': 'running'})
@@ -92,12 +99,33 @@ class DAGRunner:
                     output: Any = source(params)
                 elif kind == 'config':
                     output = params
-                elif kind == 'features' and isinstance(upstream, pd.DataFrame):
+                elif kind == 'network_input':
+                    count, mode = int(params.get('input_features', 16)), str(params.get('mode', 'last'))
+                    if not 1 <= count <= 512 or mode not in ('last', 'flatten'):
+                        raise ValueError('Network input requires 1–512 features and last/flatten mode.')
+                    output = NetworkSpec(count, mode, [])
+                elif kind in ('layer', 'network_output') and isinstance(upstream, NetworkSpec):
+                    if upstream.complete:
+                        raise ValueError('No layers may follow Network Output; connect it to a trainer.')
+                    if kind == 'network_output':
+                        if int(params.get('output_units', 1)) != 1:
+                            raise ValueError('Current forecasting target requires exactly one output.')
+                        output = NetworkSpec(upstream.input_features, upstream.mode, list(upstream.layers), True)
+                    else:
+                        output = NetworkSpec(upstream.input_features, upstream.mode, [*upstream.layers, params])
+                elif kind == 'merge' and isinstance(upstream, pd.DataFrame) and isinstance(inputs.get('frame_b'), pd.DataFrame):
+                    output = merge_features(upstream, inputs['frame_b'])
+                elif kind == 'features'  and isinstance(upstream, pd.DataFrame):
                     output = features(upstream, params)
                 elif kind == 'prepare' and isinstance(upstream, pd.DataFrame):
                     output = prepare(upstream, params)
                     report['decomposition'] = output.decomposition
+                    report['features'] = output.feature_names
+                    report['input_shape'] = list(output.x_train.shape[1:])
                 elif kind == 'model' and isinstance(upstream, PreparedData):
+                    if 'network' in inputs:
+                        params['_network'] = inputs['network']
+                        params['architecture'] = 'Custom'
                     output = train(upstream, params)
                     report['metrics'] = output.metrics
                     report['history'] = output.history
@@ -113,7 +141,10 @@ class DAGRunner:
             except (ValueError, TypeError, RuntimeError, KeyError) as exc:
                 raise ValueError(f'Node {key} ({kind}): {exc}') from exc
             self.outputs[key] = output
-            report['nodes'].append({'id': key, 'kind': kind, 'status': 'complete'})
+            summary = {'id': key, 'kind': kind, 'status': 'complete'}
+            if isinstance(output, pd.DataFrame):
+                summary.update(serialize(output))
+            report['nodes'].append(summary)
             if progress:
                 progress({'node': key, 'status': 'complete'})
         return serialize(report)

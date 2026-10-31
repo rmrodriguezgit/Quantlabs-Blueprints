@@ -671,3 +671,88 @@ i.config {
     font-size: 15px;
   }
 }
+
+.inspector-field {
+  margin-bottom: 14px;
+  position: relative;
+  font-size: 10px;
+  color: #9caabf;
+}
+.inspector-field > label {
+  margin: 0 0 7px;
+}
+.inspector-field > input[type="checkbox"] {
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+.feature-selector {
+  border: 1px solid #303c4d;
+  background: #0e141d;
+  border-radius: 5px;
+  padding: 9px;
+  margin-top: 8px;
+}
+.feature-selector > small {
+  display: block;
+  color: #6cc9ac;
+  margin: 8px 0 12px;
+}
+.feature-selector > label {
+  display: flex;
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.feature-selector input[type="checkbox"] {
+  float: none;
+  margin: 0;
+}
+.feature-actions {
+  display: flex;
+  gap: 6px;
+}
+.feature-actions button {
+  padding: 5px 8px;
+  font-size: 9px;
+}
+i.network,
+.react-flow__handle.network {
+  background: #c49af8;
+}
+i.network {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.network-label {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 7px;
+  color: #c49af8;
+}
+.second-input-label {
+  position: absolute;
+  left: 7px;
+  bottom: 10px;
+  font-size: 7px;
+  color: #f2ad65;
+}
+.palette-item:focus-visible {
+  outline: 1px solid #6cc9ac;
+}
+.toolbar-actions {
+  flex-wrap: wrap;
+}
+.toolbar {
+  min-height: 58px;
+  height: auto;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  gap: 10px;
+}

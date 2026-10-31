@@ -5,12 +5,23 @@ Fecha: 31 de octubre de 2026. Entorno local macOS, Python 3.12.12, Node.js 22.22
 ## Comprobaciones
 
 - TypeScript estricto y compilación Vite/Electron: correctos.
-- Suite unittest: seis pruebas, con diez arquitecturas como subpruebas; correcta.
+- Suite unittest: diez pruebas, con diez arquitecturas como subpruebas; correcta.
 - Dependencias Python: `pip check` sin incompatibilidades.
 - Pipeline desde la interfaz web: completado con datos sintéticos, 144 observaciones de prueba y early stopping en 7 epochs. Los cuatro paneles mostraron datos.
 - Arranque de Electron compilado en macOS: ventana nativa y renderer local verificados.
 - Sintaxis del lanzador Bash: correcta.
 - Sin verificación nativa en Windows ni descarga real yfinance. Instaladores de escritorio quedan fuera de esta base.
+
+## Ampliación de indicadores y diseño de redes
+
+- Fórmulas de VWAP, SMA, BB y MACD verificadas con datos sintéticos.
+- Activar/desactivar indicadores y causalidad de características comprobados.
+- Selección de 16 entradas y dimensiones 16×64, 64×32, 32×1 verificadas.
+- Dropout, BatchNorm y activaciones en redes conectadas comprobados.
+- Unión de ramas y detección de columnas contradictorias comprobadas.
+- Ejemplo JSON ejecutado mediante HTTP, incluyendo ramificación de una arquitectura a dos entrenadores.
+- Ejemplo cargado y entrenado desde la interfaz: 9 nodos, 16 entradas, 147 observaciones de prueba y 12 epochs. Seleccionar nodos conserva los gráficos; se verificaron los checkboxes de indicadores y de características.
+- Versión del proyecto: 0.2.0.
 
 ## Versiones Python instaladas
 

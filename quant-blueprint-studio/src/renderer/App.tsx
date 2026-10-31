@@ -15,6 +15,9 @@ import { PerformanceDock } from "./components/PerformanceDock";
 import {
   catalog,
   defaultGraph,
+  networkExample,
+  featureOptions,
+  createNode,
   type Graph,
   type Param,
   type Result,
@@ -32,7 +35,7 @@ function isGraph(value: unknown): value is Graph {
         typeof n.id === "string" &&
         n.type === "blueprint" &&
         n.data &&
-        n.data.kind in catalog &&
+        Object.hasOwn(catalog, n.data.kind) &&
         typeof n.data.params === "object" &&
         n.data.params !== null &&
         Object.values(n.data.params).every((v) =>
@@ -65,6 +68,19 @@ function isResult(value: unknown): value is Result {
     r.metrics !== null
   );
 }
+function graphSignature(graph: Graph): string {
+  return JSON.stringify({
+    nodes: graph.nodes.map(({ id, data }) => ({ id, data })),
+    edges: graph.edges.map(
+      ({ source, target, sourceHandle, targetHandle }) => ({
+        source,
+        target,
+        sourceHandle,
+        targetHandle,
+      }),
+    ),
+  });
+}
 function loadGraph(): Graph {
   try {
     const saved = JSON.parse(
@@ -89,6 +105,7 @@ export default function App() {
   const updateGraph = (update: (g: Graph) => Graph) => {
     setGraph((g) => {
       const next = update(g);
+      if (graphSignature(next) !== graphSignature(g)) setResult(null);
       try {
         localStorage.setItem("quant-blueprint", JSON.stringify(next));
       } catch {
@@ -96,7 +113,6 @@ export default function App() {
       }
       return next;
     });
-    setResult(null);
   };
   const execute = async () => {
     setRunning(true);
@@ -124,7 +140,7 @@ export default function App() {
         throw new Error("Engine returned an invalid result.");
       setResult(value);
       setMessage(
-        `Completed ${graph.nodes.length} nodes · ${value.predictions.length} out-of-sample observations`,
+        `Completed ${graph.nodes.length} nodes · ${value.features?.length ?? "auto"} input features · ${value.predictions.length} out-of-sample observations`,
       );
     } catch (e) {
       setError(true);
@@ -157,7 +173,7 @@ export default function App() {
         </div>
         <span className="workspace-tag">LOCAL WORKSPACE</span>
         <div className="header-right">
-          <span className="version">BASELINE v0.1</span>
+          <span className="version">BASELINE v0.2</span>
           <div className="engine-indicator">
             <span className="live-dot" />
             Python engine
@@ -171,6 +187,19 @@ export default function App() {
           <span>Blueprint graph</span>
         </div>
         <div className="toolbar-actions">
+          <button
+            disabled={running}
+            onClick={() => {
+              updateGraph(() => networkExample());
+              setSelected(null);
+              setError(false);
+              setMessage(
+                "Example loaded: 16 features → Dense 64 ReLU → Dense 32 ReLU → 1 output.",
+              );
+            }}
+          >
+            16 → 64 → 32 → 1
+          </button>
           <button
             disabled={running}
             onClick={() => {
@@ -188,7 +217,10 @@ export default function App() {
             <Upload size={15} />
             Import
           </button>
-          <button onClick={exportGraph}>
+          <button
+            title="Save nodes, connections and parameters to a JSON file"
+            onClick={exportGraph}
+          >
             <Download size={15} />
             Export
           </button>
@@ -227,7 +259,17 @@ export default function App() {
         />
       </div>
       <main className={running ? "workspace busy" : "workspace"}>
-        <Palette />
+        <Palette
+          disabled={running}
+          onAdd={(kind) => {
+            const node = createNode(kind, graph.nodes.length, {
+              x: 300 + (graph.nodes.length % 4) * 50,
+              y: 150 + (graph.nodes.length % 4) * 50,
+            });
+            updateGraph((g) => ({ ...g, nodes: [...g.nodes, node] }));
+            setSelected(node.id);
+          }}
+        />
         <ReactFlowProvider>
           <BlueprintCanvas
             graph={graph}
@@ -238,6 +280,23 @@ export default function App() {
         </ReactFlowProvider>
         <DetailsInspector
           node={graph.nodes.find((n) => n.id === selected)}
+          availableFeatures={selected ? featureOptions(graph, selected) : []}
+          onDuplicate={() => {
+            const original = graph.nodes.find((n) => n.id === selected);
+            if (!original) return;
+            const node = {
+              ...original,
+              id: crypto.randomUUID(),
+              position: {
+                x: original.position.x + 45,
+                y: original.position.y + 90,
+              },
+              selected: false,
+              data: { ...original.data, params: { ...original.data.params } },
+            };
+            updateGraph((g) => ({ ...g, nodes: [...g.nodes, node] }));
+            setSelected(node.id);
+          }}
           disabled={running}
           onChange={(key: string, value: Param) =>
             updateGraph((g) => ({

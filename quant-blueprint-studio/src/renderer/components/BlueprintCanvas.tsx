@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import {
   ReactFlow,
   Background,
@@ -10,6 +10,7 @@ import {
   applyEdgeChanges,
   applyNodeChanges,
   useReactFlow,
+  useNodesInitialized,
   type NodeProps,
   type Connection,
   type Edge,
@@ -27,6 +28,7 @@ import {
 import {
   catalog,
   createNode,
+  inputHandles,
   type BlueprintNode,
   type Graph,
   type Kind,
@@ -39,7 +41,45 @@ const icons = {
   model: BrainCircuit,
   backtest: ChartNoAxesCombined,
   config: Settings2,
+  network_input: Layers3,
+  layer: BrainCircuit,
+  network_output: Layers3,
+  merge: SlidersHorizontal,
 };
+function nodeSummary(data: BlueprintNode["data"]): string {
+  const p = data.params;
+  switch (data.kind) {
+    case "source":
+      return `${p.ticker} · ${p.years}Y · ${p.source}`;
+    case "features":
+      return (
+        ["rsi", "ema", "sma", "macd", "vwap", "bb"]
+          .filter((k) => p[`use_${k}`] !== false)
+          .map((k) => k.toUpperCase())
+          .join(" · ") || "Returns + volatility"
+      );
+    case "prepare":
+      return `${String(p.feature_columns ?? "").trim() ? String(p.feature_columns).split(",").length : "auto"} features · ${p.lookback} bars`;
+    case "model":
+      return `${p.architecture} · ${p.epochs} epochs`;
+    case "network_input":
+      return `${p.input_features} features · ${p.mode}`;
+    case "layer":
+      return p.layer_type === "Dense"
+        ? `Dense ${p.units} → ${p.activation}`
+        : p.layer_type === "Dropout"
+          ? `Dropout ${p.rate}`
+          : String(p.layer_type);
+    case "network_output":
+      return `${p.output_units} output · Linear`;
+    case "merge":
+      return "A + B · date-aligned features";
+    case "backtest":
+      return `Threshold ${p.threshold}`;
+    default:
+      return "Overrides connected parameters";
+  }
+}
 function VisualNode({ data, selected }: NodeProps<BlueprintNode>) {
   const def = catalog[data.kind];
   const Icon = icons[data.kind];
@@ -57,48 +97,37 @@ function VisualNode({ data, selected }: NodeProps<BlueprintNode>) {
         <strong>{data.label}</strong>
       </div>
       <p>{def.subtitle}</p>
-      <div className="node-summary">
-        {data.kind === "source"
-          ? `${String(data.params.ticker)} · ${String(data.params.years)}Y · ${String(data.params.source)}`
-          : data.kind === "model"
-            ? `${String(data.params.architecture)} / ${String(data.params.hidden)} units`
-            : data.kind === "prepare"
-              ? `${String(data.params.lookback)} bars → ${String(data.params.target)}`
-              : data.kind === "features"
-                ? `${String(data.params.lags)} lags / RSI ${String(data.params.rsi_window)}`
-                : data.kind === "backtest"
-                  ? `Threshold ${String(data.params.threshold)}`
-                  : "Overrides connected parameters"}
-      </div>
+      <div className="node-summary">{nodeSummary(data)}</div>
       <div className="node-pins">
-        {def.input ? (
-          <span>
-            <i className={def.input} />
-            {def.input === "frame" ? "DataFrame" : "Tensor bundle"}
-          </span>
-        ) : (
-          <span />
-        )}
-        {def.output && (
-          <span>
-            {def.output === "frame"
-              ? "DataFrame"
-              : def.output === "config"
-                ? "Config"
-                : "Tensor bundle"}
-            <i className={def.output} />
-          </span>
-        )}
+        <span>{def.input ?? "source"}</span>
+        <span>{def.output ?? "report"}</span>
       </div>
-      {def.input && (
-        <Handle
-          type="target"
-          position={Position.Left}
-          id={def.input}
-          className={def.input}
-          style={{ top: "82%" }}
-        />
-      )}
+      {Object.entries(inputHandles(data.kind)).map(([id, type], i) => (
+        <div key={id}>
+          <Handle
+            type="target"
+            position={
+              id === "config"
+                ? Position.Top
+                : id === "network" && data.kind === "model"
+                  ? Position.Bottom
+                  : Position.Left
+            }
+            id={id}
+            className={type}
+            style={
+              id === "config" || (id === "network" && data.kind === "model")
+                ? {}
+                : { top: data.kind === "merge" ? `${65 + i * 22}%` : "82%" }
+            }
+          />
+          {id === "config" && <span className="config-label">config</span>}
+          {id === "network" && data.kind === "model" && (
+            <span className="network-label">network</span>
+          )}
+          {id === "frame_b" && <span className="second-input-label">B</span>}
+        </div>
+      ))}
       {def.output && (
         <Handle
           type="source"
@@ -108,35 +137,42 @@ function VisualNode({ data, selected }: NodeProps<BlueprintNode>) {
           style={{ top: "82%" }}
         />
       )}
-      {def.input && (
-        <>
-          <Handle
-            type="target"
-            position={Position.Top}
-            id="config"
-            className="config"
-          />
-          <span className="config-label">config</span>
-        </>
-      )}
     </div>
   );
 }
 const nodeTypes = { blueprint: VisualNode };
-export function Palette() {
+export function Palette({
+  onAdd,
+  disabled,
+}: {
+  onAdd: (kind: Kind) => void;
+  disabled: boolean;
+}) {
   return (
     <aside className="palette">
       <div className="aside-heading">
-        NODE LIBRARY <span>06</span>
+        NODE LIBRARY <span>{Object.keys(catalog).length}</span>
       </div>
-      <p className="muted">Drag a node onto the canvas</p>
+      <p className="muted">Click or drag a node onto the canvas</p>
       {(Object.keys(catalog) as Kind[]).map((kind) => {
         const def = catalog[kind];
         const Icon = icons[kind];
         return (
           <div
             key={kind}
-            draggable
+            draggable={!disabled}
+            role="button"
+            tabIndex={disabled ? -1 : 0}
+            aria-label={`Add ${def.label}`}
+            onClick={() => {
+              if (!disabled) onAdd(kind);
+            }}
+            onKeyDown={(e) => {
+              if (!disabled && (e.key === "Enter" || e.key === " ")) {
+                e.preventDefault();
+                onAdd(kind);
+              }
+            }}
             onDragStart={(e) => {
               e.dataTransfer.setData("application/blueprint", kind);
               e.dataTransfer.effectAllowed = "move";
@@ -155,6 +191,10 @@ export function Palette() {
         );
       })}
       <div className="pin-legend">
+        <span>
+          <i className="network" />
+          Network architecture
+        </span>
         <span>
           <i className="frame" />
           DataFrame
@@ -189,6 +229,11 @@ export function BlueprintCanvas({
   disabled,
 }: Props) {
   const flow = useReactFlow<BlueprintNode, Edge>();
+  const initialized = useNodesInitialized();
+  const topology = graph.nodes.map((n) => n.id).join();
+  useEffect(() => {
+    if (initialized) void flow.fitView({ padding: 0.16, duration: 200 });
+  }, [initialized, topology, flow]);
   const onNodesChange: OnNodesChange<BlueprintNode> = useCallback(
     (changes) =>
       setGraph((g) => ({ ...g, nodes: applyNodeChanges(changes, g.nodes) })),
@@ -206,7 +251,10 @@ export function BlueprintCanvas({
       !src ||
       !dst ||
       src.id === dst.id ||
-      connection.sourceHandle !== connection.targetHandle
+      !connection.targetHandle ||
+      !connection.sourceHandle ||
+      inputHandles(dst.data.kind)[connection.targetHandle] !==
+        connection.sourceHandle
     )
       return false;
     if (
@@ -238,7 +286,7 @@ export function BlueprintCanvas({
         e.preventDefault();
         if (disabled) return;
         const kind = e.dataTransfer.getData("application/blueprint");
-        if (!(kind in catalog)) return;
+        if (!Object.hasOwn(catalog, kind)) return;
         const position = flow.screenToFlowPosition({
           x: e.clientX,
           y: e.clientY,

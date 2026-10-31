@@ -5,12 +5,16 @@ interface Props {
   onChange: (key: string, value: Param) => void;
   onDelete: () => void;
   disabled: boolean;
+  availableFeatures: string[];
+  onDuplicate: () => void;
 }
 export function DetailsInspector({
   node,
   onChange,
   onDelete,
   disabled,
+  availableFeatures,
+  onDuplicate,
 }: Props) {
   return (
     <aside className="inspector">
@@ -24,12 +28,80 @@ export function DetailsInspector({
             {node.data.label}
           </div>
           <p className="muted">{catalog[node.data.kind].subtitle}</p>
+          {node.data.kind === "network_input" && (
+            <p className="muted">
+              last: N features from the last bar. flatten: lookback × N inputs.
+            </p>
+          )}
+          {node.data.kind === "network_output" && (
+            <p className="muted">
+              Connect the purple output to the trainer’s purple network pin.
+            </p>
+          )}
           <fieldset disabled={disabled}>
             {catalog[node.data.kind].fields.map((field) => (
-              <label key={field.key}>
-                {field.label}
-                {field.options ? (
+              <div className="inspector-field" key={field.key}>
+                <label htmlFor={`param-${field.key}`}>{field.label}</label>
+                {field.key === "feature_columns" ? (
+                  <div className="feature-selector">
+                    <div className="feature-actions">
+                      <button
+                        type="button"
+                        onClick={() => onChange(field.key, "")}
+                      >
+                        All
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onChange(
+                            field.key,
+                            availableFeatures.slice(0, 16).join(","),
+                          )
+                        }
+                      >
+                        First 16
+                      </button>
+                    </div>
+                    <small>
+                      {String(node.data.params.feature_columns ?? "").trim()
+                        ? String(node.data.params.feature_columns)
+                            .split(",")
+                            .filter(Boolean).length
+                        : availableFeatures.length}{" "}
+                      input features selected
+                    </small>
+                    {availableFeatures.length === 0 && (
+                      <p>Connect a feature source first.</p>
+                    )}
+                    {availableFeatures.map((name) => {
+                      const raw = String(
+                        node.data.params.feature_columns ?? "",
+                      ).trim();
+                      const selected = raw
+                        ? raw.split(",").map((s) => s.trim())
+                        : availableFeatures;
+                      return (
+                        <label key={name}>
+                          <input
+                            type="checkbox"
+                            checked={selected.includes(name)}
+                            onChange={(e) => {
+                              const next = e.target.checked
+                                ? [...selected, name]
+                                : selected.filter((n) => n !== name);
+                              if (next.length)
+                                onChange(field.key, next.join(","));
+                            }}
+                          />
+                          {name}
+                        </label>
+                      );
+                    })}
+                  </div>
+                ) : field.options ? (
                   <select
+                    id={`param-${field.key}`}
                     value={String(node.data.params[field.key] ?? field.value)}
                     onChange={(e) => onChange(field.key, e.target.value)}
                   >
@@ -39,6 +111,7 @@ export function DetailsInspector({
                   </select>
                 ) : typeof field.value === "boolean" ? (
                   <input
+                    id={`param-${field.key}`}
                     type="checkbox"
                     checked={Boolean(
                       node.data.params[field.key] ?? field.value,
@@ -47,6 +120,7 @@ export function DetailsInspector({
                   />
                 ) : (
                   <input
+                    id={`param-${field.key}`}
                     type={typeof field.value === "number" ? "number" : "text"}
                     value={String(node.data.params[field.key] ?? field.value)}
                     min={field.min}
@@ -60,13 +134,16 @@ export function DetailsInspector({
                     }}
                   />
                 )}
-              </label>
+              </div>
             ))}
           </fieldset>
           <div className="inspector-hint">
             Parameters are applied on the next execution. A connected config
             node overrides matching fields.
           </div>
+          <button disabled={disabled} onClick={onDuplicate}>
+            Duplicate node
+          </button>
           <button
             className="delete-button"
             disabled={disabled}

@@ -1,0 +1,210 @@
+{
+  "nodes": [
+    {
+      "id": "0",
+      "type": "blueprint",
+      "position": {
+        "x": 0,
+        "y": 300
+      },
+      "data": {
+        "kind": "source",
+        "label": "Market Data",
+        "params": {
+          "source": "synthetic",
+          "years": 1,
+          "ticker": "SPY"
+        }
+      }
+    },
+    {
+      "id": "1",
+      "type": "blueprint",
+      "position": {
+        "x": 280,
+        "y": 300
+      },
+      "data": {
+        "kind": "features",
+        "label": "Technical Features",
+        "params": {}
+      }
+    },
+    {
+      "id": "2",
+      "type": "blueprint",
+      "position": {
+        "x": 560,
+        "y": 300
+      },
+      "data": {
+        "kind": "prepare",
+        "label": "Series Preparation",
+        "params": {
+          "lookback": 1,
+          "feature_columns": "Open,High,Low,Close,Volume,LogReturn,Volatility,RSI,EMA,SMA,VWAP,MACD,MACDSignal,BBUpper,BBMiddle,BBLower"
+        }
+      }
+    },
+    {
+      "id": "3",
+      "type": "blueprint",
+      "position": {
+        "x": 840,
+        "y": 300
+      },
+      "data": {
+        "kind": "model",
+        "label": "Deep Learning",
+        "params": {
+          "architecture": "Custom",
+          "epochs": 12
+        }
+      }
+    },
+    {
+      "id": "4",
+      "type": "blueprint",
+      "position": {
+        "x": 1120,
+        "y": 300
+      },
+      "data": {
+        "kind": "backtest",
+        "label": "Market Backtest",
+        "params": {}
+      }
+    },
+    {
+      "id": "5",
+      "type": "blueprint",
+      "position": {
+        "x": 0,
+        "y": 30
+      },
+      "data": {
+        "kind": "network_input",
+        "label": "Network Input",
+        "params": {
+          "input_features": 16,
+          "mode": "last"
+        }
+      }
+    },
+    {
+      "id": "6",
+      "type": "blueprint",
+      "position": {
+        "x": 280,
+        "y": 30
+      },
+      "data": {
+        "kind": "layer",
+        "label": "Network Layer",
+        "params": {
+          "layer_type": "Dense",
+          "units": 64,
+          "activation": "ReLU"
+        }
+      }
+    },
+    {
+      "id": "7",
+      "type": "blueprint",
+      "position": {
+        "x": 560,
+        "y": 30
+      },
+      "data": {
+        "kind": "layer",
+        "label": "Network Layer",
+        "params": {
+          "layer_type": "Dense",
+          "units": 32,
+          "activation": "ReLU"
+        }
+      }
+    },
+    {
+      "id": "8",
+      "type": "blueprint",
+      "position": {
+        "x": 840,
+        "y": 30
+      },
+      "data": {
+        "kind": "network_output",
+        "label": "Network Output",
+        "params": {
+          "output_units": 1
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e0",
+      "source": "0",
+      "target": "1",
+      "sourceHandle": "frame",
+      "targetHandle": "frame",
+      "animated": true
+    },
+    {
+      "id": "e1",
+      "source": "1",
+      "target": "2",
+      "sourceHandle": "frame",
+      "targetHandle": "frame",
+      "animated": true
+    },
+    {
+      "id": "e2",
+      "source": "2",
+      "target": "3",
+      "sourceHandle": "tensor",
+      "targetHandle": "tensor",
+      "animated": true
+    },
+    {
+      "id": "e3",
+      "source": "3",
+      "target": "4",
+      "sourceHandle": "tensor",
+      "targetHandle": "tensor",
+      "animated": true
+    },
+    {
+      "id": "e4",
+      "source": "5",
+      "target": "6",
+      "sourceHandle": "network",
+      "targetHandle": "network",
+      "animated": true
+    },
+    {
+      "id": "e5",
+      "source": "6",
+      "target": "7",
+      "sourceHandle": "network",
+      "targetHandle": "network",
+      "animated": true
+    },
+    {
+      "id": "e6",
+      "source": "7",
+      "target": "8",
+      "sourceHandle": "network",
+      "targetHandle": "network",
+      "animated": true
+    },
+    {
+      "id": "e7",
+      "source": "8",
+      "target": "3",
+      "sourceHandle": "network",
+      "targetHandle": "network",
+      "animated": true
+    }
+  ]
+}

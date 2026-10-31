@@ -72,10 +72,31 @@ npm run electron:dev
 4. Consultar los cuatro paneles: TR/VA/TE separados, real vs. pronóstico, equity de estrategia/mercado y MSE/RMSE/MAE/R².
 5. **Export** guarda el grafo JSON; **Import** lo recupera. El editor también conserva el último grafo en almacenamiento local. **Reset** restaura el ejemplo inicial.
 
+## Diseñar una red 16 → 64 → 32 → 1
+
+![Ejemplo de red conectada con 16 entradas](docs/network-16-64-32-1.jpg)
+
+Usar el botón **16 → 64 → 32 → 1** de la barra superior para cargar un ejemplo completo. También se puede importar [`examples/dense-16-64-32-1.json`](quant-blueprint-studio/examples/dense-16-64-32-1.json).
+
+1. En **Technical Features**, activar/desactivar RSI, EMA, SMA, MACD, VWAP y BB y ajustar sus periodos. VWAP usa precio típico ponderado por volumen en una ventana móvil de barras diarias; no es VWAP intradía reiniciado por sesión. BB usa desviación poblacional (`ddof=0`).
+2. En **Series Preparation**, marcar las columnas de entrada. El inspector muestra el número seleccionado. El objetivo de predicción se elige aparte.
+3. Añadir **Network Input**, declarar 16 características y seleccionar `last`: la red recibe los 16 valores de la última barra disponible. `flatten` usa `lookback × características` valores. El ejemplo usa lookback 1.
+4. Conectar pines morados: **Network Input → Network Layer (Dense, 64, ReLU) → Network Layer (Dense, 32, ReLU) → Network Output (1)**.
+5. Conectar **Network Output** al pin morado `network` del entrenador **Deep Learning** y **Series Preparation** al pin azul. La arquitectura conectada tiene prioridad sobre el selector del entrenador.
+6. Ejecutar. Se validan las dimensiones antes de entrenar; el ejemplo crea matrices 16×64, 64×32 y 32×1. Los números 64 y 32 son neuronas de dos capas ocultas.
+
+**Network Layer** permite añadir Dense, ReLU, Tanh, GELU, Sigmoid, LeakyReLU, Dropout o BatchNorm. Las capas Dense permiten elegir su activación, incluida Identity. El cabezal de salida es lineal y escalar para el objetivo de pronóstico actual. Los presets LSTM/GRU/CNN/AE/DQN siguen disponibles en el entrenador cuando no hay una arquitectura conectada.
+
+Se pueden ramificar salidas hacia varios consumidores, duplicar nodos desde el inspector y añadirlos con clic o arrastrando. **Merge Features** combina dos ramas por fecha mediante entradas A y B; elimina columnas idénticas y rechaza nombres con valores contradictorios. Una arquitectura puede alimentar varios entrenadores: comparten el diseño y entrenan pesos independientes. El límite de seguridad sigue siendo 50 nodos y 150 conexiones; no se admiten ciclos.
+
+## Guardar y recuperar
+
+**Export** descarga un `.json` con los nodos, posiciones, conexiones y parámetros. **Import** abre ese archivo. El editor también restaura automáticamente su último diseño desde el almacenamiento local de esa instalación. El JSON no incluye cotizaciones, resultados ni pesos entrenados; tras importarlo se ejecuta otra vez el pipeline. Para conservar variantes, exportarlas con nombres diferentes. El botón de ejemplo sustituye el grafo actual: exportarlo antes si se quiere conservar.
+
 ## Motor y decisiones de evaluación
 
 - Kahn ordena el DAG independientemente del orden visual de los nodos. Los nodos se ejecutan secuencialmente y el servidor permite una ejecución a la vez.
-- Indicadores: retornos logarítmicos, lags 1…N, RSI, EMA20, MACD 12/26/9 y volatilidad móvil20. Barras diarias, historia 1–10 años.
+- Indicadores seleccionables: RSI, EMA, SMA, MACD (línea/señal/histograma), VWAP móvil y bandas de Bollinger (media/superior/inferior), con periodos configurables. Retornos logarítmicos y volatilidad móvil20 permanecen disponibles; lags 0…60 (0 los desactiva). Barras diarias, historia 1–10 años.
 - En cada ventana, los datos hasta `t-1` pronostican el objetivo en `t`. División cronológica 65% entrenamiento / 15% validación / 20% prueba por defecto. Las ventanas de prueba pueden usar observaciones previas ya disponibles: evaluación móvil de un paso, sin reentrenamiento.
 - El escalador de características y la normalización del objetivo se ajustan únicamente con entrenamiento. Early stopping utiliza validación y restaura los mejores pesos; prueba se reserva para métricas finales.
 - TR = tendencia, VA = componente estacional, TE = residuo. Son componentes de serie, **no** abreviaturas de train/validation/test. La descomposición usa la serie completa como diagnóstico visual; nunca alimenta el modelo ni la estrategia.

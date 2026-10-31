@@ -20,10 +20,73 @@ class ModelResult:
     reconstructed: np.ndarray | None = None
 
 
+@dataclass
+class NetworkSpec:
+    input_features: int
+    mode: str
+    layers: list[dict[str, Any]]
+    complete: bool = False
+
+
+class SelectInput(nn.Module):
+    def __init__(self, mode: str) -> None:
+        super().__init__()
+        self.mode = mode
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return x[:, -1, :] if self.mode == 'last' else x.flatten(1)
+
+
+def custom_network(features: int, steps: int, spec: NetworkSpec) -> tuple[nn.Sequential, int]:
+    if not spec.complete:
+        raise ValueError('Connect Network Output before the trainer.')
+    if spec.input_features != features:
+        raise ValueError(f'Network expects {spec.input_features} features; preparation provides {features}. Select matching feature columns.')
+    width = features if spec.mode == 'last' else features * steps
+    modules: list[nn.Module] = [SelectInput(spec.mode)]
+    activations: dict[str, type[nn.Module]] = {'ReLU': nn.ReLU, 'Tanh': nn.Tanh, 'GELU': nn.GELU,
+                                            'Sigmoid': nn.Sigmoid, 'LeakyReLU': nn.LeakyReLU, 'Identity': nn.Identity}
+    for layer in spec.layers:
+        kind = str(layer.get('layer_type', 'Dense'))
+        if kind == 'Dense':
+            units = int(layer.get('units', 64))
+            if not 1 <= units <= 2048:
+                raise ValueError('Dense units must be 1–2048.')
+            modules.append(nn.Linear(width, units))
+            width = units
+            activation = str(layer.get('activation', 'ReLU'))
+            if activation not in activations:
+                raise ValueError('Unsupported activation.')
+            modules.append(activations[activation]())
+        elif kind == 'Dropout':
+            rate = float(layer.get('rate', .2))
+            if not 0 <= rate < 1:
+                raise ValueError('Dropout rate must be 0–<1.')
+            modules.append(nn.Dropout(rate))
+        elif kind == 'BatchNorm':
+            modules.append(nn.BatchNorm1d(width))
+        elif kind in activations:
+            modules.append(activations[kind]())
+        else:
+            raise ValueError(f'Unsupported layer type: {kind}')
+    return nn.Sequential(*modules), width
+
+
 class SequenceNet(nn.Module):
     def __init__(self, features: int, steps: int, params: dict[str, Any]) -> None:
         super().__init__()
         self.kind = str(params.get('architecture', 'LSTM'))
+        spec = params.get('_network')
+        if isinstance(spec, NetworkSpec):
+            self.kind = 'Custom'
+            self.denoise = self.autoencoder = self.dqn = False
+            self.conv = nn.Identity()
+            self.recurrent = None
+            self.encoder, width = custom_network(features, steps, spec)
+            self.norm = self.dropout = nn.Identity()
+            self.head = nn.Linear(width, 1)
+            self.decoder = self.q_head = None
+            return
         hidden = int(params.get('hidden', 32))
         layers = int(params.get('layers', 1))
         dropout = float(params.get('dropout', 0.15))
@@ -75,9 +138,11 @@ class SequenceNet(nn.Module):
 
 def train(data: PreparedData, params: dict[str, Any]) -> ModelResult:
     architecture = str(params.get('architecture', 'LSTM'))
-    if architecture not in ('Dense', 'CNN', 'LSTM', 'GRU', 'BiLSTM', 'BiGRU', 'CNN-LSTM', 'Autoencoder', 'DAE', 'DQN'):
+    if architecture == 'Custom' and not isinstance(params.get('_network'), NetworkSpec):
+        raise ValueError('Custom architecture requires a connected Network Input → Layers → Network Output chain.')
+    if architecture not in ('Custom', 'Dense', 'CNN', 'LSTM', 'GRU', 'BiLSTM', 'BiGRU', 'CNN-LSTM', 'Autoencoder', 'DAE', 'DQN'):
         raise ValueError('Unsupported architecture.')
-    if architecture == 'DQN' and data.target != 'LogReturn':
+    if architecture == 'DQN' and not isinstance(params.get('_network'), NetworkSpec) and data.target != 'LogReturn':
         raise ValueError('DQN requires LogReturn target.')
     torch.manual_seed(int(params.get('seed', 42)))
     epochs, batch = int(params.get('epochs', 12)), int(params.get('batch_size', 32))

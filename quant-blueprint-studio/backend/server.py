@@ -14,7 +14,7 @@ except ImportError:
 
 class NodeData(BaseModel):
     model_config = ConfigDict(extra='ignore')
-    kind: Literal['source', 'features', 'prepare', 'model', 'backtest', 'config']
+    kind: Literal['source', 'features', 'prepare', 'model', 'backtest', 'config', 'network_input', 'layer', 'network_output', 'merge']
     label: str = ''
     params: dict[str, str | int | float | bool] = Field(default_factory=dict)
 

@@ -20,6 +20,7 @@ class PreparedData:
     scaler: StandardScaler | MinMaxScaler
     decomposition: list[dict[str, Any]]
     target: str
+    feature_names: list[str]
 
 
 def prepare(frame: pd.DataFrame, params: dict[str, Any]) -> PreparedData:
@@ -30,11 +31,18 @@ def prepare(frame: pd.DataFrame, params: dict[str, Any]) -> PreparedData:
     train_ratio = float(params.get('train_ratio', 0.65))
     val_ratio = float(params.get('val_ratio', 0.15))
     period = int(params.get('period', 20))
-    if not 2 <= lookback <= 120 or not 2 <= period <= 120:
-        raise ValueError('Lookback and period must be 2–120.')
+    if not 1 <= lookback <= 120 or not 2 <= period <= 120:
+        raise ValueError('Lookback must be 1–120; period 2–120.')
     if train_ratio < 0.3 or val_ratio < 0.05 or train_ratio + val_ratio > 0.95:
         raise ValueError('Require train ≥ .3, validation ≥ .05 and at least .05 test.')
-    values = frame.select_dtypes(include=[np.number]).to_numpy(dtype=np.float64)
+    requested = str(params.get('feature_columns', '')).strip()
+    names = [name.strip() for name in requested.split(',') if name.strip()] if requested else list(frame.select_dtypes(include=[np.number]).columns)
+    if not names or len(names) != len(set(names)):
+        raise ValueError('Select at least one unique input feature.')
+    missing = set(names) - set(frame.columns)
+    if missing:
+        raise ValueError(f'Selected features unavailable: {", ".join(sorted(missing))}. Enable their indicators first.')
+    values = frame[names].to_numpy(dtype=np.float64)
     count = len(values) - lookback
     train_end, val_end = int(count * train_ratio), int(count * (train_ratio + val_ratio))
     if min(train_end, val_end - train_end, count - val_end) < 3:
@@ -52,4 +60,4 @@ def prepare(frame: pd.DataFrame, params: dict[str, Any]) -> PreparedData:
                      if np.isfinite(tr) and np.isfinite(va) and np.isfinite(te)]
     return PreparedData(x[:train_end], y[:train_end], x[train_end:val_end], y[train_end:val_end],
                         x[val_end:], y[val_end:], frame['LogReturn'].to_numpy()[lookback+val_end:],
-                        [str(d.date()) for d in frame.index[lookback+val_end:]], scaler, decomposition, target)
+                        [str(d.date()) for d in frame.index[lookback+val_end:]], scaler, decomposition, target, names)
