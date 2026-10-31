@@ -5,7 +5,7 @@ Fecha: 31 de octubre de 2026. Entorno local macOS, Python 3.12.12, Node.js 22.22
 ## Comprobaciones
 
 - TypeScript estricto y compilación Vite/Electron: correctos.
-- Suite unittest: 25 pruebas, con diez arquitecturas como subpruebas; correcta.
+- Suite unittest: 26 pruebas, con diez arquitecturas como subpruebas; correcta.
 - Dependencias Python: `pip check` sin incompatibilidades.
 - Pipeline desde la interfaz web: completado con datos sintéticos, 144 observaciones de prueba y early stopping en 7 epochs. Los cuatro paneles mostraron datos.
 - Arranque de Electron compilado en macOS: ventana nativa y renderer local verificados.
@@ -84,3 +84,9 @@ Consultar `quant-blueprint-studio/package-lock.json` para el árbol npm completo
 - Métricas separadas de cartera, activos y benchmark comprobadas; retorno de cartera contrastado con composición diaria de los activos.
 - Renderizado de las once tarjetas, selección personalizada por defecto y compatibilidad con resultados anteriores mediante `npm run test:portfolio-ui`.
 - Comprobación visual: once métricas visibles, selector cambiado a mínima varianza, valores y pesos actualizados sin repetir ejecución. Compilación, 25 pruebas Python y pruebas de grafo/renderizado correctas.
+
+## Auditoría de signos de alpha / Sharpe / Sortino
+
+- Identidad OLS contrastada con beta por covarianza/varianza y alpha por diferencia de medias ajustada a beta.
+- Caso de alpha positivo con ROI, Sharpe y Sortino negativos verificado con RF anual 0% y 5%.
+- La auditoría de la configuración concreta se guarda únicamente en `quant-blueprint-studio/reports/local/` (excluido de Git). Sin cambios en las fórmulas de producción tras esta revisión.

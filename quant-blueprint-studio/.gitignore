@@ -5,3 +5,6 @@ __pycache__/
 *.pyc
 *.log
 .DS_Store
+
+# Local user-specific calculation audits
+reports/local/

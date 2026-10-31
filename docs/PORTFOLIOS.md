@@ -74,3 +74,15 @@ Series de portafolio: `equal_weight,max_sharpe,min_variance,custom` (la última 
 ## Panel de cartera completa (v0.4.1)
 
 Después de ejecutar Portfolio / Markowitz, el bloque **Indicadores del portafolio completo** aparece antes de la tabla comparativa. Elegir la asignación en **Cartera evaluada** actualiza once tarjetas (ROI, CAGR, VaR, CVaR, Sharpe, Sortino, alpha, beta, volatilidad, drawdown y R²), junto con pesos y benchmark. La opción personalizada aparece si se definieron pesos personalizados. Cada indicador corresponde al retorno de la cartera agregada tras costes, no a un promedio de indicadores individuales. Los valores no definidos explican su causa.
+
+## Alpha positivo con Sharpe y Sortino negativos
+
+Es una combinación válida. Sharpe y Sortino usan el exceso medio sobre la tasa libre de riesgo en el numerador; alpha OLS compara ese exceso con el exceso del benchmark ajustado a beta:
+
+`alpha_anual = A * (mean(r−rf) − beta * mean(rb−rf))`.
+
+Por ejemplo, con RF cero, media aritmética anual de cartera −8%, benchmark −30% y beta 0.4, alpha es `−8% − 0.4*(−30%) = +4%`, aunque Sharpe y Sortino sean negativos. Alpha no es el retorno total ni el CAGR. Un alpha positivo tampoco establece por sí solo significación estadística. No se deben sustituir las medias aritméticas de esta identidad por ROI o CAGR.
+
+El modo `synthetic` genera trayectorias simuladas incluso si se escriben tickers reales. Para consultar su evolución real hay que elegir `yfinance`.
+
+Referencias: [CFA Institute, medidas de rendimiento ajustado por riesgo](https://rpc.cfainstitute.org/-/media/documents/code/gips/measures-risk-adjusted-return.pdf), [CFA Institute, Sortino](https://rpc.cfainstitute.org/-/media/documents/code/gips/the-sortino-ratio.pdf).

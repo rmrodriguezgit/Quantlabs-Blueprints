@@ -34,6 +34,24 @@ class PortfolioTests(unittest.TestCase):
         risk = analyze(benchmark.to_frame('Asset'),benchmark,{},'Test','historical sample')
         self.assertEqual(risk.report['benchmark'],'Reference')
 
+    def test_positive_alpha_with_negative_sharpe_and_sortino(self) -> None:
+        index=pd.bdate_range('2024-01-01',periods=252)
+        market_excess=pd.Series(np.linspace(-.01,.008,252),index=index)
+        for annual_rf in (0.,.05):
+            with self.subTest(annual_rf=annual_rf):
+                daily_rf=np.expm1(np.log1p(annual_rf)/252)
+                benchmark=market_excess+daily_rf
+                asset=daily_rf+.0002+.5*market_excess
+                result=performance(asset,benchmark,{'risk_free_rate':annual_rf})
+                self.assertAlmostEqual(result['alpha'],.0002*252)
+                self.assertAlmostEqual(result['beta'],.5)
+                self.assertGreater(result['alpha'],0)
+                self.assertLess(result['sharpe'],0)
+                self.assertLess(result['sortino'],0)
+                self.assertLess(result['roi'],0)
+                excess=asset-daily_rf
+                self.assertAlmostEqual(result['alpha'],252*(excess.mean()-.5*market_excess.mean()))
+
     def test_zero_denominators_and_invalid_returns(self) -> None:
         series = pd.Series(np.zeros(20),index=pd.bdate_range('2024-01-01',periods=20))
         metrics = performance(series,series,{})
