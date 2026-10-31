@@ -1,0 +1,7 @@
+.DS_Store
+quant-blueprint-studio/node_modules/
+quant-blueprint-studio/.venv/
+quant-blueprint-studio/dist/
+__pycache__/
+*.pyc
+*.log

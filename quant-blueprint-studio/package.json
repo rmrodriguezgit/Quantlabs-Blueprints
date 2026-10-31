@@ -1,0 +1,37 @@
+{
+  "name": "quant-blueprint-studio",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/main/main.js",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "electron:dev": "npm run build:main && concurrently -k \"npm:dev\" \"wait-on http://127.0.0.1:5173 && electron .\"",
+    "build:main": "tsc -p tsconfig.main.json",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.main.json --noEmit",
+    "build": "npm run typecheck && vite build && npm run build:main",
+    "electron:start": "electron . --production",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"*.{json,ts,html}\""
+  },
+  "dependencies": {
+    "@xyflow/react": "^12.9.0",
+    "lucide-react": "^0.468.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "recharts": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.0",
+    "electron": "^42.0.0",
+    "typescript": "^5.7.2",
+    "vite": "^6.4.1",
+    "wait-on": "^8.0.0",
+    "prettier": "^3.6.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

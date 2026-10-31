@@ -1,0 +1,40 @@
+# Verificación de la base
+
+Fecha: 31 de octubre de 2026. Entorno local macOS, Python 3.12.12, Node.js 22.22.3, npm 10.9.8.
+
+## Comprobaciones
+
+- TypeScript estricto y compilación Vite/Electron: correctos.
+- Suite unittest: seis pruebas, con diez arquitecturas como subpruebas; correcta.
+- Dependencias Python: `pip check` sin incompatibilidades.
+- Pipeline desde la interfaz web: completado con datos sintéticos, 144 observaciones de prueba y early stopping en 7 epochs. Los cuatro paneles mostraron datos.
+- Arranque de Electron compilado en macOS: ventana nativa y renderer local verificados.
+- Sintaxis del lanzador Bash: correcta.
+- Sin verificación nativa en Windows ni descarga real yfinance. Instaladores de escritorio quedan fuera de esta base.
+
+## Versiones Python instaladas
+
+| Paquete | Versión |
+| --- | --- |
+| torch | 2.15.0 |
+| pandas | 2.3.3 |
+| numpy | 2.5.4 |
+| scikit-learn | 1.9.1 |
+| fastapi | 0.162.0 |
+| uvicorn | 0.54.0 |
+| arch | 8.0.0 |
+| statsmodels | 0.15.0 |
+| yfinance | 0.2.66 |
+
+## Versiones principales JavaScript instaladas
+
+| Paquete | Versión |
+| --- | --- |
+| Electron | 42.11.18 |
+| React / React DOM | 19.3.1 |
+| React Flow | 12.12.0 |
+| TypeScript | 5.9.3 |
+| Vite | 6.4.5 |
+| Recharts | 3.10.1 |
+
+Consultar `quant-blueprint-studio/package-lock.json` para el árbol npm completo.
