@@ -29,6 +29,7 @@ import {
   catalog,
   createNode,
   inputHandles,
+  plotPalette,
   type BlueprintNode,
   type Graph,
   type Kind,
@@ -46,6 +47,9 @@ const icons = {
   network_output: Layers3,
   merge: SlidersHorizontal,
   plot: ChartNoAxesCombined,
+  portfolio_data: Database,
+  portfolio: ChartNoAxesCombined,
+  risk: SlidersHorizontal,
 };
 function nodeSummary(data: BlueprintNode["data"]): string {
   const p = data.params;
@@ -75,6 +79,12 @@ function nodeSummary(data: BlueprintNode["data"]): string {
       return `${p.output_units} output · Linear`;
     case "merge":
       return "A + B · date-aligned features";
+    case "portfolio_data":
+      return `${p.tickers} · ${p.source}`;
+    case "portfolio":
+      return `Max Sharpe + min variance · ${Number(p.train_fraction) * 100}% estimation`;
+    case "risk":
+      return `VaR ${Number(p.confidence) * 100}% · RF ${Number(p.risk_free_rate) * 100}%`;
     case "plot":
       return `${String(p.plot_source)} · ${String(p.plot_columns || "default series")}`;
     case "backtest":
@@ -89,7 +99,14 @@ function VisualNode({ data, selected }: NodeProps<BlueprintNode>) {
   return (
     <div
       className={`blueprint-node ${selected ? "selected" : ""}`}
-      style={{ "--node-color": def.color } as React.CSSProperties}
+      style={
+        {
+          "--node-color":
+            data.kind === "plot"
+              ? (plotPalette[String(data.params.color)] ?? def.color)
+              : def.color,
+        } as React.CSSProperties
+      }
     >
       <div className="node-category">
         {def.category}
@@ -97,7 +114,11 @@ function VisualNode({ data, selected }: NodeProps<BlueprintNode>) {
       </div>
       <div className="node-title">
         <Icon size={19} />
-        <strong>{data.label}</strong>
+        <strong>
+          {data.kind === "plot"
+            ? String(data.params.title || data.label)
+            : data.label}
+        </strong>
       </div>
       <p>{def.subtitle}</p>
       <div className="node-summary">{nodeSummary(data)}</div>
@@ -110,7 +131,7 @@ function VisualNode({ data, selected }: NodeProps<BlueprintNode>) {
           <Handle
             type="target"
             position={
-              id === "config"
+              id === "config" || id === "benchmark"
                 ? Position.Top
                 : id === "network" && data.kind === "model"
                   ? Position.Bottom
@@ -119,15 +140,20 @@ function VisualNode({ data, selected }: NodeProps<BlueprintNode>) {
             id={id}
             className={type}
             style={
-              id === "config" || (id === "network" && data.kind === "model")
+              id === "config" ||
+              id === "benchmark" ||
+              (id === "network" && data.kind === "model")
                 ? {}
                 : {
-                    top: ["merge", "plot"].includes(data.kind)
-                      ? `${65 + i * 22}%`
+                    top: ["merge", "plot", "risk"].includes(data.kind)
+                      ? `${44 + i * 15}%`
                       : "82%",
                   }
             }
           />
+          {id === "benchmark" && (
+            <span className="config-label">benchmark</span>
+          )}
           {id === "config" && <span className="config-label">config</span>}
           {id === "network" && data.kind === "model" && (
             <span className="network-label">network</span>
@@ -198,6 +224,10 @@ export function Palette({
         );
       })}
       <div className="pin-legend">
+        <span>
+          <i className="portfolio" />
+          Portfolio / risk bundle
+        </span>
         <span>
           <i className="network" />
           Network architecture
@@ -274,6 +304,14 @@ export function BlueprintCanvas({
     if (
       dst.data.kind === "plot" &&
       graph.edges.some((e) => e.target === dst.id)
+    )
+      return false;
+    if (
+      dst.data.kind === "risk" &&
+      connection.targetHandle !== "benchmark" &&
+      graph.edges.some(
+        (e) => e.target === dst.id && e.targetHandle !== "benchmark",
+      )
     )
       return false;
     const visited = new Set<string>();

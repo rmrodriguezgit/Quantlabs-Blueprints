@@ -20,8 +20,8 @@ def backtest(result: ModelResult, params: dict[str, Any]) -> dict[str, Any]:
     equity = np.cumprod(1 + returns)
     benchmark = np.cumprod(1 + market)
     peak = np.maximum.accumulate(np.r_[1., equity])[1:]
-    return {'backtest': [{'date': date, 'strategy': float(eq - 1), 'market': float(bm - 1), 'signal': int(signal)}
-                         for date, eq, bm, signal in zip(result.prepared.dates, equity, benchmark, signals)],
+    return {'backtest': [{'date': date, 'strategy': float(eq - 1), 'market': float(bm - 1), 'signal': int(signal), 'strategy_return': float(net), 'market_return': float(raw)}
+                         for date, eq, bm, signal, net, raw in zip(result.prepared.dates, equity, benchmark, signals, returns, market)],
             'trading': {'total_return': float(equity[-1] - 1), 'max_drawdown': float(np.min(equity / peak - 1)),
                         'sharpe': float(np.sqrt(252) * returns.mean() / returns.std()) if returns.std() else 0.,
                         'turnover': float(turnover.sum())}}

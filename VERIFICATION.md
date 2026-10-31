@@ -1,16 +1,16 @@
-# Verificación de la base
+# Verificación del proyecto (v0.4.0)
 
 Fecha: 31 de octubre de 2026. Entorno local macOS, Python 3.12.12, Node.js 22.22.3, npm 10.9.8.
 
 ## Comprobaciones
 
 - TypeScript estricto y compilación Vite/Electron: correctos.
-- Suite unittest: catorce pruebas, con diez arquitecturas como subpruebas; correcta.
+- Suite unittest: 24 pruebas, con diez arquitecturas como subpruebas; correcta.
 - Dependencias Python: `pip check` sin incompatibilidades.
 - Pipeline desde la interfaz web: completado con datos sintéticos, 144 observaciones de prueba y early stopping en 7 epochs. Los cuatro paneles mostraron datos.
 - Arranque de Electron compilado en macOS: ventana nativa y renderer local verificados.
 - Sintaxis del lanzador Bash: correcta.
-- Sin verificación nativa en Windows ni descarga real yfinance. Instaladores de escritorio quedan fuera de esta base.
+- Sin verificación nativa en Windows. Descargas yfinance verificadas para EURUSD y para portafolio SPY/QQQ/TLT (ver registros abajo). Instaladores de escritorio quedan fuera de esta base.
 
 ## Ampliación de indicadores y diseño de redes
 
@@ -21,7 +21,7 @@ Fecha: 31 de octubre de 2026. Entorno local macOS, Python 3.12.12, Node.js 22.22
 - Unión de ramas y detección de columnas contradictorias comprobadas.
 - Ejemplo JSON ejecutado mediante HTTP, incluyendo ramificación de una arquitectura a dos entrenadores.
 - Ejemplo cargado y entrenado desde la interfaz: 9 nodos, 16 entradas, 147 observaciones de prueba y 12 epochs. Seleccionar nodos conserva los gráficos; se verificaron los checkboxes de indicadores y de características.
-- Versión del proyecto: 0.3.0.
+- Versión correspondiente a la ampliación de redes: 0.3.0.
 
 ## Versiones Python instaladas
 
@@ -67,3 +67,14 @@ Consultar `quant-blueprint-studio/package-lock.json` para el árbol npm completo
 - `CumulativeLogReturn` verificado contra la suma acumulada de las filas útiles, incluida su primera observación.
 - Columna comprobada en Plot y en la preparación de entradas.
 - Quince pruebas Python, compilación y comprobaciones del grafo correctas. Unión de ramas con distinto calentamiento conserva una acumulación coherente sobre las fechas comunes.
+
+## v0.4.0
+
+- 24 pruebas Python: métricas comparadas con cálculos independientes, alpha/beta OLS conocidos, solución analítica de mínima varianza, restricciones de pesos y máximo Sharpe al menos igual al candidato de pesos iguales.
+- Modificar únicamente precios del holdout no modifica los pesos de Markowitz.
+- Costes, buy-and-hold, benchmark, fuentes de Plot, paleta y pipeline API de portafolio comprobados.
+- Comprobaciones del grafo: pines nuevos, ejemplo de portafolio y presentación inmediata de títulos/colores/leyendas.
+
+- Ejemplo visual ejecutado: tres activos sintéticos, 528 retornos de estimación y 227 de holdout, seis filas de métricas (activos más asignaciones), pesos y dos gráficos.
+- Color Coral y título SPY / QQQ / TLT · Holdout aplicados sin repetir ejecución; se conservaron las métricas.
+- Integración Yahoo real: SPY, QQQ y TLT de un año, 251 fechas comunes, benchmark SPY, optimización con límite de peso 60%, 75 observaciones holdout y seis filas de métricas.

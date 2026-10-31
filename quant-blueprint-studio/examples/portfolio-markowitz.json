@@ -1,0 +1,160 @@
+{
+  "nodes": [
+    {
+      "id": "portfolio-data",
+      "type": "blueprint",
+      "position": {
+        "x": 0,
+        "y": 150
+      },
+      "data": {
+        "kind": "portfolio_data",
+        "label": "Portfolio Data",
+        "params": {
+          "source": "synthetic",
+          "tickers": "SPY,QQQ,TLT",
+          "benchmark": "SPY",
+          "years": 3
+        }
+      }
+    },
+    {
+      "id": "markowitz",
+      "type": "blueprint",
+      "position": {
+        "x": 320,
+        "y": 150
+      },
+      "data": {
+        "kind": "portfolio",
+        "label": "Portfolio / Markowitz",
+        "params": {
+          "title": "Portfolio holdout comparison",
+          "train_fraction": 0.7,
+          "max_weight": 1,
+          "covariance": "shrinkage",
+          "rebalance": "daily",
+          "risk_free_rate": 0,
+          "confidence": 0.95,
+          "periods_per_year": 252,
+          "fee_bps": 0,
+          "slippage_bps": 0,
+          "weights": ""
+        }
+      }
+    },
+    {
+      "id": "equity",
+      "type": "blueprint",
+      "position": {
+        "x": 650,
+        "y": 0
+      },
+      "data": {
+        "kind": "plot",
+        "label": "Plot",
+        "params": {
+          "title": "Holdout portfolio returns",
+          "plot_source": "equity",
+          "plot_columns": "",
+          "chart_type": "line",
+          "color": "Mint"
+        }
+      }
+    },
+    {
+      "id": "weights",
+      "type": "blueprint",
+      "position": {
+        "x": 650,
+        "y": 260
+      },
+      "data": {
+        "kind": "plot",
+        "label": "Plot",
+        "params": {
+          "title": "Portfolio allocations",
+          "plot_source": "weights",
+          "plot_columns": "",
+          "chart_type": "bar",
+          "color": "Violet"
+        }
+      }
+    },
+    {
+      "id": "max-log",
+      "type": "blueprint",
+      "position": {
+        "x": 650,
+        "y": 520
+      },
+      "data": {
+        "kind": "plot",
+        "label": "Plot",
+        "params": {
+          "title": "Max Sharpe \u00b7 cumulative log return",
+          "plot_source": "cumulative_log",
+          "plot_columns": "max_sharpe",
+          "chart_type": "line",
+          "color": "Orange"
+        }
+      }
+    },
+    {
+      "id": "min-log",
+      "type": "blueprint",
+      "position": {
+        "x": 650,
+        "y": 780
+      },
+      "data": {
+        "kind": "plot",
+        "label": "Plot",
+        "params": {
+          "title": "Min variance \u00b7 cumulative log return",
+          "plot_source": "cumulative_log",
+          "plot_columns": "min_variance",
+          "chart_type": "line",
+          "color": "Blue"
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "data-to-portfolio",
+      "source": "portfolio-data",
+      "target": "markowitz",
+      "sourceHandle": "portfolio",
+      "targetHandle": "portfolio"
+    },
+    {
+      "id": "to-equity",
+      "source": "markowitz",
+      "target": "equity",
+      "sourceHandle": "portfolio",
+      "targetHandle": "portfolio"
+    },
+    {
+      "id": "to-weights",
+      "source": "markowitz",
+      "target": "weights",
+      "sourceHandle": "portfolio",
+      "targetHandle": "portfolio"
+    },
+    {
+      "id": "to-max-log",
+      "source": "markowitz",
+      "target": "max-log",
+      "sourceHandle": "portfolio",
+      "targetHandle": "portfolio"
+    },
+    {
+      "id": "to-min-log",
+      "source": "markowitz",
+      "target": "min-log",
+      "sourceHandle": "portfolio",
+      "targetHandle": "portfolio"
+    }
+  ]
+}

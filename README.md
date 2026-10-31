@@ -2,16 +2,16 @@
 
 ![Quantlabs Blueprints](docs/banner.svg)
 
-[![Version](https://img.shields.io/github/v/tag/rmrodriguezgit/Quantlabs-Blueprints?label=version&color=6cc9ac)](https://github.com/rmrodriguezgit/Quantlabs-Blueprints/releases/tag/v0.3.1)
+[![Version](https://img.shields.io/github/v/tag/rmrodriguezgit/Quantlabs-Blueprints?label=version&color=6cc9ac)](https://github.com/rmrodriguezgit/Quantlabs-Blueprints/releases/tag/v0.4.0)
 ![Desktop](https://img.shields.io/badge/desktop-macOS%20%7C%20Windows-79b4ef)
 ![Electron](https://img.shields.io/badge/Electron-42-79b4ef)
 ![React](https://img.shields.io/badge/React-19-61dafb)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)
 ![Python](https://img.shields.io/badge/Python-3.10%E2%80%933.13-ffd343)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.x-ee4c2c)
-![Features](https://img.shields.io/badge/Blueprints-indicators%20%7C%20networks%20%7C%20plots%20%7C%20backtest-c49af8)
+![Features](https://img.shields.io/badge/Blueprints-indicators%20%7C%20networks%20%7C%20Markowitz%20%7C%20risk-c49af8)
 
-**Versión actual: [v0.3.1](https://github.com/rmrodriguezgit/Quantlabs-Blueprints/releases/tag/v0.3.1)** · [Historial de cambios](CHANGELOG.md) · [Verificaciones](VERIFICATION.md)
+**Versión actual: [v0.4.0](https://github.com/rmrodriguezgit/Quantlabs-Blueprints/releases/tag/v0.4.0)** · [Historial de cambios](CHANGELOG.md) · [Verificaciones](VERIFICATION.md)
 
 Estudio de escritorio para investigación cuantitativa mediante un grafo visual de nodos: datos → indicadores → preparación temporal → aprendizaje profundo → backtest. Base funcional para macOS y Windows, con Electron, React y un motor Python local.
 
@@ -37,6 +37,7 @@ El código se encuentra en [`quant-blueprint-studio/`](quant-blueprint-studio/).
 | scikit-learn | ≥1.5, <2 | Escaladores y métricas |
 | FastAPI / Uvicorn | ≥0.115, <1 / ≥0.34, <1 | API y WebSocket locales |
 | yfinance | ≥0.2.54, <1 | OHLCV diario ajustado |
+| SciPy | ≥1.13, <2 | Optimización SLSQP con restricciones |
 | statsmodels / arch | ≥0.14, <1 / ≥7.2, <9 | Descomposición; arch disponible para extensiones |
 
 `package-lock.json` fija las versiones resueltas de JavaScript. `requirements.txt` establece los rangos Python; consultar las versiones verificadas en [`VERIFICATION.md`](VERIFICATION.md).
@@ -105,6 +106,28 @@ Se pueden ramificar salidas hacia varios consumidores, duplicar nodos desde el i
 ## Guardar y recuperar
 
 **Export** descarga un `.json` con los nodos, posiciones, conexiones y parámetros. **Import** abre ese archivo. El editor también restaura automáticamente su último diseño desde el almacenamiento local de esa instalación. El JSON no incluye cotizaciones, resultados ni pesos entrenados; tras importarlo se ejecuta otra vez el pipeline. Para conservar variantes, exportarlas con nombres diferentes. El botón de ejemplo sustituye el grafo actual: exportarlo antes si se quiere conservar.
+
+## Portafolios, riesgo y Markowitz (v0.4)
+
+![Métricas de activos y portafolios, y asignaciones](docs/v0.4-portfolio.jpg)
+
+El botón **Portfolio / Markowitz example** carga un pipeline independiente del entrenamiento neuronal: **Portfolio Data → Portfolio / Markowitz → Plot**. También puede importarse [`portfolio-markowitz.json`](quant-blueprint-studio/examples/portfolio-markowitz.json), que incluye cuatro gráficos con colores y nombres distintos.
+
+- **Portfolio Data**: elegir `synthetic` o `yfinance`, escribir 2–20 activos separados por comas, elegir benchmark y años. Se usan cierres ajustados y fechas comunes sin rellenar precios. Todos los activos deben estar en la misma moneda; no hay conversión FX automática.
+- **Portfolio / Markowitz**: calcula pesos iguales, **máximo Sharpe**, **mínima varianza** y, opcionalmente, pesos personalizados. Solo posiciones largas, suma 100%, límite configurable por activo para las soluciones de Markowitz. Los pesos opcionales son decimales en el orden de los tickers: por ejemplo `.5,.3,.2`.
+- La estimación usa el primer 70% de los retornos por defecto. Los pesos se congelan y **las métricas se calculan en el 30% posterior**, incluyendo activos individuales en las mismas fechas. No se optimiza con las observaciones de prueba. Benchmark, tasa libre de riesgo, confianza VaR, frecuencia anual, costes y rebalanceo son configurables.
+- El panel **PORTFOLIO & RISK ANALYTICS** muestra ROI, CAGR, VaR, CVaR, Sharpe, Sortino, OLS alpha/beta, volatilidad anual, drawdown y pesos. Las fechas de estimación y evaluación aparecen por separado.
+- **Risk Metrics** permite obtener estas métricas sobre un activo (pin naranja), un backtest (azul) o un portafolio (amarillo). Su pin superior admite opcionalmente otro nodo de precios como benchmark. Conectar la salida del modelo mide el activo subyacente en fechas de prueba; para medir la estrategia de trading conectar **Market Backtest**.
+
+[Guía de parámetros, fórmulas y supuestos](docs/PORTFOLIOS.md).
+
+## Identificar gráficos y elegir colores
+
+![Paleta y nombres de los gráficos](docs/v0.4-palette.jpg)
+
+En cada **Plot**, editar **Chart title** y elegir **Chart color** mediante las muestras de una paleta de ocho colores. **Auto** asigna colores diferentes por orden de ejecución; **Per-series colors** permite nombres separados por comas (`Blue,Orange`) y **Legend names** permite nombres personalizados en el mismo orden que las series. Los cambios de título, color y leyenda se aplican inmediatamente a resultados existentes, sin reentrenar.
+
+Cada tarjeta muestra título, origen de activos y un botón **Plot ID ↗** que selecciona su nodo. El título también aparece en el nodo del lienzo. Duplicar un Plot añade `(copy)` y cambia su color. Para comparar dos acumulados: crear títulos distintos y seleccionar `CumulativeLogReturn` en cada uno, o `cumulative_log` para retornos de portafolio.
 
 ## Monitor de ejecución y solución de errores
 

@@ -1,5 +1,10 @@
 import { Settings2, X } from "lucide-react";
-import { catalog, type BlueprintNode, type Param } from "../types/blueprint";
+import {
+  plotPalette,
+  catalog,
+  type BlueprintNode,
+  type Param,
+} from "../types/blueprint";
 interface Props {
   node: BlueprintNode | undefined;
   onChange: (key: string, value: Param) => void;
@@ -24,8 +29,18 @@ export function DetailsInspector({
       {node ? (
         <>
           <div className="inspector-title">
-            <span style={{ background: catalog[node.data.kind].color }} />
-            {node.data.label}
+            <span
+              style={{
+                background:
+                  node.data.kind === "plot"
+                    ? (plotPalette[String(node.data.params.color)] ??
+                      catalog[node.data.kind].color)
+                    : catalog[node.data.kind].color,
+              }}
+            />
+            {node.data.kind === "plot"
+              ? String(node.data.params.title || node.data.label)
+              : node.data.label}
           </div>
           <p className="muted">{catalog[node.data.kind].subtitle}</p>
           {node.data.kind === "network_input" && (
@@ -48,11 +63,35 @@ export function DetailsInspector({
             <div className="inspector-hint">
               Connect one input: orange for OHLCV/indicators; blue from
               Preparation for TR/VA/TE, Model for predictions/loss, or Backtest
-              for equity/signals. Choose a source and comma-separated series.{" "}
+              for equity/signals. Yellow portfolio pins support asset_prices,
+              equity, cumulative_log, drawdown and weights. Choose a source and
+              comma-separated series.{" "}
               {availableFeatures.length > 0 && (
                 <p>Available columns: {availableFeatures.join(", ")}</p>
               )}
             </div>
+          )}
+          {node.data.kind === "portfolio_data" && (
+            <p className="inspector-hint">
+              Adjusted daily closes are joined on common dates. All assets must
+              use the same currency; no FX conversion is applied.
+            </p>
+          )}
+          {node.data.kind === "portfolio" && (
+            <p className="inspector-hint">
+              Long-only, weights sum to 100%. Fit max Sharpe/min variance on
+              estimation dates, then compare assets and portfolios on holdout
+              dates. Optional custom weights follow ticker order and must sum to
+              1.
+            </p>
+          )}
+          {node.data.kind === "risk" && (
+            <p className="inspector-hint">
+              Connect one main input (frame, model/backtest or portfolio).
+              Optional benchmark: orange Close-price frame at the top pin.
+              VaR/CVaR use one-period historical losses; ratios and volatility
+              are annualized.
+            </p>
           )}
           <fieldset disabled={disabled}>
             {catalog[node.data.kind].fields.map((field) => (
@@ -115,6 +154,30 @@ export function DetailsInspector({
                       );
                     })}
                   </div>
+                ) : field.key === "color" ? (
+                  <div className="palette-swatches">
+                    {["Auto", ...Object.keys(plotPalette)].map((color) => (
+                      <button
+                        type="button"
+                        key={color}
+                        title={color}
+                        aria-label={`Color ${color}`}
+                        aria-pressed={
+                          String(node.data.params.color ?? "Auto") === color
+                        }
+                        onClick={() => onChange("color", color)}
+                      >
+                        <i
+                          style={{
+                            background:
+                              plotPalette[color] ??
+                              "linear-gradient(90deg,#6cc9ac,#9c9af8)",
+                          }}
+                        />
+                        {color}
+                      </button>
+                    ))}
+                  </div>
                 ) : field.options ? (
                   <select
                     id={`param-${field.key}`}
@@ -158,8 +221,9 @@ export function DetailsInspector({
             ))}
           </fieldset>
           <div className="inspector-hint">
-            Parameters are applied on the next execution. A connected config
-            node overrides matching fields.
+            {node.data.kind === "plot"
+              ? "Title, colors and legend names update immediately. Source, type and series apply on the next execution."
+              : "Parameters are applied on the next execution. A connected config node overrides matching fields."}
           </div>
           <button disabled={disabled} onClick={onDuplicate}>
             Duplicate node

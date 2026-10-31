@@ -10,7 +10,10 @@ export type Kind =
   | "layer"
   | "network_output"
   | "merge"
-  | "plot";
+  | "plot"
+  | "portfolio_data"
+  | "portfolio"
+  | "risk";
 export type Param = string | number | boolean;
 export type BlueprintData = {
   label: string;
@@ -31,6 +34,8 @@ export interface Result {
   metrics: Record<string, number | null>;
   history: { epoch: number; train: number; validation: number }[];
   plots?: CustomPlot[];
+  portfolios?: PortfolioReport[];
+  risk_reports?: RiskReport[];
   target?: string;
   features?: string[];
   input_shape?: number[];
@@ -55,8 +60,8 @@ export interface Definition {
   subtitle: string;
   category: string;
   color: string;
-  input?: "frame" | "tensor" | "network";
-  output?: "frame" | "tensor" | "config" | "network";
+  input?: "frame" | "tensor" | "network" | "portfolio";
+  output?: "frame" | "tensor" | "config" | "network" | "portfolio";
   fields: Field[];
 }
 export const catalog: Record<Kind, Definition> = {
@@ -403,6 +408,32 @@ export const catalog: Record<Kind, Definition> = {
     fields: [
       { key: "title", label: "Chart title", value: "Custom plot" },
       {
+        key: "color",
+        label: "Chart color / predefined palette",
+        value: "Auto",
+        options: [
+          "Auto",
+          "Mint",
+          "Violet",
+          "Orange",
+          "Blue",
+          "Pink",
+          "Yellow",
+          "Coral",
+          "Cyan",
+        ],
+      },
+      {
+        key: "series_colors",
+        label: "Per-series colors (CSV; optional)",
+        value: "",
+      },
+      {
+        key: "series_labels",
+        label: "Legend names (CSV; optional)",
+        value: "",
+      },
+      {
         key: "plot_source",
         label: "What to plot",
         value: "auto",
@@ -414,6 +445,11 @@ export const catalog: Record<Kind, Definition> = {
           "backtest",
           "signals",
           "loss",
+          "asset_prices",
+          "equity",
+          "cumulative_log",
+          "drawdown",
+          "weights",
         ],
       },
       {
@@ -426,6 +462,163 @@ export const catalog: Record<Kind, Definition> = {
         key: "plot_columns",
         label: "Series (comma-separated; empty = defaults)",
         value: "",
+      },
+    ],
+  },
+  portfolio_data: {
+    label: "Portfolio Data",
+    subtitle: "Multiple assets · aligned adjusted prices",
+    category: "06 / PORTFOLIO",
+    color: "#d5d77e",
+    output: "portfolio",
+    fields: [
+      {
+        key: "source",
+        label: "Data source",
+        value: "synthetic",
+        options: ["synthetic", "yfinance"],
+      },
+      {
+        key: "tickers",
+        label: "Assets (comma-separated, 2–20)",
+        value: "SPY,QQQ,TLT",
+      },
+      { key: "benchmark", label: "OLS benchmark ticker", value: "SPY" },
+      { key: "years", label: "History / years", value: 3, min: 1, max: 10 },
+    ],
+  },
+  portfolio: {
+    label: "Portfolio / Markowitz",
+    subtitle: "Equal weight · max Sharpe · min variance",
+    category: "06 / PORTFOLIO",
+    color: "#d5d77e",
+    input: "portfolio",
+    output: "portfolio",
+    fields: [
+      {
+        key: "title",
+        label: "Portfolio report name",
+        value: "Portfolio comparison",
+      },
+      {
+        key: "weights",
+        label: "Optional custom weights, in ticker order",
+        value: "",
+      },
+      {
+        key: "train_fraction",
+        label: "Estimation fraction / rest is holdout",
+        value: 0.7,
+        min: 0.5,
+        max: 0.9,
+        step: 0.05,
+      },
+      {
+        key: "max_weight",
+        label: "Markowitz maximum asset weight",
+        value: 1,
+        min: 0.05,
+        max: 1,
+        step: 0.05,
+      },
+      {
+        key: "covariance",
+        label: "Covariance estimator",
+        value: "shrinkage",
+        options: ["shrinkage", "sample"],
+      },
+      {
+        key: "rebalance",
+        label: "Rebalancing policy",
+        value: "daily",
+        options: ["daily", "buy_hold"],
+      },
+      {
+        key: "risk_free_rate",
+        label: "Annual risk-free rate (decimal)",
+        value: 0,
+        min: -0.9,
+        max: 1,
+        step: 0.005,
+      },
+      {
+        key: "confidence",
+        label: "Historical VaR / CVaR confidence",
+        value: 0.95,
+        min: 0.8,
+        max: 0.999,
+        step: 0.01,
+      },
+      {
+        key: "periods_per_year",
+        label: "Trading periods per year",
+        value: 252,
+        min: 1,
+        max: 365,
+      },
+      {
+        key: "fee_bps",
+        label: "Fee / traded notional (bps)",
+        value: 0,
+        min: 0,
+        max: 1000,
+      },
+      {
+        key: "slippage_bps",
+        label: "Slippage (bps)",
+        value: 0,
+        min: 0,
+        max: 1000,
+      },
+    ],
+  },
+  risk: {
+    label: "Risk Metrics",
+    subtitle: "ROI · CAGR · VaR · CVaR · alpha / beta",
+    category: "06 / PORTFOLIO",
+    color: "#d5d77e",
+    output: "portfolio",
+    fields: [
+      { key: "title", label: "Metrics report name", value: "Risk metrics" },
+      { key: "series_name", label: "Asset / strategy name", value: "Asset" },
+      {
+        key: "return_column",
+        label: "DataFrame return column",
+        value: "LogReturn",
+      },
+      {
+        key: "return_type",
+        label: "DataFrame input type",
+        value: "log",
+        options: ["log", "simple", "price"],
+      },
+      {
+        key: "benchmark_name",
+        label: "Optional benchmark name",
+        value: "Benchmark",
+      },
+      {
+        key: "risk_free_rate",
+        label: "Annual risk-free rate (decimal)",
+        value: 0,
+        min: -0.9,
+        max: 1,
+        step: 0.005,
+      },
+      {
+        key: "confidence",
+        label: "Historical VaR / CVaR confidence",
+        value: 0.95,
+        min: 0.8,
+        max: 0.999,
+        step: 0.01,
+      },
+      {
+        key: "periods_per_year",
+        label: "Trading periods per year",
+        value: 252,
+        min: 1,
+        max: 365,
       },
     ],
   },
@@ -630,6 +823,13 @@ export function inputHandles(kind: Kind): Record<string, string> {
   if (kind === "plot") {
     handles.frame = "frame";
     handles.tensor = "tensor";
+    handles.portfolio = "portfolio";
+  }
+  if (kind === "risk") {
+    handles.frame = "frame";
+    handles.tensor = "tensor";
+    handles.portfolio = "portfolio";
+    handles.benchmark = "frame";
   }
   return handles;
 }
@@ -637,6 +837,9 @@ export function inputHandles(kind: Kind): Record<string, string> {
 export interface CustomPlot {
   id: string;
   title: string;
+  origin?: string;
+  colors?: Record<string, string>;
+  labels?: Record<string, string>;
   chart_type: "line" | "area" | "bar";
   source: string;
   x_key: string;
@@ -770,5 +973,149 @@ export function syncNetworkInputs(graph: Graph): Graph {
           }
         : n,
     ),
+  };
+}
+
+export const plotPalette: Record<string, string> = {
+  Mint: "#6cc9ac",
+  Violet: "#9c9af8",
+  Orange: "#f2ad65",
+  Blue: "#79b4ef",
+  Pink: "#ec9dd6",
+  Yellow: "#d5d77e",
+  Coral: "#f07777",
+  Cyan: "#56d9dd",
+};
+export interface MetricRow {
+  name: string;
+  roi: number | null;
+  cagr: number | null;
+  var: number | null;
+  cvar: number | null;
+  sharpe: number | null;
+  sortino: number | null;
+  alpha: number | null;
+  beta: number | null;
+  volatility: number | null;
+  max_drawdown: number | null;
+  ols_r2: number | null;
+  observations: number;
+}
+export interface RiskReport {
+  id: string;
+  title: string;
+  scope: string;
+  start: string;
+  end: string;
+  confidence: number;
+  var_horizon: string;
+  risk_free_rate: number;
+  periods_per_year: number;
+  benchmark: string | null;
+  metrics: MetricRow[];
+}
+export interface PortfolioReport extends RiskReport {
+  assets: string[];
+  weights: Record<string, Record<string, number>>;
+  estimation: {
+    start: string;
+    end: string;
+    observations: number;
+    covariance: string;
+    long_only: boolean;
+    max_weight: number;
+  };
+  rebalance: string;
+  cost_bps_per_traded_notional: number;
+  source: string;
+  curves: Record<string, string | number>[];
+}
+export function portfolioExample(): Graph {
+  const data = createNode("portfolio_data", 0, { x: 0, y: 150 });
+  const allocation = createNode("portfolio", 1, { x: 320, y: 150 });
+  const equity = createNode("plot", 2, { x: 650, y: 30 });
+  equity.data.params = {
+    ...equity.data.params,
+    title: "Portfolio holdout · cumulative returns",
+    plot_source: "equity",
+    color: "Mint",
+  };
+  const weights = createNode("plot", 3, { x: 650, y: 300 });
+  weights.data.params = {
+    ...weights.data.params,
+    title: "Markowitz allocations",
+    plot_source: "weights",
+    chart_type: "bar",
+    color: "Violet",
+  };
+  return {
+    nodes: [data, allocation, equity, weights],
+    edges: [
+      {
+        id: "portfolio-data",
+        source: data.id,
+        target: allocation.id,
+        sourceHandle: "portfolio",
+        targetHandle: "portfolio",
+      },
+      {
+        id: "portfolio-equity",
+        source: allocation.id,
+        target: equity.id,
+        sourceHandle: "portfolio",
+        targetHandle: "portfolio",
+      },
+      {
+        id: "portfolio-weights",
+        source: allocation.id,
+        target: weights.id,
+        sourceHandle: "portfolio",
+        targetHandle: "portfolio",
+      },
+    ],
+  };
+}
+
+export function presentPlot(
+  plot: CustomPlot,
+  node: BlueprintNode | undefined,
+  index: number,
+): CustomPlot {
+  if (!node || node.data.kind !== "plot") return plot;
+  const params = node.data.params;
+  const names = Object.keys(plotPalette);
+  const selected = String(params.color ?? "Auto");
+  const offset =
+    selected === "Auto"
+      ? index % names.length
+      : Math.max(0, names.indexOf(selected));
+  const assigned = String(params.series_colors ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const labels = String(params.series_labels ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const title = String(params.title ?? "").trim();
+  return {
+    ...plot,
+    title:
+      title && title !== "Custom plot"
+        ? title
+        : `${plot.origin ?? "Input"} · ${plot.series.join(", ")}`,
+    colors: Object.fromEntries(
+      plot.series.map((key, i) => [
+        key,
+        assigned.length === plot.series.length &&
+        assigned.every((name) => name in plotPalette)
+          ? plotPalette[assigned[i]]
+          : plotPalette[names[(offset + i) % names.length]],
+      ]),
+    ),
+    labels:
+      labels.length === plot.series.length
+        ? Object.fromEntries(plot.series.map((key, i) => [key, labels[i]]))
+        : Object.fromEntries(plot.series.map((key) => [key, key])),
   };
 }

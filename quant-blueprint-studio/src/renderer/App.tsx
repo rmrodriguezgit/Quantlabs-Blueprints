@@ -17,12 +17,16 @@ import {
   ExecutionPanel,
   type ExecutionEntry,
 } from "./components/ExecutionPanel";
+import { PortfolioDock } from "./components/PortfolioDock";
 import { PlotDock } from "./components/PlotDock";
 import { PerformanceDock } from "./components/PerformanceDock";
 import {
   catalog,
   defaultGraph,
   networkExample,
+  portfolioExample,
+  plotPalette,
+  presentPlot,
   networkBindings,
   syncNetworkInputs,
   featureOptions,
@@ -79,7 +83,26 @@ function isResult(value: unknown): value is Result {
 }
 function graphSignature(graph: Graph): string {
   return JSON.stringify({
-    nodes: graph.nodes.map(({ id, data }) => ({ id, data })),
+    nodes: graph.nodes.map(({ id, data }) => ({
+      id,
+      data:
+        data.kind === "plot"
+          ? {
+              ...data,
+              params: Object.fromEntries(
+                Object.entries(data.params).filter(
+                  ([key]) =>
+                    ![
+                      "title",
+                      "color",
+                      "series_colors",
+                      "series_labels",
+                    ].includes(key),
+                ),
+              ),
+            }
+          : data,
+    })),
     edges: graph.edges.map(
       ({ source, target, sourceHandle, targetHandle }) => ({
         source,
@@ -174,7 +197,11 @@ export default function App() {
         throw new Error("Engine returned an invalid result.");
       setResult(value);
       setMessage(
-        `Completed ${graph.nodes.length} nodes · ${value.features?.length ?? "auto"} input features · ${value.predictions.length} out-of-sample observations`,
+        value.portfolios?.length
+          ? `Completed ${graph.nodes.length} nodes · ${value.portfolios.length} portfolio report(s) · ${value.portfolios[0].metrics[0]?.observations ?? 0} holdout observations`
+          : value.risk_reports?.length
+            ? `Completed ${graph.nodes.length} nodes · ${value.risk_reports.length} risk report(s)`
+            : `Completed ${graph.nodes.length} nodes · ${value.features?.length ?? "auto"} input features · ${value.predictions.length} out-of-sample observations`,
       );
     } catch (e) {
       setError(true);
@@ -221,6 +248,15 @@ export default function App() {
           <span>Blueprint graph</span>
         </div>
         <div className="toolbar-actions">
+          <button
+            disabled={running}
+            onClick={() => {
+              updateGraph(() => portfolioExample());
+              setSelected(null);
+            }}
+          >
+            Portfolio / Markowitz example
+          </button>
           <button
             disabled={running}
             onClick={() => {
@@ -338,6 +374,30 @@ export default function App() {
               selected: false,
               data: { ...original.data, params: { ...original.data.params } },
             };
+            if (node.data.kind === "plot") {
+              const palette = Object.keys(plotPalette);
+              const current = palette.indexOf(
+                String(original.data.params.color),
+              );
+              node.data.params = {
+                ...node.data.params,
+                title: `${String(original.data.params.title || "Custom plot")} (copy)`,
+                color:
+                  palette[
+                    ((current >= 0
+                      ? current
+                      : Math.max(
+                          (
+                            result?.plots ??
+                            graph.nodes.filter((n) => n.data.kind === "plot")
+                          ).findIndex((n) => n.id === original.id),
+                          0,
+                        ) % palette.length) +
+                      1) %
+                      palette.length
+                  ],
+              };
+            }
             updateGraph((g) => ({ ...g, nodes: [...g.nodes, node] }));
             setSelected(node.id);
           }}
@@ -370,8 +430,28 @@ export default function App() {
           }}
         />
       </main>
-      <PerformanceDock result={result} running={running} />
-      <PlotDock plots={result?.plots ?? []} />
+      {graph.nodes.some((n) => n.data.kind === "model") && (
+        <PerformanceDock result={result} running={running} />
+      )}
+      <PortfolioDock
+        portfolios={result?.portfolios ?? []}
+        reports={result?.risk_reports ?? []}
+      />
+      <PlotDock
+        plots={(result?.plots ?? []).map((plot, index) =>
+          presentPlot(
+            plot,
+            graph.nodes.find((n) => n.id === plot.id),
+            index,
+          ),
+        )}
+        onInspect={(id) => {
+          setSelected(id);
+          document
+            .querySelector(".workspace")
+            ?.scrollIntoView({ behavior: "smooth" });
+        }}
+      />
       <footer className={`status-bar ${error ? "error" : ""}`}>
         {error ? <CircleAlert size={13} /> : <CheckCircle2 size={13} />}
         <span>{message}</span>
@@ -379,7 +459,8 @@ export default function App() {
           LOCAL COMPUTE <span>•</span>{" "}
           {graph.nodes.some(
             (n) =>
-              n.data.kind === ("source" satisfies Kind) &&
+              (n.data.kind === ("source" satisfies Kind) ||
+                n.data.kind === "portfolio_data") &&
               n.data.params.source === "yfinance",
           )
             ? "YFINANCE DATA"

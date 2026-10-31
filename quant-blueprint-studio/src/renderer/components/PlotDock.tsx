@@ -19,7 +19,13 @@ const colors = [
   "#ec9dd6",
   "#d5d77e",
 ];
-export function PlotDock({ plots }: { plots: CustomPlot[] }) {
+export function PlotDock({
+  plots,
+  onInspect,
+}: {
+  plots: CustomPlot[];
+  onInspect: (id: string) => void;
+}) {
   if (!plots.length) return null;
   return (
     <section className="plot-dock" aria-label="Custom plot outputs">
@@ -28,12 +34,25 @@ export function PlotDock({ plots }: { plots: CustomPlot[] }) {
       </h2>
       <div>
         {plots.map((plot) => (
-          <article key={plot.id}>
+          <article
+            key={plot.id}
+            style={{
+              borderTopColor: plot.colors?.[plot.series[0]] ?? colors[0],
+            }}
+          >
             <header>
-              <strong>{plot.title}</strong>
+              <div className="plot-title">
+                <strong>{plot.title}</strong>
+                <button
+                  onClick={() => onInspect(plot.id)}
+                  title="Select this Plot node"
+                >
+                  Plot {plot.id.slice(0, 8)} ↗
+                </button>
+              </div>
               <small>
-                {plot.source} · {plot.rows.length} observations ·{" "}
-                {plot.series.join(" / ")}
+                {plot.origin ?? "Input"} · {plot.source} · {plot.rows.length}{" "}
+                observations · {plot.series.join(" / ")}
               </small>
             </header>
             <ResponsiveContainer width="100%" height={230}>
@@ -50,7 +69,9 @@ export function PlotDock({ plots }: { plots: CustomPlot[] }) {
                 <YAxis
                   tick={{ fontSize: 10, fill: "#8898af" }}
                   tickFormatter={(value: number) =>
-                    Number(value).toPrecision(3)
+                    ["equity", "drawdown", "weights"].includes(plot.source)
+                      ? `${(value * 100).toFixed(0)}%`
+                      : Number(value).toPrecision(3)
                   }
                 />
                 <Tooltip
@@ -66,15 +87,17 @@ export function PlotDock({ plots }: { plots: CustomPlot[] }) {
                     <Bar
                       key={key}
                       dataKey={key}
-                      fill={colors[i % colors.length]}
+                      name={plot.labels?.[key] ?? key}
+                      fill={plot.colors?.[key] ?? colors[i % colors.length]}
                       isAnimationActive={false}
                     />
                   ) : plot.chart_type === "area" ? (
                     <Area
                       key={key}
                       dataKey={key}
-                      stroke={colors[i % colors.length]}
-                      fill={colors[i % colors.length]}
+                      name={plot.labels?.[key] ?? key}
+                      stroke={plot.colors?.[key] ?? colors[i % colors.length]}
+                      fill={plot.colors?.[key] ?? colors[i % colors.length]}
                       fillOpacity={0.12}
                       isAnimationActive={false}
                     />
@@ -82,7 +105,8 @@ export function PlotDock({ plots }: { plots: CustomPlot[] }) {
                     <Line
                       key={key}
                       dataKey={key}
-                      stroke={colors[i % colors.length]}
+                      name={plot.labels?.[key] ?? key}
+                      stroke={plot.colors?.[key] ?? colors[i % colors.length]}
                       dot={false}
                       strokeWidth={1.5}
                       isAnimationActive={false}

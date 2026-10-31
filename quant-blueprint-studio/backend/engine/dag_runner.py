@@ -9,17 +9,20 @@ from .nodes.stats_nodes import PreparedData, prepare
 from .nodes.dl_nodes import ModelResult, NetworkSpec, train
 from .nodes.backtest_nodes import backtest
 from .nodes.plot_nodes import plot
+from .nodes.metrics_nodes import RiskAnalysis, analyze, frame_returns
+from .nodes.portfolio_nodes import PortfolioData, PortfolioResult, portfolio_data, build_portfolio
 
 PINS = {'source': (None, 'frame'), 'features': ('frame', 'frame'), 'prepare': ('frame', 'tensor'),
         'model': ('tensor', 'tensor'), 'backtest': ('tensor', None), 'config': (None, 'config'),
         'network_input': (None, 'network'), 'layer': ('network', 'network'),
-        'network_output': ('network', 'network'), 'merge': ('frame', 'frame'), 'plot': (None, None)}
+        'network_output': ('network', 'network'), 'merge': ('frame', 'frame'), 'plot': (None, None), 'portfolio_data': (None, 'portfolio'), 'portfolio': ('portfolio', 'portfolio'), 'risk': (None, 'portfolio')}
 INPUTS = {kind: ({pin: pin} if pin else {}) for kind, (pin, _) in PINS.items()}
 for kind in ('features', 'prepare', 'model', 'backtest'):
     INPUTS[kind]['config'] = 'config'
 INPUTS['model']['network'] = 'network'
 INPUTS['merge']['frame_b'] = 'frame'
-INPUTS['plot'] = {'frame': 'frame', 'tensor': 'tensor'}
+INPUTS['plot'] = {'frame': 'frame', 'tensor': 'tensor', 'portfolio': 'portfolio'}
+INPUTS['risk'] = {'frame': 'frame', 'tensor': 'tensor', 'portfolio': 'portfolio', 'benchmark': 'frame'}
 PINS['backtest'] = ('tensor', 'tensor')
 
 
@@ -81,7 +84,7 @@ class DAGRunner:
         return order
 
     def execute(self, progress: Callable[[dict[str, Any]], None] | None = None) -> dict[str, Any]:
-        report: dict[str, Any] = {'decomposition': [], 'predictions': [], 'backtest': [], 'metrics': {}, 'history': [], 'nodes': [], 'plots': []}
+        report: dict[str, Any] = {'decomposition': [], 'predictions': [], 'backtest': [], 'metrics': {}, 'history': [], 'nodes': [], 'plots': [], 'portfolios': [], 'risk_reports': []}
         order = self.topological_sort()
         for key in order:
             node = self.nodes[key]
@@ -100,9 +103,62 @@ class DAGRunner:
             try:
                 if kind == 'source':
                     output: Any = source(params)
+                elif kind == 'portfolio_data':
+                    output = portfolio_data(params, (lambda symbol: progress({'node': key, 'status': 'running', 'detail': f'Loading {symbol}'})) if progress else None)
+                elif kind == 'portfolio' and isinstance(upstream, PortfolioData):
+                    output = build_portfolio(upstream, params)
+                    report['portfolios'].append({'id': key, **output.report})
+                elif kind == 'risk':
+                    primary = [value for pin, value in inputs.items() if pin != 'benchmark']
+                    if len(primary) != 1:
+                        raise ValueError('Risk Metrics needs exactly one primary input and an optional benchmark frame.')
+                    value = primary[0]
+                    benchmark = None
+                    scope = 'historical sample'
+                    if isinstance(value, PortfolioResult):
+                        assets = value.data.prices.pct_change(fill_method=None).reindex(value.returns.index)
+                        daily = pd.concat([assets, value.returns], axis=1)
+                        benchmark, scope = value.benchmark, 'holdout / out of sample'
+                    elif isinstance(value, PortfolioData):
+                        daily = value.prices.pct_change(fill_method=None).dropna()
+                        benchmark = value.benchmark.pct_change(fill_method=None).reindex(daily.index)
+                    elif isinstance(value, RiskAnalysis):
+                        daily, benchmark, scope = value.returns, value.benchmark, value.report['scope']
+                    elif isinstance(value, pd.DataFrame):
+                        daily = frame_returns(value, params).to_frame(params.get('series_name', 'Asset'))
+                    elif isinstance(value, ModelResult):
+                        daily = pd.DataFrame({'Underlying asset': np.expm1(value.prepared.returns)}, index=pd.to_datetime(value.prepared.dates))
+                        scope = 'underlying asset on model test dates'
+                    elif isinstance(value, dict) and 'backtest' in value:
+                        daily = pd.DataFrame(value['backtest']).set_index('date')
+                        daily.index = pd.to_datetime(daily.index)
+                        benchmark = daily['market_return'].rename('Market')
+                        daily = daily[['strategy_return','market_return']].rename(columns={'strategy_return':'Strategy','market_return':'Market'})
+                        scope = 'strategy holdout / out of sample'
+                    else:
+                        raise ValueError('Risk Metrics input is not a return series, model, backtest or portfolio.')
+                    if 'benchmark' in inputs:
+                        benchmark = frame_returns(inputs['benchmark'], {'return_column':'Close','return_type':'price'}).rename(str(params.get('benchmark_name','Benchmark')))
+                    output = analyze(daily, benchmark, params, str(params.get('title', 'Risk metrics')), scope)
+                    report['risk_reports'].append({'id': key, **output.report})
                 elif kind == 'plot':
                     if len(inputs) != 1:
                         raise ValueError('Plot requires exactly one frame or tensor input.')
+                    ancestors: list[str] = []
+                    visited: set[str] = set()
+                    def origins(node_id: str) -> None:
+                        if node_id in visited:
+                            return
+                        visited.add(node_id)
+                        item = self.nodes[node_id]['data']
+                        if item['kind'] in ('source','portfolio_data'):
+                            title = str(item.get('params',{}).get('ticker' if item['kind']=='source' else 'tickers', item.get('label',node_id)))
+                            ancestors.append(title)
+                        for incoming in self.incoming[node_id]:
+                            origins(incoming['source'])
+                    origins(key)
+                    params['_origin'] = ' / '.join(dict.fromkeys(ancestors)) or self.nodes[next(iter(self.incoming[key]))['source']]['data'].get('label','Input')
+                    params['_plot_index'] = len(report['plots'])
                     output = plot(next(iter(inputs.values())), params, key)
                     report['plots'].append(output)
                 elif kind == 'config':
@@ -158,6 +214,8 @@ class DAGRunner:
             report['nodes'].append(summary)
             if progress:
                 details = {k: v for k, v in summary.items() if k not in ('id', 'kind', 'status')}
+                if isinstance(output, PortfolioData):
+                    details.update({'rows': len(output.prices), 'detail': ', '.join(output.prices.columns)})
                 if isinstance(output, PreparedData):
                     details.update({'features': len(output.feature_names), 'samples': {'train': len(output.y_train), 'validation': len(output.y_val), 'test': len(output.y_test)}})
                 progress({'node': key, 'status': 'complete', **details})

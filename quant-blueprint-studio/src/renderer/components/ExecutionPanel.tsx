@@ -36,6 +36,13 @@ export function ExecutionPanel({
   return (
     <section className="execution-panel" aria-label="Execution monitor">
       <div className="network-overview">
+        {bindings.length === 0 && (
+          <p className="risk-conventions">
+            Portfolio / risk pipeline
+            <br />
+            Inspect nodes for assets, benchmark, weights and holdout settings.
+          </p>
+        )}
         {bindings.map((binding) => (
           <div
             key={binding.trainerId}
@@ -78,7 +85,7 @@ export function ExecutionPanel({
         {running && (
           <p aria-live="polite">
             {latest
-              ? `${latest.label}${latest.status === "epoch" ? ` · epoch ${latest.epoch}/${latest.epochs} · validation loss ${latest.validation?.toPrecision(5)}` : latest.status === "running" ? " · running…" : " · complete"}`
+              ? `${latest.label}${latest.status === "epoch" ? ` · epoch ${latest.epoch}/${latest.epochs} · validation loss ${latest.validation?.toPrecision(5)}` : latest.status === "running" ? ` · ${latest.detail ?? "running…"}` : " · complete"}`
               : "Connecting to Python engine…"}
           </p>
         )}
@@ -104,7 +111,7 @@ export function ExecutionPanel({
                     ? `complete${entry.rows !== undefined ? ` · ${entry.rows} rows / ${entry.source_rows ?? entry.rows} source rows` : ""}${entry.features !== undefined ? ` · ${entry.features} features` : ""}`
                     : entry.status === "error"
                       ? entry.detail
-                      : "running…"}
+                      : (entry.detail ?? "running…")}
               </span>
             </div>
           ))}

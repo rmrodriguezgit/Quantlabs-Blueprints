@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.4.0 — 2026-10-31
+
+- Plot con títulos, origen, identificación de nodo, paleta de ocho colores, colores por serie y leyendas personalizadas. Cambios de presentación inmediatos sin reentrenar.
+- Nodos Portfolio Data, Portfolio / Markowitz y Risk Metrics, con pines de portafolio independientes.
+- Hasta 20 activos, benchmark, pesos personalizados, Markowitz de máximo Sharpe y mínima varianza, pesos iguales y evaluación temporal separada.
+- ROI, CAGR, VaR/CVaR histórico, Sharpe, Sortino, alpha/beta OLS, volatilidad y drawdown, con convenciones visibles.
+- Estimación de covarianza con shrinkage o muestra, límite de peso, rebalanceo diario o buy-and-hold, costes de entrada/rebalanceo/salida.
+- Panel de métricas/pesos y gráficos de equity, log-retorno acumulado, drawdown, precios y pesos.
+
+
 ## v0.3.1 — 2026-10-31
 
 - Columna CumulativeLogReturn calculada como la suma acumulada de los LogReturn retenidos tras el calentamiento.

@@ -6,7 +6,7 @@ const path = require('node:path');
 const temporary=mkdtempSync(path.join(tmpdir(),'quantlabs-graph-'));
 try {
  execFileSync(process.execPath,[require.resolve('typescript/bin/tsc'),'src/renderer/types/blueprint.ts','--outDir',temporary,'--module','commonjs','--target','es2022','--skipLibCheck','--esModuleInterop'],{stdio:'inherit'});
- const {networkExample,networkBindings,syncNetworkInputs,featureOptions}=require(path.join(temporary,'blueprint.js'));
+ const {networkExample,networkBindings,syncNetworkInputs,featureOptions,portfolioExample,presentPlot,inputHandles}=require(path.join(temporary,'blueprint.js'));
  let graph=networkExample();
  let binding=networkBindings(graph)[0];
  assert.equal(binding.summary,'16 inputs → 64 ReLU → 32 ReLU → 1 output');
@@ -21,5 +21,15 @@ try {
  const features=graph.nodes.find(n=>n.data.kind==='features');features.data.params.use_vwap=false;
  assert.equal(featureOptions(graph,features.id).includes('VWAP'),false);
  assert.match(networkBindings(graph)[0].issue,/VWAP/);
+ const portfolio=portfolioExample();
+ assert.deepEqual(inputHandles('portfolio'),{portfolio:'portfolio'});
+ assert.equal(portfolio.nodes.filter(n=>n.data.kind==='plot').length,2);
+ assert.equal(inputHandles('risk').benchmark,'frame');
+ const chart=portfolio.nodes.find(n=>n.data.kind==='plot');
+ chart.data.params={title:'My returns',color:'Coral',series_labels:'Growth'};
+ const styled=presentPlot({id:chart.id,title:'Old',origin:'SPY',chart_type:'line',source:'equity',x_key:'date',series:['max_sharpe'],rows:[]},chart,0);
+ assert.equal(styled.title,'My returns');assert.equal(styled.colors.max_sharpe,'#f07777');assert.equal(styled.labels.max_sharpe,'Growth');
+ chart.data.params.series_labels='';assert.equal(presentPlot(styled,chart,0).labels.max_sharpe,'max_sharpe');
+ console.log('Portfolio/color checks passed.');
  console.log('Graph checks passed: architecture summary, automatic dimensions, manual mismatch, disabled indicators.');
 } finally {rmSync(temporary,{recursive:true,force:true});}
