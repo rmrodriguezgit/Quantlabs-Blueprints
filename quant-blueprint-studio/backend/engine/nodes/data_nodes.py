@@ -81,6 +81,8 @@ def features(frame: pd.DataFrame, params: dict[str, Any]) -> pd.DataFrame:
         result['BBMiddle'], result['BBUpper'], result['BBLower'] = middle, middle + spread, middle - spread
     result['Volatility'] = result['LogReturn'].rolling(20).std()
     cleaned = result.replace([np.inf, -np.inf], np.nan).dropna()
+    # Accumulate the exact retained LogReturn series, after indicator warm-up.
+    cleaned['CumulativeLogReturn'] = cleaned['LogReturn'].cumsum()
     cleaned.attrs['raw_rows'] = frame.attrs.get('raw_rows', len(frame))
     return cleaned
 
@@ -92,6 +94,11 @@ def merge_features(left: pd.DataFrame, right: pd.DataFrame) -> pd.DataFrame:
         raise ValueError('Feature branches have no overlapping dates.')
     duplicate = left.columns.intersection(right.columns)
     for column in duplicate:
+        if column == 'CumulativeLogReturn':
+            continue  # Branch warm-up can change the accumulation origin.
         if not np.allclose(left.loc[common, column], right.loc[common, column], equal_nan=True):
             raise ValueError(f'Conflicting column {column}; use distinct indicators/parameters across branches.')
-    return left.loc[common].join(right.loc[common].drop(columns=duplicate)).dropna()
+    joined = left.loc[common].join(right.loc[common].drop(columns=duplicate)).dropna()
+    if 'LogReturn' in joined:
+        joined['CumulativeLogReturn'] = joined['LogReturn'].cumsum()
+    return joined

@@ -2,7 +2,7 @@
 
 ![Quantlabs Blueprints](docs/banner.svg)
 
-[![Version](https://img.shields.io/github/v/tag/rmrodriguezgit/Quantlabs-Blueprints?label=version&color=6cc9ac)](https://github.com/rmrodriguezgit/Quantlabs-Blueprints/releases/tag/v0.3.0)
+[![Version](https://img.shields.io/github/v/tag/rmrodriguezgit/Quantlabs-Blueprints?label=version&color=6cc9ac)](https://github.com/rmrodriguezgit/Quantlabs-Blueprints/releases/tag/v0.3.1)
 ![Desktop](https://img.shields.io/badge/desktop-macOS%20%7C%20Windows-79b4ef)
 ![Electron](https://img.shields.io/badge/Electron-42-79b4ef)
 ![React](https://img.shields.io/badge/React-19-61dafb)
@@ -11,7 +11,7 @@
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.x-ee4c2c)
 ![Features](https://img.shields.io/badge/Blueprints-indicators%20%7C%20networks%20%7C%20plots%20%7C%20backtest-c49af8)
 
-**Versión actual: [v0.3.0](https://github.com/rmrodriguezgit/Quantlabs-Blueprints/releases/tag/v0.3.0)** · [Historial de cambios](CHANGELOG.md) · [Verificaciones](VERIFICATION.md)
+**Versión actual: [v0.3.1](https://github.com/rmrodriguezgit/Quantlabs-Blueprints/releases/tag/v0.3.1)** · [Historial de cambios](CHANGELOG.md) · [Verificaciones](VERIFICATION.md)
 
 Estudio de escritorio para investigación cuantitativa mediante un grafo visual de nodos: datos → indicadores → preparación temporal → aprendizaje profundo → backtest. Base funcional para macOS y Windows, con Electron, React y un motor Python local.
 
@@ -115,6 +115,12 @@ El panel **Execution monitor** aparece encima del lienzo. Muestra `Calculating` 
 Cuando faltan datos, el mensaje indica filas de origen, filas útiles tras indicadores, lookback, secuencias y tamaños de entrenamiento/validación/prueba. Cada conjunto necesita al menos tres muestras. Para corregirlo: aumentar historia (por ejemplo 3–5 años), reducir ventanas de indicadores/lags y/o reducir lookback. La descomposición también requiere dos periodos completos. Un indicador de 252 barras puede consumir casi todo un histórico de un año; cambiar a ventanas de 20 barras o ampliar historia conserva más muestras.
 
 El resumen de red siempre muestra `N inputs → 64 ReLU → 32 ReLU → 1 output`, junto a `selected / declared`. Por defecto **Network Input** activa **Match selected features automatically**. Si se desactiva, se permite editar el número manualmente y se bloquea el entrenamiento ante una discrepancia. El motor vuelve a comprobar las dimensiones reales. Al compartir una arquitectura entre entrenadores, todos deben usar la misma cantidad de características.
+
+## Retornos logarítmicos acumulados
+
+Technical Features genera `CumulativeLogReturn = LogReturn.cumsum()` sobre las filas útiles, después de eliminar el calentamiento de indicadores. Se acumula desde el primer retorno retenido (la primera observación no se fuerza a cero). En Plot: conectar el pin naranja de Technical Features, elegir `columns` y escribir `CumulativeLogReturn` en Series. También aparece en el selector de características; el objetivo del modelo sigue eligiéndose por separado.
+
+La columna expresa retorno logarítmico acumulado, no porcentaje simple. Para convertir su valor a rendimiento acumulado porcentual: `100 * (exp(CumulativeLogReturn) - 1)`.
 
 ## Nodo Plot: elegir qué graficar
 

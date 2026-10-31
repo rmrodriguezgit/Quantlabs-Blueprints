@@ -87,7 +87,7 @@ class EngineTests(unittest.TestCase):
         self.assertAlmostEqual(all_features.loc[date, 'BBUpper'], tail.Close.mean() + 2 * tail.Close.std(ddof=0))
         np.testing.assert_allclose(all_features.MACDHistogram, all_features.MACD - all_features.MACDSignal)
         disabled = features(raw, {**{f'use_{key}': False for key in ('rsi','ema','sma','macd','vwap','bb')}, 'lags': 0})
-        self.assertEqual(set(disabled.columns), {'Open','High','Low','Close','Volume','LogReturn','Volatility'})
+        self.assertEqual(set(disabled.columns), {'Open','High','Low','Close','Volume','LogReturn','CumulativeLogReturn','Volatility'})
         # Future edits must not change any historical feature values.
         modified = raw.copy()
         modified.iloc[-1, modified.columns.get_loc('Close')] *= 2
@@ -95,6 +95,21 @@ class EngineTests(unittest.TestCase):
         np.testing.assert_allclose(all_features.iloc[:-1].to_numpy(), pd_features.iloc[:-1].to_numpy())
         with self.assertRaisesRegex(ValueError, 'MACD'):
             features(raw, {'macd_fast': 30, 'macd_slow': 20})
+
+    def test_cumulative_log_return_and_plot(self) -> None:
+        frame = self.frame
+        np.testing.assert_allclose(frame['CumulativeLogReturn'], frame['LogReturn'].cumsum())
+        self.assertAlmostEqual(frame['CumulativeLogReturn'].iloc[0], frame['LogReturn'].iloc[0])
+        chart = plot(frame, {'plot_source':'columns','plot_columns':'CumulativeLogReturn'}, 'cumulative')
+        self.assertEqual(chart['series'],['CumulativeLogReturn'])
+        np.testing.assert_allclose([row['CumulativeLogReturn'] for row in chart['rows']], frame['LogReturn'].cumsum())
+        # The selected cumulative series can also be an input without changing the target.
+        data = prepare(frame, {'feature_columns':'CumulativeLogReturn','lookback':1})
+        self.assertEqual(data.feature_names,['CumulativeLogReturn'])
+        self.assertEqual(data.target,'LogReturn')
+        raw = source({'years':1})
+        branches = merge_features(features(raw,{'use_vwap':False}), features(raw,{'vwap_window':40}))
+        np.testing.assert_allclose(branches['CumulativeLogReturn'], branches['LogReturn'].cumsum())
 
     def test_feature_selection_and_custom_network(self) -> None:
         names = ['Open','High','Low','Close','Volume','LogReturn','Volatility','RSI','EMA','SMA','VWAP','MACD','MACDSignal','BBUpper','BBMiddle','BBLower']

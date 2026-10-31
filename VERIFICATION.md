@@ -61,3 +61,9 @@ Consultar `quant-blueprint-studio/package-lock.json` para el árbol npm completo
 - Diagnóstico sobre Yahoo real: EURUSD=X devolvió 259 observaciones en la consulta de un año, todas con volumen cero. La sesión del usuario con 10 años también produjo el mensaje específico de VWAP y mostró eventos por nodo desde Electron.
 - Comprobación visual independiente: ejemplo de 11 nodos, 147 observaciones de prueba, 16 entradas coincidentes y dos gráficos Plot (precio/VWAP/BB y pérdidas de 12 épocas).
 - La app de escritorio se reinició con v0.3.0. La versión aparece en su cabecera.
+
+## v0.3.1
+
+- `CumulativeLogReturn` verificado contra la suma acumulada de las filas útiles, incluida su primera observación.
+- Columna comprobada en Plot y en la preparación de entradas.
+- Quince pruebas Python, compilación y comprobaciones del grafo correctas. Unión de ramas con distinto calentamiento conserva una acumulación coherente sobre las fechas comunes.

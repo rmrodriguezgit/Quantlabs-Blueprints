@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.1 — 2026-10-31
+
+- Columna CumulativeLogReturn calculada como la suma acumulada de los LogReturn retenidos tras el calentamiento.
+- Disponible en Plot y en la selección de características de entrada.
+
+
 ## v0.3.0 — 2026-10-31
 
 - Monitor de ejecución con nodo activo, tiempo transcurrido, filas disponibles, progreso por nodos y pérdidas por época. Electron y navegador reciben eventos WebSocket.

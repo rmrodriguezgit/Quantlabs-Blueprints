@@ -601,6 +601,7 @@ export function featureOptions(
   const names = [
     ...base,
     "LogReturn",
+    "CumulativeLogReturn",
     "Volatility",
     ...Array.from(
       { length: Math.max(0, Math.min(60, Number(p.lags ?? 5))) },
