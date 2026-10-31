@@ -45,6 +45,7 @@ const icons = {
   layer: BrainCircuit,
   network_output: Layers3,
   merge: SlidersHorizontal,
+  plot: ChartNoAxesCombined,
 };
 function nodeSummary(data: BlueprintNode["data"]): string {
   const p = data.params;
@@ -74,6 +75,8 @@ function nodeSummary(data: BlueprintNode["data"]): string {
       return `${p.output_units} output · Linear`;
     case "merge":
       return "A + B · date-aligned features";
+    case "plot":
+      return `${String(p.plot_source)} · ${String(p.plot_columns || "default series")}`;
     case "backtest":
       return `Threshold ${p.threshold}`;
     default:
@@ -118,7 +121,11 @@ function VisualNode({ data, selected }: NodeProps<BlueprintNode>) {
             style={
               id === "config" || (id === "network" && data.kind === "model")
                 ? {}
-                : { top: data.kind === "merge" ? `${65 + i * 22}%` : "82%" }
+                : {
+                    top: ["merge", "plot"].includes(data.kind)
+                      ? `${65 + i * 22}%`
+                      : "82%",
+                  }
             }
           />
           {id === "config" && <span className="config-label">config</span>}
@@ -262,6 +269,11 @@ export function BlueprintCanvas({
         (e) =>
           e.target === dst.id && e.targetHandle === connection.targetHandle,
       )
+    )
+      return false;
+    if (
+      dst.data.kind === "plot" &&
+      graph.edges.some((e) => e.target === dst.id)
     )
       return false;
     const visited = new Set<string>();

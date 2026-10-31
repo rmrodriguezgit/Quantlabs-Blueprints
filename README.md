@@ -1,5 +1,18 @@
 # Quantlabs-Blueprints
 
+![Quantlabs Blueprints](docs/banner.svg)
+
+[![Version](https://img.shields.io/github/v/tag/rmrodriguezgit/Quantlabs-Blueprints?label=version&color=6cc9ac)](https://github.com/rmrodriguezgit/Quantlabs-Blueprints/releases/tag/v0.3.0)
+![Desktop](https://img.shields.io/badge/desktop-macOS%20%7C%20Windows-79b4ef)
+![Electron](https://img.shields.io/badge/Electron-42-79b4ef)
+![React](https://img.shields.io/badge/React-19-61dafb)
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)
+![Python](https://img.shields.io/badge/Python-3.10%E2%80%933.13-ffd343)
+![PyTorch](https://img.shields.io/badge/PyTorch-2.x-ee4c2c)
+![Features](https://img.shields.io/badge/Blueprints-indicators%20%7C%20networks%20%7C%20plots%20%7C%20backtest-c49af8)
+
+**Versión actual: [v0.3.0](https://github.com/rmrodriguezgit/Quantlabs-Blueprints/releases/tag/v0.3.0)** · [Historial de cambios](CHANGELOG.md) · [Verificaciones](VERIFICATION.md)
+
 Estudio de escritorio para investigación cuantitativa mediante un grafo visual de nodos: datos → indicadores → preparación temporal → aprendizaje profundo → backtest. Base funcional para macOS y Windows, con Electron, React y un motor Python local.
 
 El código se encuentra en [`quant-blueprint-studio/`](quant-blueprint-studio/). Incluye un pipeline sintético reproducible para ejecutar sin descargar cotizaciones. Para datos reales, seleccionar `yfinance` en **Market Data**.
@@ -93,6 +106,33 @@ Se pueden ramificar salidas hacia varios consumidores, duplicar nodos desde el i
 
 **Export** descarga un `.json` con los nodos, posiciones, conexiones y parámetros. **Import** abre ese archivo. El editor también restaura automáticamente su último diseño desde el almacenamiento local de esa instalación. El JSON no incluye cotizaciones, resultados ni pesos entrenados; tras importarlo se ejecuta otra vez el pipeline. Para conservar variantes, exportarlas con nombres diferentes. El botón de ejemplo sustituye el grafo actual: exportarlo antes si se quiere conservar.
 
+## Monitor de ejecución y solución de errores
+
+El panel **Execution monitor** aparece encima del lienzo. Muestra `Calculating` durante el trabajo, el nodo activo, tiempo transcurrido, nodos completados y eventos con filas y pérdidas por época. `Execution stopped` indica que el motor ya terminó con error; el detalle se presenta completo y el inspector selecciona el nodo afectado. El porcentaje corresponde a nodos completados, no a una estimación de tiempo restante.
+
+**EURUSD=X / divisas sin volumen:** Yahoo puede devolver volumen cero. VWAP requiere volumen real: desactivar **Enable VWAP** en Technical Features y quitar `VWAP` de las columnas seleccionadas y del nodo Plot. El motor detecta este caso antes de limpiar datos y muestra la corrección específica; no sustituye VWAP por una media falsa.
+
+Cuando faltan datos, el mensaje indica filas de origen, filas útiles tras indicadores, lookback, secuencias y tamaños de entrenamiento/validación/prueba. Cada conjunto necesita al menos tres muestras. Para corregirlo: aumentar historia (por ejemplo 3–5 años), reducir ventanas de indicadores/lags y/o reducir lookback. La descomposición también requiere dos periodos completos. Un indicador de 252 barras puede consumir casi todo un histórico de un año; cambiar a ventanas de 20 barras o ampliar historia conserva más muestras.
+
+El resumen de red siempre muestra `N inputs → 64 ReLU → 32 ReLU → 1 output`, junto a `selected / declared`. Por defecto **Network Input** activa **Match selected features automatically**. Si se desactiva, se permite editar el número manualmente y se bloquea el entrenamiento ante una discrepancia. El motor vuelve a comprobar las dimensiones reales. Al compartir una arquitectura entre entrenadores, todos deben usar la misma cantidad de características.
+
+## Nodo Plot: elegir qué graficar
+
+![Gráficos configurables de precio e historial de entrenamiento](docs/v0.3-plots.jpg)
+
+Añadir **Plot** desde la biblioteca y conectar **una sola** entrada. Seleccionar el nodo y ajustar título, origen, tipo de gráfico (`line`, `area`, `bar`) y series separadas por comas. Al ejecutar, sus gráficos aparecen en **PLOT NODES**, debajo de los cuatro paneles generales. La página permite desplazamiento vertical.
+
+| Qué graficar | Conectar desde | `What to plot` | Ejemplo de series |
+| --- | --- | --- | --- |
+| OHLCV e indicadores | Technical Features, pin naranja | `columns` | `Close,VWAP,BBUpper,BBLower` |
+| Descomposición | Series Preparation, pin azul | `decomposition` | `TR,VA,TE` |
+| Real vs. pronóstico | Deep Learning, pin azul | `predictions` | `actual,predicted` |
+| Pérdidas por época | Deep Learning, pin azul | `loss` | `train,validation` |
+| Equity acumulada | Market Backtest, pin azul | `backtest` | `strategy,market` |
+| Posiciones de trading | Market Backtest, pin azul | `signals` | `signal` |
+
+`auto` identifica el origen según el tipo de datos. Dejar las series vacías usa sus valores predeterminados. Se admiten hasta 12 series numéricas por gráfico. Las columnas usan su escala original; para mezclar magnitudes distintas (por ejemplo precio y RSI), usar nodos Plot separados. El ejemplo de la barra incluye dos Plot; también se puede importar [`network-with-plots.json`](quant-blueprint-studio/examples/network-with-plots.json).
+
 ## Motor y decisiones de evaluación
 
 - Kahn ordena el DAG independientemente del orden visual de los nodos. Los nodos se ejecutan secuencialmente y el servidor permite una ejecución a la vez.
@@ -121,6 +161,7 @@ Los autoencoders también devuelven `autoencoder.latent` y `autoencoder.reconstr
 ```bash
 cd quant-blueprint-studio
 npm run typecheck
+npm run test:graph
 npm run build
 .venv/bin/python -m unittest discover -s backend/tests -v
 # Windows: .venv\Scripts\python.exe -m unittest discover -s backend/tests -v

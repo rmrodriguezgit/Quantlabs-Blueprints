@@ -1,7 +1,7 @@
 """Configurable PyTorch sequence models, denoising AE and offline trading DQN."""
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Callable
 import numpy as np
 import torch
 from torch import nn
@@ -136,7 +136,7 @@ class SequenceNet(nn.Module):
         return self.head(self.encode(x)).squeeze(-1)
 
 
-def train(data: PreparedData, params: dict[str, Any]) -> ModelResult:
+def train(data: PreparedData, params: dict[str, Any], progress: Callable[[dict[str, Any]], None] | None = None) -> ModelResult:
     architecture = str(params.get('architecture', 'LSTM'))
     if architecture == 'Custom' and not isinstance(params.get('_network'), NetworkSpec):
         raise ValueError('Custom architecture requires a connected Network Input → Layers → Network Output chain.')
@@ -211,6 +211,8 @@ def train(data: PreparedData, params: dict[str, Any]) -> ModelResult:
                 validation += criterion(model.q_head(encoded_val), rewards + .95 * next_values[:, None])
             val_loss = float(validation)
         history.append({'epoch': epoch + 1, 'train': total / max(seen, 1), 'validation': val_loss})
+        if progress and np.isfinite(val_loss):
+            progress({**history[-1], 'epochs': epochs})
         target_model.load_state_dict(model.state_dict())
         if not np.isfinite(val_loss):
             raise ValueError('Training diverged; reduce learning rate.')

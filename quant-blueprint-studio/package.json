@@ -1,6 +1,6 @@
 {
   "name": "quant-blueprint-studio",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "main": "dist/main/main.js",
   "scripts": {
@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit && tsc -p tsconfig.main.json --noEmit",
     "build": "npm run typecheck && vite build && npm run build:main",
     "electron:start": "electron . --production",
-    "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"*.{json,ts,html}\""
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"*.{json,ts,html}\"",
+    "test:graph": "node scripts/test_graph.cjs"
   },
   "dependencies": {
     "@xyflow/react": "^12.9.0",

@@ -65,6 +65,8 @@ def features(frame: pd.DataFrame, params: dict[str, Any]) -> pd.DataFrame:
         result['MACDSignal'] = result['MACD'].ewm(span=signal, adjust=False).mean()
         result['MACDHistogram'] = result['MACD'] - result['MACDSignal']
     if params.get('use_vwap', True):
+        if not result['Volume'].fillna(0).gt(0).any():
+            raise ValueError('VWAP is unavailable: this asset has no positive reported volume (common for Yahoo FX symbols such as EURUSD=X). Disable Enable VWAP in Technical Features, and deselect VWAP from input/plot columns, or use an asset with reported trading volume. No rows were silently discarded.')
         period = window('vwap_window', 20)
         typical = (result['High'] + result['Low'] + close) / 3
         volume = result['Volume'].rolling(period).sum().replace(0, np.nan)
@@ -78,7 +80,9 @@ def features(frame: pd.DataFrame, params: dict[str, Any]) -> pd.DataFrame:
         spread = deviations * close.rolling(period).std(ddof=0)
         result['BBMiddle'], result['BBUpper'], result['BBLower'] = middle, middle + spread, middle - spread
     result['Volatility'] = result['LogReturn'].rolling(20).std()
-    return result.replace([np.inf, -np.inf], np.nan).dropna()
+    cleaned = result.replace([np.inf, -np.inf], np.nan).dropna()
+    cleaned.attrs['raw_rows'] = frame.attrs.get('raw_rows', len(frame))
+    return cleaned
 
 
 def merge_features(left: pd.DataFrame, right: pd.DataFrame) -> pd.DataFrame:

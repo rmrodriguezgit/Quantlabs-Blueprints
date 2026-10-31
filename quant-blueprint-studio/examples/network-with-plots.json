@@ -1,0 +1,260 @@
+{
+  "nodes": [
+    {
+      "id": "0",
+      "type": "blueprint",
+      "position": {
+        "x": 0,
+        "y": 300
+      },
+      "data": {
+        "kind": "source",
+        "label": "Market Data",
+        "params": {
+          "source": "synthetic",
+          "years": 1,
+          "ticker": "SPY"
+        }
+      }
+    },
+    {
+      "id": "1",
+      "type": "blueprint",
+      "position": {
+        "x": 280,
+        "y": 300
+      },
+      "data": {
+        "kind": "features",
+        "label": "Technical Features",
+        "params": {}
+      }
+    },
+    {
+      "id": "2",
+      "type": "blueprint",
+      "position": {
+        "x": 560,
+        "y": 300
+      },
+      "data": {
+        "kind": "prepare",
+        "label": "Series Preparation",
+        "params": {
+          "lookback": 1,
+          "feature_columns": "Open,High,Low,Close,Volume,LogReturn,Volatility,RSI,EMA,SMA,VWAP,MACD,MACDSignal,BBUpper,BBMiddle,BBLower"
+        }
+      }
+    },
+    {
+      "id": "3",
+      "type": "blueprint",
+      "position": {
+        "x": 840,
+        "y": 300
+      },
+      "data": {
+        "kind": "model",
+        "label": "Deep Learning",
+        "params": {
+          "architecture": "Custom",
+          "epochs": 12
+        }
+      }
+    },
+    {
+      "id": "4",
+      "type": "blueprint",
+      "position": {
+        "x": 1120,
+        "y": 300
+      },
+      "data": {
+        "kind": "backtest",
+        "label": "Market Backtest",
+        "params": {}
+      }
+    },
+    {
+      "id": "5",
+      "type": "blueprint",
+      "position": {
+        "x": 0,
+        "y": 30
+      },
+      "data": {
+        "kind": "network_input",
+        "label": "Network Input",
+        "params": {
+          "input_features": 16,
+          "mode": "last"
+        }
+      }
+    },
+    {
+      "id": "6",
+      "type": "blueprint",
+      "position": {
+        "x": 280,
+        "y": 30
+      },
+      "data": {
+        "kind": "layer",
+        "label": "Network Layer",
+        "params": {
+          "layer_type": "Dense",
+          "units": 64,
+          "activation": "ReLU"
+        }
+      }
+    },
+    {
+      "id": "7",
+      "type": "blueprint",
+      "position": {
+        "x": 560,
+        "y": 30
+      },
+      "data": {
+        "kind": "layer",
+        "label": "Network Layer",
+        "params": {
+          "layer_type": "Dense",
+          "units": 32,
+          "activation": "ReLU"
+        }
+      }
+    },
+    {
+      "id": "8",
+      "type": "blueprint",
+      "position": {
+        "x": 840,
+        "y": 30
+      },
+      "data": {
+        "kind": "network_output",
+        "label": "Network Output",
+        "params": {
+          "output_units": 1
+        }
+      }
+    },
+    {
+      "id": "plot-indicators",
+      "type": "blueprint",
+      "position": {
+        "x": 0,
+        "y": 570
+      },
+      "data": {
+        "kind": "plot",
+        "label": "Plot",
+        "params": {
+          "title": "Price, VWAP and Bollinger bands",
+          "plot_source": "columns",
+          "plot_columns": "Close,VWAP,BBUpper,BBLower",
+          "chart_type": "line"
+        }
+      }
+    },
+    {
+      "id": "plot-loss",
+      "type": "blueprint",
+      "position": {
+        "x": 300,
+        "y": 570
+      },
+      "data": {
+        "kind": "plot",
+        "label": "Plot",
+        "params": {
+          "title": "Training and validation loss",
+          "plot_source": "loss",
+          "plot_columns": "",
+          "chart_type": "line"
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e0",
+      "source": "0",
+      "target": "1",
+      "sourceHandle": "frame",
+      "targetHandle": "frame",
+      "animated": true
+    },
+    {
+      "id": "e1",
+      "source": "1",
+      "target": "2",
+      "sourceHandle": "frame",
+      "targetHandle": "frame",
+      "animated": true
+    },
+    {
+      "id": "e2",
+      "source": "2",
+      "target": "3",
+      "sourceHandle": "tensor",
+      "targetHandle": "tensor",
+      "animated": true
+    },
+    {
+      "id": "e3",
+      "source": "3",
+      "target": "4",
+      "sourceHandle": "tensor",
+      "targetHandle": "tensor",
+      "animated": true
+    },
+    {
+      "id": "e4",
+      "source": "5",
+      "target": "6",
+      "sourceHandle": "network",
+      "targetHandle": "network",
+      "animated": true
+    },
+    {
+      "id": "e5",
+      "source": "6",
+      "target": "7",
+      "sourceHandle": "network",
+      "targetHandle": "network",
+      "animated": true
+    },
+    {
+      "id": "e6",
+      "source": "7",
+      "target": "8",
+      "sourceHandle": "network",
+      "targetHandle": "network",
+      "animated": true
+    },
+    {
+      "id": "e7",
+      "source": "8",
+      "target": "3",
+      "sourceHandle": "network",
+      "targetHandle": "network",
+      "animated": true
+    },
+    {
+      "id": "eplot1",
+      "source": "1",
+      "target": "plot-indicators",
+      "sourceHandle": "frame",
+      "targetHandle": "frame"
+    },
+    {
+      "id": "eplot2",
+      "source": "3",
+      "target": "plot-loss",
+      "sourceHandle": "tensor",
+      "targetHandle": "tensor"
+    }
+  ]
+}

@@ -9,7 +9,8 @@ export type Kind =
   | "network_input"
   | "layer"
   | "network_output"
-  | "merge";
+  | "merge"
+  | "plot";
 export type Param = string | number | boolean;
 export type BlueprintData = {
   label: string;
@@ -29,6 +30,7 @@ export interface Result {
   }[];
   metrics: Record<string, number | null>;
   history: { epoch: number; train: number; validation: number }[];
+  plots?: CustomPlot[];
   target?: string;
   features?: string[];
   input_shape?: number[];
@@ -271,6 +273,7 @@ export const catalog: Record<Kind, Definition> = {
   },
   backtest: {
     label: "Market Backtest",
+    output: "tensor",
     subtitle: "Short / cash / long",
     category: "04 / EVALUATION",
     color: "#79b4ef",
@@ -306,6 +309,11 @@ export const catalog: Record<Kind, Definition> = {
     color: "#c49af8",
     output: "network",
     fields: [
+      {
+        key: "auto_features",
+        label: "Match selected features automatically",
+        value: true,
+      },
       {
         key: "input_features",
         label: "Input features",
@@ -387,6 +395,40 @@ export const catalog: Record<Kind, Definition> = {
     output: "frame",
     fields: [],
   },
+  plot: {
+    label: "Plot",
+    subtitle: "Choose data and series to chart",
+    category: "05 / VISUALIZATION",
+    color: "#ec9dd6",
+    fields: [
+      { key: "title", label: "Chart title", value: "Custom plot" },
+      {
+        key: "plot_source",
+        label: "What to plot",
+        value: "auto",
+        options: [
+          "auto",
+          "columns",
+          "decomposition",
+          "predictions",
+          "backtest",
+          "signals",
+          "loss",
+        ],
+      },
+      {
+        key: "chart_type",
+        label: "Chart type",
+        value: "line",
+        options: ["line", "area", "bar"],
+      },
+      {
+        key: "plot_columns",
+        label: "Series (comma-separated; empty = defaults)",
+        value: "",
+      },
+    ],
+  },
   config: {
     label: "Training Config",
     subtitle: "Shared hyperparameters",
@@ -441,7 +483,10 @@ export function defaultGraph(): Graph {
 }
 declare global {
   interface Window {
-    quantEngine?: { execute: (graph: Graph) => Promise<unknown> };
+    quantEngine?: {
+      execute: (graph: Graph) => Promise<unknown>;
+      onProgress: (callback: (event: unknown) => void) => () => void;
+    };
   }
 }
 
@@ -497,8 +542,36 @@ export function networkExample(): Graph {
     targetHandle: "network",
     animated: true,
   });
+  const chart = createNode("plot", 9, { x: 100, y: 570 });
+  chart.data.params = {
+    title: "Price, VWAP and Bollinger bands",
+    plot_source: "columns",
+    plot_columns: "Close,VWAP,BBUpper,BBLower",
+    chart_type: "line",
+  };
+  const loss = createNode("plot", 10, { x: 550, y: 570 });
+  loss.data.params = {
+    title: "Training and validation loss",
+    plot_source: "loss",
+    plot_columns: "",
+    chart_type: "line",
+  };
+  edges.push({
+    id: "plot-indicators",
+    source: graph.nodes[1].id,
+    target: chart.id,
+    sourceHandle: "frame",
+    targetHandle: "frame",
+  });
+  edges.push({
+    id: "plot-loss",
+    source: trainer.id,
+    target: loss.id,
+    sourceHandle: "tensor",
+    targetHandle: "tensor",
+  });
   return {
-    nodes: [...graph.nodes, ...network],
+    nodes: [...graph.nodes, ...network, chart, loss],
     edges: [...graph.edges, ...edges],
   };
 }
@@ -524,7 +597,7 @@ export function featureOptions(
   if (node.data.kind === "source")
     return ["Open", "High", "Low", "Close", "Volume"];
   if (node.data.kind !== "features") return base;
-  const p = node.data.params;
+  const p = effectiveParams(graph, id);
   const names = [
     ...base,
     "LogReturn",
@@ -553,5 +626,148 @@ export function inputHandles(kind: Kind): Record<string, string> {
     handles.config = "config";
   if (kind === "model") handles.network = "network";
   if (kind === "merge") handles.frame_b = "frame";
+  if (kind === "plot") {
+    handles.frame = "frame";
+    handles.tensor = "tensor";
+  }
   return handles;
+}
+
+export interface CustomPlot {
+  id: string;
+  title: string;
+  chart_type: "line" | "area" | "bar";
+  source: string;
+  x_key: string;
+  series: string[];
+  rows: Record<string, string | number>[];
+}
+export interface NetworkBinding {
+  trainerId: string;
+  inputId?: string;
+  prepareId?: string;
+  selected: string[];
+  unavailable: string[];
+  declared: number;
+  summary: string;
+  issue?: string;
+}
+export function effectiveParams(
+  graph: Graph,
+  id: string,
+): Record<string, Param> {
+  const node = graph.nodes.find((n) => n.id === id);
+  if (!node) return {};
+  const params = { ...node.data.params };
+  const edge = graph.edges.find(
+    (e) => e.target === id && e.targetHandle === "config",
+  );
+  const config = graph.nodes.find((n) => n.id === edge?.source);
+  return config?.data.kind === "config"
+    ? { ...params, ...config.data.params }
+    : params;
+}
+export function networkBindings(graph: Graph): NetworkBinding[] {
+  return graph.nodes
+    .filter((n) => n.data.kind === "model")
+    .map((trainer) => {
+      const prepEdge = graph.edges.find(
+        (e) => e.target === trainer.id && e.targetHandle === "tensor",
+      );
+      const prep = graph.nodes.find(
+        (n) => n.id === prepEdge?.source && n.data.kind === "prepare",
+      );
+      const params = prep ? effectiveParams(graph, prep.id) : {};
+      const available = prep ? featureOptions(graph, prep.id) : [];
+      const raw = String(params.feature_columns ?? "").trim();
+      const selected = raw
+        ? raw
+            .split(",")
+            .map((n) => n.trim())
+            .filter(Boolean)
+        : available;
+      const unavailable = selected.filter((name) => !available.includes(name));
+      let cursor = graph.edges.find(
+        (e) => e.target === trainer.id && e.targetHandle === "network",
+      )?.source;
+      const visited = new Set<string>();
+      const blocks: string[] = [];
+      let input: BlueprintNode | undefined;
+      while (cursor && !visited.has(cursor)) {
+        visited.add(cursor);
+        const node = graph.nodes.find((n) => n.id === cursor);
+        if (!node) break;
+        if (node.data.kind === "network_input") {
+          input = node;
+          break;
+        }
+        if (node.data.kind === "layer")
+          blocks.unshift(
+            node.data.params.layer_type === "Dense"
+              ? `${node.data.params.units} ${node.data.params.activation}`
+              : String(node.data.params.layer_type),
+          );
+        if (node.data.kind === "network_output")
+          blocks.unshift(`${node.data.params.output_units} output`);
+        cursor = graph.edges.find(
+          (e) => e.target === node.id && e.targetHandle === "network",
+        )?.source;
+      }
+      const declared = Number(
+        input?.data.params.input_features ?? selected.length,
+      );
+      const summary = input
+        ? [`${declared} inputs`, ...blocks].join(" → ")
+        : `${selected.length} features → ${String(trainer.data.params.architecture ?? "LSTM")} → 1 output`;
+      const issue = !prep
+        ? "Connect Series Preparation to the trainer."
+        : unavailable.length
+          ? `Unavailable selected features: ${unavailable.join(", ")}. Enable their indicators or deselect them.`
+          : selected.length === 0
+            ? "Select input features."
+            : input && declared !== selected.length
+              ? `Input mismatch: selected ${selected.length}, Network Input declares ${declared}. Enable automatic input size or correct the count.`
+              : undefined;
+      return {
+        trainerId: trainer.id,
+        inputId: input?.id,
+        prepareId: prep?.id,
+        selected,
+        unavailable,
+        declared,
+        summary,
+        issue,
+      };
+    });
+}
+export function syncNetworkInputs(graph: Graph): Graph {
+  const bindings = networkBindings(graph);
+  const updates = new Map<string, number>();
+  for (const binding of bindings) {
+    const node = graph.nodes.find((n) => n.id === binding.inputId);
+    const counts = bindings
+      .filter((b) => b.inputId === binding.inputId)
+      .map((b) => b.selected.length);
+    if (
+      node &&
+      node.data.params.auto_features !== false &&
+      binding.selected.length > 0 &&
+      counts.every((n) => n === binding.selected.length)
+    )
+      updates.set(node.id, binding.selected.length);
+  }
+  return {
+    ...graph,
+    nodes: graph.nodes.map((n) =>
+      updates.has(n.id)
+        ? {
+            ...n,
+            data: {
+              ...n.data,
+              params: { ...n.data.params, input_features: updates.get(n.id)! },
+            },
+          }
+        : n,
+    ),
+  };
 }

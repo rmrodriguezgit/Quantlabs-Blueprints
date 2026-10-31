@@ -38,6 +38,22 @@ export function DetailsInspector({
               Connect the purple output to the trainer’s purple network pin.
             </p>
           )}
+          {node.data.kind === "features" && (
+            <p className="inspector-hint">
+              VWAP requires reported volume. For Yahoo FX symbols such as
+              EURUSD=X (zero volume), turn VWAP off.
+            </p>
+          )}
+          {node.data.kind === "plot" && (
+            <div className="inspector-hint">
+              Connect one input: orange for OHLCV/indicators; blue from
+              Preparation for TR/VA/TE, Model for predictions/loss, or Backtest
+              for equity/signals. Choose a source and comma-separated series.{" "}
+              {availableFeatures.length > 0 && (
+                <p>Available columns: {availableFeatures.join(", ")}</p>
+              )}
+            </div>
+          )}
           <fieldset disabled={disabled}>
             {catalog[node.data.kind].fields.map((field) => (
               <div className="inspector-field" key={field.key}>
@@ -123,6 +139,10 @@ export function DetailsInspector({
                     id={`param-${field.key}`}
                     type={typeof field.value === "number" ? "number" : "text"}
                     value={String(node.data.params[field.key] ?? field.value)}
+                    disabled={
+                      field.key === "input_features" &&
+                      node.data.params.auto_features !== false
+                    }
                     min={field.min}
                     max={field.max}
                     step={field.step ?? 1}

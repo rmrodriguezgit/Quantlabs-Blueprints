@@ -756,3 +756,155 @@ i.network {
   padding-bottom: 8px;
   gap: 10px;
 }
+
+.studio {
+  height: auto;
+  min-height: 100vh;
+}
+.workspace {
+  flex: none;
+  height: 48vh;
+  min-height: 360px;
+}
+.performance {
+  height: 268px;
+  flex-shrink: 0;
+}
+.status-bar {
+  position: sticky;
+  bottom: 0;
+  min-height: 30px;
+  z-index: 10;
+}
+.execution-panel {
+  padding: 10px 22px;
+  background: #111a26;
+  border-bottom: 1px solid #303a48;
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(300px, 1.2fr);
+  gap: 20px;
+}
+.network-overview > div {
+  margin-bottom: 6px;
+}
+.network-overview button {
+  color: #d6b7f8;
+  font-size: 12px;
+  max-width: 100%;
+  text-align: left;
+  justify-content: flex-start;
+}
+.network-overview span {
+  display: block;
+  font-size: 10px;
+  color: #6cc9ac;
+  margin: 7px 0;
+}
+.network-overview .network-issue span,
+.network-issue p {
+  color: #ed9b9b;
+}
+.network-issue p {
+  font-size: 11px;
+  line-height: 1.5;
+  margin: 6px 0;
+}
+.run-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11px;
+}
+.run-heading > span {
+  color: #8495ad;
+}
+.run-monitor progress {
+  width: 100%;
+  height: 5px;
+  accent-color: #6cc9ac;
+  margin-top: 8px;
+}
+.run-monitor > p {
+  font-size: 11px;
+  color: #b6c6da;
+  margin: 7px 0;
+}
+.run-monitor.failed > p {
+  color: #ed9b9b;
+  line-height: 1.7;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.run-monitor.failed strong {
+  color: #ed9b9b;
+}
+.execution-log {
+  max-height: 92px;
+  overflow: auto;
+  margin-top: 7px;
+  font: 10px monospace;
+  color: #93a5be;
+}
+.execution-log > div {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+  align-items: baseline;
+}
+.execution-log time {
+  color: #667e9b;
+  flex-shrink: 0;
+}
+.execution-log b {
+  font-weight: 500;
+  color: #c2cede;
+  flex-shrink: 0;
+}
+.execution-log span {
+  overflow-wrap: anywhere;
+}
+.plot-dock {
+  padding: 16px 22px;
+  background: #0e141e;
+  border-top: 1px solid #303a48;
+}
+.plot-dock h2 {
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: #ec9dd6;
+  margin: 0 0 15px;
+}
+.plot-dock > div {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+  gap: 15px;
+}
+.plot-dock article {
+  border: 1px solid #303a48;
+  background: #141b25;
+  border-radius: 6px;
+  padding: 14px;
+}
+.plot-dock header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  gap: 14px;
+}
+.plot-dock strong {
+  font-size: 12px;
+}
+.plot-dock small {
+  font-size: 10px;
+  color: #8193ad;
+}
+@media (max-width: 1100px) {
+  .execution-panel {
+    grid-template-columns: 1fr;
+  }
+  .plot-dock > div {
+    grid-template-columns: 1fr;
+  }
+}

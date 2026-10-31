@@ -14,7 +14,7 @@ except ImportError:
 
 class NodeData(BaseModel):
     model_config = ConfigDict(extra='ignore')
-    kind: Literal['source', 'features', 'prepare', 'model', 'backtest', 'config', 'network_input', 'layer', 'network_output', 'merge']
+    kind: Literal['source', 'features', 'prepare', 'model', 'backtest', 'config', 'network_input', 'layer', 'network_output', 'merge', 'plot']
     label: str = ''
     params: dict[str, str | int | float | bool] = Field(default_factory=dict)
 
@@ -36,7 +36,7 @@ class Graph(BaseModel):
     edges: list[Edge] = Field(default_factory=list, max_length=150)
 
 
-app = FastAPI(title='Quant Blueprint Engine', version='0.1.0')
+app = FastAPI(title='Quant Blueprint Engine', version='0.3.0')
 app.add_middleware(CORSMiddleware, allow_origins=['http://127.0.0.1:5173', 'http://localhost:5173'],
                    allow_methods=['GET', 'POST'], allow_headers=['Content-Type'])
 execution_lock = threading.Lock()

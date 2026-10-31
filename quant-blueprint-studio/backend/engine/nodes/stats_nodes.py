@@ -46,7 +46,19 @@ def prepare(frame: pd.DataFrame, params: dict[str, Any]) -> PreparedData:
     count = len(values) - lookback
     train_end, val_end = int(count * train_ratio), int(count * (train_ratio + val_ratio))
     if min(train_end, val_end - train_end, count - val_end) < 3:
-        raise ValueError('Insufficient rows for the selected splits/lookback.')
+        required_samples = 1
+        while min(int(required_samples * train_ratio), int(required_samples * (train_ratio + val_ratio)) - int(required_samples * train_ratio), required_samples - int(required_samples * (train_ratio + val_ratio))) < 3:
+            required_samples += 1
+        raw_rows = int(frame.attrs.get('raw_rows', len(frame)))
+        raise ValueError(
+            f'Insufficient data: {len(frame)} usable rows from {raw_rows} source rows; '
+            f'lookback={lookback} leaves {max(count, 0)} sequences. '
+            f'Splits train/validation/test={max(train_end, 0)}/{max(val_end-train_end, 0)}/{max(count-val_end, 0)}; '
+            f'each needs at least 3. Need at least {lookback + required_samples} usable rows. '
+            'Increase Market Data history (e.g. 3–5 years), reduce indicator windows/lags (e.g. 20 bars), '
+            'or reduce Series Preparation lookback (1 for a one-bar Dense input).')
+    if len(frame) < 2 * period:
+        raise ValueError(f'Decomposition period={period} needs {2 * period} usable rows; only {len(frame)} available. Reduce the decomposition period or increase data history.')
     # Training windows end at lookback + train_end - 2. Fit nowhere else.
     scaler = MinMaxScaler() if params.get('scaler') == 'minmax' else StandardScaler()
     scaler.fit(values[:lookback + train_end - 1])

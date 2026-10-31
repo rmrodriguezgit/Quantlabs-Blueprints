@@ -8,16 +8,19 @@ from .nodes.data_nodes import source, features, merge_features
 from .nodes.stats_nodes import PreparedData, prepare
 from .nodes.dl_nodes import ModelResult, NetworkSpec, train
 from .nodes.backtest_nodes import backtest
+from .nodes.plot_nodes import plot
 
 PINS = {'source': (None, 'frame'), 'features': ('frame', 'frame'), 'prepare': ('frame', 'tensor'),
         'model': ('tensor', 'tensor'), 'backtest': ('tensor', None), 'config': (None, 'config'),
         'network_input': (None, 'network'), 'layer': ('network', 'network'),
-        'network_output': ('network', 'network'), 'merge': ('frame', 'frame')}
+        'network_output': ('network', 'network'), 'merge': ('frame', 'frame'), 'plot': (None, None)}
 INPUTS = {kind: ({pin: pin} if pin else {}) for kind, (pin, _) in PINS.items()}
 for kind in ('features', 'prepare', 'model', 'backtest'):
     INPUTS[kind]['config'] = 'config'
 INPUTS['model']['network'] = 'network'
 INPUTS['merge']['frame_b'] = 'frame'
+INPUTS['plot'] = {'frame': 'frame', 'tensor': 'tensor'}
+PINS['backtest'] = ('tensor', 'tensor')
 
 
 def serialize(value: Any) -> Any:
@@ -78,7 +81,7 @@ class DAGRunner:
         return order
 
     def execute(self, progress: Callable[[dict[str, Any]], None] | None = None) -> dict[str, Any]:
-        report: dict[str, Any] = {'decomposition': [], 'predictions': [], 'backtest': [], 'metrics': {}, 'history': [], 'nodes': []}
+        report: dict[str, Any] = {'decomposition': [], 'predictions': [], 'backtest': [], 'metrics': {}, 'history': [], 'nodes': [], 'plots': []}
         order = self.topological_sort()
         for key in order:
             node = self.nodes[key]
@@ -93,10 +96,15 @@ class DAGRunner:
                 elif edge['targetHandle'] == PINS[kind][0]:
                     upstream = value
             if progress:
-                progress({'node': key, 'status': 'running'})
+                progress({'node': key, 'label': node['data'].get('label') or kind, 'status': 'running'})
             try:
                 if kind == 'source':
                     output: Any = source(params)
+                elif kind == 'plot':
+                    if len(inputs) != 1:
+                        raise ValueError('Plot requires exactly one frame or tensor input.')
+                    output = plot(next(iter(inputs.values())), params, key)
+                    report['plots'].append(output)
                 elif kind == 'config':
                     output = params
                 elif kind == 'network_input':
@@ -126,7 +134,7 @@ class DAGRunner:
                     if 'network' in inputs:
                         params['_network'] = inputs['network']
                         params['architecture'] = 'Custom'
-                    output = train(upstream, params)
+                    output = train(upstream, params, (lambda event: progress({'node': key, 'status': 'epoch', **event})) if progress else None)
                     report['metrics'] = output.metrics
                     report['history'] = output.history
                     report['predictions'] = [{'date': d, 'actual': float(y), 'predicted': float(p)} for d, y, p in zip(upstream.dates, upstream.y_test, output.predicted)]
@@ -139,12 +147,18 @@ class DAGRunner:
                 else:
                     raise ValueError(f'{kind} has a missing or invalid input.')
             except (ValueError, TypeError, RuntimeError, KeyError) as exc:
-                raise ValueError(f'Node {key} ({kind}): {exc}') from exc
+                if progress:
+                    progress({'node': key, 'status': 'error', 'detail': str(exc)})
+                raise ValueError(f'{node["data"].get("label") or kind}: {exc}') from exc
             self.outputs[key] = output
             summary = {'id': key, 'kind': kind, 'status': 'complete'}
             if isinstance(output, pd.DataFrame):
                 summary.update(serialize(output))
+                summary['source_rows'] = output.attrs.get('raw_rows', len(output))
             report['nodes'].append(summary)
             if progress:
-                progress({'node': key, 'status': 'complete'})
+                details = {k: v for k, v in summary.items() if k not in ('id', 'kind', 'status')}
+                if isinstance(output, PreparedData):
+                    details.update({'features': len(output.feature_names), 'samples': {'train': len(output.y_train), 'validation': len(output.y_val), 'test': len(output.y_test)}})
+                progress({'node': key, 'status': 'complete', **details})
         return serialize(report)

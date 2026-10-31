@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="320" viewBox="0 0 1200 320" role="img" aria-labelledby="title description">
+<title id="title">Quantlabs Blueprints v0.3.0</title><desc id="description">Visual quantitative research: selectable indicators, composable neural networks, live progress, custom plots and backtesting.</desc>
+<defs><pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" fill="#263344"/></pattern><linearGradient id="bg"><stop stop-color="#0e1825"/><stop offset="1" stop-color="#171526"/></linearGradient></defs>
+<rect width="1200" height="320" rx="18" fill="url(#bg)"/><rect width="1200" height="320" rx="18" fill="url(#grid)"/>
+<rect x="30" y="30" width="6" height="50" rx="3" fill="#6cc9ac"/><text x="56" y="55" font-family="Segoe UI,Arial,sans-serif" font-size="30" font-weight="700" fill="#e3eaf6">QUANTLABS / BLUEPRINTS</text><text x="56" y="81" font-family="Segoe UI,Arial,sans-serif" font-size="13" letter-spacing="3" fill="#8b9db6">VISUAL QUANTITATIVE RESEARCH STUDIO</text>
+<rect x="1035" y="32" width="125" height="36" rx="8" fill="#6cc9ac"/><text x="1097" y="56" text-anchor="middle" fill="#112a24" font-family="Segoe UI,Arial,sans-serif" font-size="17" font-weight="700">v0.3.0</text>
+<g stroke="#8673b2" stroke-width="2"><path d="M230 160H280M475 160H525M720 160H770"/></g>
+<g font-family="Segoe UI,Arial,sans-serif"><rect x="45" y="114" width="185" height="90" rx="8" fill="#182330" stroke="#6cc9ac"/><text x="63" y="139" fill="#6cc9ac" font-size="11">NETWORK INPUT</text><text x="63" y="177" fill="#e3eaf6" font-size="26">16 features</text>
+<rect x="280" y="114" width="195" height="90" rx="8" fill="#201e33" stroke="#c49af8"/><text x="298" y="139" fill="#c49af8" font-size="11">DENSE + ACTIVATION</text><text x="298" y="177" fill="#e3eaf6" font-size="26">64 / ReLU</text>
+<rect x="525" y="114" width="195" height="90" rx="8" fill="#201e33" stroke="#c49af8"/><text x="543" y="139" fill="#c49af8" font-size="11">DENSE + ACTIVATION</text><text x="543" y="177" fill="#e3eaf6" font-size="26">32 / ReLU</text>
+<rect x="770" y="114" width="185" height="90" rx="8" fill="#201e33" stroke="#c49af8"/><text x="788" y="139" fill="#c49af8" font-size="11">NETWORK OUTPUT</text><text x="788" y="177" fill="#e3eaf6" font-size="26">1 forecast</text>
+<text x="45" y="246" fill="#f2ad65" font-size="14">RSI · EMA · SMA · MACD · VWAP · BOLLINGER BANDS</text><text x="45" y="277" fill="#afbdd1" font-size="13">Live execution &amp; epochs   /   Configurable plot nodes   /   Short · Cash · Long backtests</text><text x="1148" y="277" text-anchor="end" fill="#7f92ad" font-size="12">Electron + React + Python / PyTorch</text></g>
+</svg>

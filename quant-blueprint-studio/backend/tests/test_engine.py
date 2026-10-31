@@ -9,6 +9,7 @@ from backend.engine.nodes.data_nodes import source, features, merge_features
 from backend.engine.nodes.stats_nodes import prepare
 from backend.engine.nodes.dl_nodes import train, NetworkSpec, SequenceNet
 from backend.engine.nodes.backtest_nodes import backtest
+from backend.engine.nodes.plot_nodes import plot
 
 
 def graph() -> dict:
@@ -144,6 +145,68 @@ class EngineTests(unittest.TestCase):
         example['nodes'].append(clone)
         example['edges'].extend([{**edge,'target':'model-copy'} for edge in list(example['edges']) if edge['target']==trainer['id']])
         self.assertEqual(len(DAGRunner(example).execute()['nodes']), len(example['nodes']))
+
+    def test_insufficient_rows_diagnostic_and_recovery(self) -> None:
+        short = features(source({'years':1}), {'bb_window':252})
+        with self.assertRaisesRegex(ValueError, '1 usable rows from 252 source rows') as error:
+            prepare(short, {'lookback':20})
+        self.assertIn('Increase Market Data history', str(error.exception))
+        self.assertIn('train/validation/test=', str(error.exception))
+        enough = features(source({'years':3}), {'bb_window':252})
+        self.assertGreater(len(prepare(enough, {'lookback':20}).y_test), 3)
+        with self.assertRaisesRegex(ValueError, 'Decomposition period'):
+            prepare(self.frame.tail(30), {'lookback':1,'period':20})
+
+    def test_forex_zero_volume_does_not_silently_discard_rows(self) -> None:
+        raw = source({'years':1})
+        raw['Volume'] = 0
+        with self.assertRaisesRegex(ValueError,'Disable Enable VWAP'):
+            features(raw,{})
+        without_vwap = features(raw,{'use_vwap':False})
+        self.assertGreater(len(without_vwap),200)
+        self.assertNotIn('VWAP',without_vwap.columns)
+        self.assertGreater(len(prepare(without_vwap,{}).y_test),3)
+
+    def test_plot_sources_and_validation(self) -> None:
+        data = prepare(self.frame,{})
+        result = train(data, {'epochs':2,'hidden':8})
+        market = backtest(result,{})
+        cases = [(self.frame,'columns','Close,VWAP'),(data,'decomposition','TR,VA,TE'),
+                 (result,'predictions','actual,predicted'),(result,'loss','train,validation'),
+                 (market,'backtest','strategy,market'),(market,'signals','signal')]
+        for value, mode, columns in cases:
+            with self.subTest(mode=mode):
+                chart = plot(value, {'plot_source':mode,'plot_columns':columns,'chart_type':'area'}, 'plot1')
+                self.assertTrue(chart['rows'])
+                self.assertEqual(chart['series'],columns.split(','))
+                self.assertEqual(chart['chart_type'],'area')
+        with self.assertRaisesRegex(ValueError,'unavailable'):
+            plot(self.frame, {'plot_columns':'NotAColumn'}, 'plot1')
+        with self.assertRaisesRegex(ValueError,'does not match'):
+            plot(data, {'plot_source':'loss'}, 'plot1')
+        with self.assertRaisesRegex(ValueError,'unique numeric'):
+            plot(result, {'plot_source':'loss','plot_columns':'train,train'}, 'plot1')
+
+    def test_progress_epochs_rows_and_plot_graph(self) -> None:
+        g = graph()
+        g['nodes'].extend([{'id':'plot-frame','data':{'kind':'plot','params':{'plot_columns':'Close,VWAP'}}},
+                           {'id':'plot-equity','data':{'kind':'plot','params':{'plot_source':'backtest'}}}])
+        g['edges'].extend([{'source':'1','target':'plot-frame','sourceHandle':'frame','targetHandle':'frame'},
+                           {'source':'4','target':'plot-equity','sourceHandle':'tensor','targetHandle':'tensor'}])
+        events = []
+        result = DAGRunner(g).execute(events.append)
+        self.assertEqual(len(result['plots']),2)
+        self.assertTrue(any(e['status']=='epoch' and e['epoch']==1 for e in events))
+        source_event = next(e for e in events if e['node']=='0' and e['status']=='complete')
+        self.assertEqual(source_event['rows'],252)
+        prep_event = next(e for e in events if e['node']=='2' and e['status']=='complete')
+        self.assertIn('features',prep_event)
+        self.assertTrue(all(n>=3 for n in prep_event['samples'].values()))
+        g['nodes'][1]['data']['params']['bb_window'] = 252
+        failed = []
+        with self.assertRaisesRegex(ValueError,'Insufficient data'):
+            DAGRunner(g).execute(failed.append)
+        self.assertTrue(any(e['node']=='2' and e['status']=='error' for e in failed))
 
     def test_api(self) -> None:
         with TestClient(app) as client:

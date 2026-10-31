@@ -1,4 +1,5 @@
-import { useRef, useState } from "react";
+import { version } from "../../package.json";
+import { useEffect, useRef, useState } from "react";
 import { ReactFlowProvider } from "@xyflow/react";
 import {
   Activity,
@@ -11,11 +12,19 @@ import {
 } from "lucide-react";
 import { BlueprintCanvas, Palette } from "./components/BlueprintCanvas";
 import { DetailsInspector } from "./components/DetailsInspector";
+import { executeGraph } from "./engine";
+import {
+  ExecutionPanel,
+  type ExecutionEntry,
+} from "./components/ExecutionPanel";
+import { PlotDock } from "./components/PlotDock";
 import { PerformanceDock } from "./components/PerformanceDock";
 import {
   catalog,
   defaultGraph,
   networkExample,
+  networkBindings,
+  syncNetworkInputs,
   featureOptions,
   createNode,
   type Graph,
@@ -86,7 +95,7 @@ function loadGraph(): Graph {
     const saved = JSON.parse(
       localStorage.getItem("quant-blueprint") ?? "null",
     ) as unknown;
-    if (isGraph(saved)) return saved;
+    if (isGraph(saved)) return syncNetworkInputs(saved);
   } catch {
     /* Start with the included pipeline if local storage is unavailable. */
   }
@@ -102,10 +111,28 @@ export default function App() {
   );
   const [error, setError] = useState(false);
   const input = useRef<HTMLInputElement>(null);
+  const [entries, setEntries] = useState<ExecutionEntry[]>([]);
+  const [elapsed, setElapsed] = useState(0);
+  const started = useRef(0);
+  const bindings = networkBindings(graph);
+  useEffect(() => {
+    if (!running) return;
+    const timer = window.setInterval(
+      () => setElapsed(Math.floor((Date.now() - started.current) / 1000)),
+      1000,
+    );
+    return () => window.clearInterval(timer);
+  }, [running]);
   const updateGraph = (update: (g: Graph) => Graph) => {
     setGraph((g) => {
-      const next = update(g);
-      if (graphSignature(next) !== graphSignature(g)) setResult(null);
+      const next = syncNetworkInputs(update(g));
+      if (graphSignature(next) !== graphSignature(g)) {
+        setResult(null);
+        setEntries([]);
+        setError(false);
+        setElapsed(0);
+        setMessage("Graph changed. Ready to execute.");
+      }
       try {
         localStorage.setItem("quant-blueprint", JSON.stringify(next));
       } catch {
@@ -115,27 +142,34 @@ export default function App() {
     });
   };
   const execute = async () => {
+    const issue = bindings.find((binding) => binding.issue);
+    if (issue) {
+      setError(true);
+      setMessage(issue.issue ?? "Input configuration mismatch.");
+      setSelected(issue.inputId ?? issue.prepareId ?? issue.trainerId);
+      return;
+    }
+    started.current = Date.now();
+    setEntries([]);
+    setElapsed(0);
     setRunning(true);
     setError(false);
     setResult(null);
     setMessage("Executing DAG · preparing data and training model…");
     try {
-      let value: unknown;
-      if (window.quantEngine) value = await window.quantEngine.execute(graph);
-      else {
-        const response = await fetch("http://localhost:8000/api/execute", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(graph),
-        });
-        value = await response.json();
-        if (!response.ok)
-          throw new Error(
-            typeof value === "object" && value && "detail" in value
-              ? JSON.stringify(value.detail)
-              : `Engine returned ${response.status}`,
-          );
-      }
+      const value = await executeGraph(graph, (event) => {
+        const label =
+          graph.nodes.find((n) => n.id === event.node)?.data.label ??
+          event.node;
+        setEntries((previous) => [
+          ...previous,
+          { ...event, label, time: (Date.now() - started.current) / 1000 },
+        ]);
+        if (event.status === "running") setMessage(`${label}: calculating…`);
+        if (event.status === "epoch")
+          setMessage(`${label}: epoch ${event.epoch}/${event.epochs}`);
+        if (event.status === "error") setSelected(event.node);
+      });
       if (!isResult(value))
         throw new Error("Engine returned an invalid result.");
       setResult(value);
@@ -173,7 +207,7 @@ export default function App() {
         </div>
         <span className="workspace-tag">LOCAL WORKSPACE</span>
         <div className="header-right">
-          <span className="version">BASELINE v0.2</span>
+          <span className="version">v{version}</span>
           <div className="engine-indicator">
             <span className="live-dot" />
             Python engine
@@ -198,7 +232,7 @@ export default function App() {
               );
             }}
           >
-            16 → 64 → 32 → 1
+            Example: 16 → 64 → 32 → 1
           </button>
           <button
             disabled={running}
@@ -258,6 +292,16 @@ export default function App() {
           }}
         />
       </div>
+      <ExecutionPanel
+        bindings={bindings}
+        entries={entries}
+        running={running}
+        error={error}
+        message={message}
+        elapsed={elapsed}
+        total={graph.nodes.length}
+        onInspect={setSelected}
+      />
       <main className={running ? "workspace busy" : "workspace"}>
         <Palette
           disabled={running}
@@ -327,6 +371,7 @@ export default function App() {
         />
       </main>
       <PerformanceDock result={result} running={running} />
+      <PlotDock plots={result?.plots ?? []} />
       <footer className={`status-bar ${error ? "error" : ""}`}>
         {error ? <CircleAlert size={13} /> : <CheckCircle2 size={13} />}
         <span>{message}</span>

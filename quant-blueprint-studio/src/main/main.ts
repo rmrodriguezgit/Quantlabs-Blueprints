@@ -23,15 +23,45 @@ function createWindow(): void {
 }
 ipcMain.handle(
   "engine:execute",
-  async (_event, graph: unknown): Promise<unknown> => {
-    const response = await fetch("http://127.0.0.1:8000/api/execute", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(graph),
-    });
-    const result: unknown = await response.json();
-    if (!response.ok) throw new Error(JSON.stringify(result));
-    return result;
+  async (event, graph: unknown): Promise<unknown> => {
+    try {
+      return await new Promise<unknown>((resolve, reject) => {
+        const socket = new WebSocket("ws://127.0.0.1:8000/ws/execute");
+        let settled = false;
+        const fail = (message: string) => {
+          if (settled) return;
+          settled = true;
+          reject(new Error(message));
+          socket.close();
+        };
+        socket.onopen = () => socket.send(JSON.stringify(graph));
+        socket.onmessage = (message) => {
+          try {
+            const value: unknown = JSON.parse(String(message.data));
+            if (typeof value !== "object" || !value) return;
+            const item = value as Record<string, unknown>;
+            if (item.event === "result") {
+              settled = true;
+              resolve(item.result);
+              socket.close();
+            } else if (item.event === "error") fail(String(item.detail));
+            else if (!event.sender.isDestroyed())
+              event.sender.send("engine:progress", value);
+          } catch {
+            fail("Invalid message received from the Python engine.");
+          }
+        };
+        socket.onerror = () =>
+          fail(
+            "Cannot connect to Python engine. Restart the launcher (port 8000).",
+          );
+        socket.onclose = () => {
+          if (!settled) fail("Engine connection closed before completion.");
+        };
+      });
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : String(error) };
+    }
   },
 );
 void app.whenReady().then(() => {

@@ -5,7 +5,7 @@ Fecha: 31 de octubre de 2026. Entorno local macOS, Python 3.12.12, Node.js 22.22
 ## Comprobaciones
 
 - TypeScript estricto y compilación Vite/Electron: correctos.
-- Suite unittest: diez pruebas, con diez arquitecturas como subpruebas; correcta.
+- Suite unittest: catorce pruebas, con diez arquitecturas como subpruebas; correcta.
 - Dependencias Python: `pip check` sin incompatibilidades.
 - Pipeline desde la interfaz web: completado con datos sintéticos, 144 observaciones de prueba y early stopping en 7 epochs. Los cuatro paneles mostraron datos.
 - Arranque de Electron compilado en macOS: ventana nativa y renderer local verificados.
@@ -21,7 +21,7 @@ Fecha: 31 de octubre de 2026. Entorno local macOS, Python 3.12.12, Node.js 22.22
 - Unión de ramas y detección de columnas contradictorias comprobadas.
 - Ejemplo JSON ejecutado mediante HTTP, incluyendo ramificación de una arquitectura a dos entrenadores.
 - Ejemplo cargado y entrenado desde la interfaz: 9 nodos, 16 entradas, 147 observaciones de prueba y 12 epochs. Seleccionar nodos conserva los gráficos; se verificaron los checkboxes de indicadores y de características.
-- Versión del proyecto: 0.2.0.
+- Versión del proyecto: 0.3.0.
 
 ## Versiones Python instaladas
 
@@ -49,3 +49,15 @@ Fecha: 31 de octubre de 2026. Entorno local macOS, Python 3.12.12, Node.js 22.22
 | Recharts | 3.10.1 |
 
 Consultar `quant-blueprint-studio/package-lock.json` para el árbol npm completo.
+
+## v0.3.0
+
+- Catorce pruebas Python correctas, incluyendo progreso por época, diagnóstico de filas insuficientes y recuperación ampliando historia.
+- Plot verificado para columnas, descomposición, pronósticos, pérdidas, equity y señales; valida fuentes incompatibles y series inexistentes.
+- `npm run test:graph`: resumen 16→64→32→1, sincronización automática de entradas, bloqueo de discrepancias manuales e indicadores desactivados.
+
+- Volumen cero reproducido con datos de prueba: VWAP informa cómo desactivarlo y el pipeline vuelve a tener muestras válidas al hacerlo.
+
+- Diagnóstico sobre Yahoo real: EURUSD=X devolvió 259 observaciones en la consulta de un año, todas con volumen cero. La sesión del usuario con 10 años también produjo el mensaje específico de VWAP y mostró eventos por nodo desde Electron.
+- Comprobación visual independiente: ejemplo de 11 nodos, 147 observaciones de prueba, 16 entradas coincidentes y dos gráficos Plot (precio/VWAP/BB y pérdidas de 12 épocas).
+- La app de escritorio se reinició con v0.3.0. La versión aparece en su cabecera.
