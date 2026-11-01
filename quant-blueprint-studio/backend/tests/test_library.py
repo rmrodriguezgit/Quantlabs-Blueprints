@@ -25,6 +25,7 @@ class LibraryTests(unittest.TestCase):
             with self.subTest(entry=entry['id']):
                 graph=deepcopy(entry['graph'])
                 for node in graph['nodes']:
+                    if node['data']['kind']=='plot':node['data']['params']['skip_rows']=0
                     if node['data']['kind']=='source' and entry['id'].startswith('notebook-'):
                         node['data']['params']['source']='synthetic'
                     if node['data']['kind'] in ('study','model','curve_fit'):

@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.5.3 — 2026-10-31
+
+- New en barra y File → New (⌘N / Ctrl+N): lienzo vacío persistente, archivo automático del diseño actual en Personal y ejecución bloqueada mientras esté vacío.
+
+- Herramientas faltantes del notebook: Swish en Network Layer y conexión de arquitecturas moradas al entrenador Curve Fitting; sincronización de entradas 1 / grado polinómico.
+- Resumen de capas ejecutadas, formas y parámetros en el informe de curvas, conservando estados BatchNorm y aleatoriedad.
+- Plot con puntos, puntos + curva suave de 300 coordenadas, eje X numérico seleccionable, Y logarítmica y descarte inicial del historial.
+- Las tres fichas existentes exponen la arquitectura de alta capacidad; se mantienen 18 fichas y se reutilizan los cálculos de datos, escalado, regularización y entrenamiento.
+
+
 ## v0.5.2 — 2026-10-31
 
 - Auditoría de escalado por nodo: método, ámbito/filas de ajuste, centro/divisor y estadísticas antes/después; distingue X, y, columnas constantes y ramas sin escalado.

@@ -1,8 +1,14 @@
-# Biblioteca de Blueprints — v0.5.1
+# Biblioteca de Blueprints — v0.5.3
 
 La aplicación incluye **18 diseños ejecutables**: tres variantes del [notebook EUR/USD](NOTEBOOK_EURUSD.md) y los quince diseños base descritos abajo: diez basados en las diez imágenes encontradas (unidades 2–10 y ampliación cDCGAN) y cinco ejemplos adicionales. No se encontró una undécima infografía; no se atribuye contenido inventado a ese material.
 
 ![Biblioteca integrada](v0.5-library.png)
+
+## Nuevo diseño
+
+Pulsa **New** en la barra o **File → New** en Electron; atajo **⌘N** en macOS / **Ctrl+N** en Windows. El diseño actual con nodos se archiva automáticamente en Personal si no estaba guardado. New abre un lienzo vacío, distinto de Reset, que carga el pipeline predeterminado. El borrador vacío se autoguarda y puede importarse/exportarse; Execute está desactivado hasta añadir nodos. Durante una ejecución se conserva el diseño activo y se espera a que termine.
+
+![New en Electron](v0.5.3-new.png)
 
 ## Usarla y recuperar diseños
 

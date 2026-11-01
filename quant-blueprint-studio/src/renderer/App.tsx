@@ -150,6 +150,10 @@ export default function App() {
     });
   };
   const execute = async (executionGraph: Graph = graph) => {
+    if (!executionGraph.nodes.length) {
+      setMessage("Add nodes before executing the blueprint.");
+      return;
+    }
     const issue = networkBindings(executionGraph).find(
       (binding) => binding.issue,
     );
@@ -216,6 +220,7 @@ export default function App() {
     try {
       const previous = readSaved();
       if (
+        graph.nodes.length > 0 &&
         !previous.some((e) => JSON.stringify(e.graph) === JSON.stringify(graph))
       )
         storeSaved([
@@ -230,13 +235,40 @@ export default function App() {
       setTitle(entry.title);
       setSelected(null);
       setLibraryOpen(false);
-      setMessage(`${entry.title}: loaded. Edit parameters or execute.`);
+      setMessage(
+        next.nodes.length
+          ? `${entry.title}: loaded. Edit parameters or execute.`
+          : "New blueprint. Click or drag a node from the library to begin.",
+      );
       if (run) void execute(next);
     } catch (e) {
       setError(true);
       setMessage(e instanceof Error ? e.message : String(e));
     }
   };
+  const newBlueprint = () => {
+    if (running) {
+      setMessage(
+        "Wait for the current execution before creating a new blueprint.",
+      );
+      return;
+    }
+    loadEntry(
+      {
+        id: crypto.randomUUID(),
+        title: "Untitled research",
+        area: "Personal",
+        description: "Blank research blueprint",
+        instructions: ["Add and connect nodes, then execute."],
+        graph: { nodes: [], edges: [] },
+      },
+      false,
+    );
+  };
+  useEffect(
+    () => window.quantEngine?.onNewBlueprint?.(newBlueprint),
+    [graph, title, running],
+  );
   return (
     <div className="studio">
       <header className="app-header">
@@ -265,6 +297,13 @@ export default function App() {
           <span>Blueprint graph</span>
         </div>
         <div className="toolbar-actions">
+          <button
+            disabled={running}
+            onClick={newBlueprint}
+            title="New empty blueprint; archive current design in Personal"
+          >
+            New
+          </button>
           <button disabled={running} onClick={() => setLibraryOpen(true)}>
             Biblioteca / ejemplos
           </button>
@@ -316,7 +355,7 @@ export default function App() {
           </button>
           <button
             className="execute-button"
-            disabled={running}
+            disabled={running || !graph.nodes.length}
             onClick={() => void execute(graph)}
           >
             <Play size={15} fill="currentColor" />
@@ -392,6 +431,9 @@ export default function App() {
           />
         </ReactFlowProvider>
         <DetailsInspector
+          networkConnected={graph.edges.some(
+            (e) => e.target === selected && e.targetHandle === "network",
+          )}
           node={graph.nodes.find((n) => n.id === selected)}
           availableFeatures={selected ? featureOptions(graph, selected) : []}
           onDuplicate={() => {

@@ -67,3 +67,25 @@ Desde v0.5.2, la ficha temporal activa StandardScaler en todas las ramas neurona
 Para abrir el notebook acompañante, instala el kernel opcional con `.venv/bin/python -m pip install -r requirements-notebook.txt` dentro de `quant-blueprint-studio`, y selecciona esa `.venv` en tu editor compatible con Jupyter. Esta dependencia no es necesaria para ejecutar los blueprints desde Electron.
 
 El [notebook acompañante](../quant-blueprint-studio/examples/notebook_eurusd_blueprint.ipynb) carga el mismo grafo y ejecuta el motor local. Es una reproducción del blueprint que depende del proyecto instalado; no reemplaza ni modifica el notebook original.
+
+## Herramientas añadidas para completar el notebook (v0.5.3)
+
+Se reutilizan los nodos y cálculos existentes. Se añadieron las capacidades que faltaban para construir las capas y representar las figuras:
+
+| Herramienta existente | Capacidad añadida | Uso |
+| --- | --- | --- |
+| Network Layer | Swish como activación Dense o como capa individual | Elegir `Swish`; implementada mediante [SiLU de PyTorch](https://docs.pytorch.org/docs/2.15/generated/torch.nn.SiLU.html) |
+| Curve Fitting / Benchmark | Pin morado de arquitectura | Conectar Network Input → capas → Network Output → pin network del entrenador |
+| Informe de curva | Resumen real de capas, formas y parámetros | Abrir **Arquitectura · … parámetros** después de ejecutar; corresponde al `model.summary()` del ejercicio |
+| Plot | `scatter` y `scatter_line`, X numérica seleccionable | Para puntos observados + curva: índice 0, X=`coordinate`, tipo=`scatter_line`, serie de puntos=`actual` |
+| Plot | Escala Y logarítmica y descarte inicial de filas | Para pérdidas: índice 2, X=`epoch`, Y=`log`; `skip_rows=100` reproduce el corte inicial del historial |
+
+Para una red densa, Network Input declara **1** característica. Para la rama `polynomial_net` de grado 5 declara **5**; esta expansión y StandardScaler permanecen en el entrenador existente. Con **Match selected features automatically**, la dimensión se sincroniza al conectar la arquitectura. Network Output mantiene una salida lineal. Cuando hay red conectada, sus capas controlan los anchos y activaciones y esos campos del entrenador se desactivan.
+
+Las tres fichas del notebook muestran ahora la rama **1→256 Swish→256 Swish→128 Swish→1** con capas conectables y **99,329 parámetros**. La biblioteca sigue teniendo 18 fichas. Las demás ramas conservan sus configuraciones; también admiten un pin de red si deseas construirlas manualmente. Una red de entrada 5 conectada directamente a Network Output implementa el polinomio neuronal lineal 5→1 (6 parámetros).
+
+En `scatter_line`, para la salida de curva índice 0 con X=`coordinate`, los puntos usan los meses observados y la línea ajustada usa la malla de 300 coordenadas del notebook. Los colores y leyendas siguen configurándose en Plot. Los puntos y las líneas combinadas están soportados por [Recharts Scatter en ComposedChart](https://recharts.github.io/en-US/api/Scatter/).
+
+Y=`log` exige valores finitos estrictamente positivos; para datos centrados que incluyen negativos usa `linear`. El descarte debe dejar al menos una observación. La ficha de épocas originales configura 100 filas de descarte para las pérdidas; inicio rápido y temporal no descartan filas porque usan sólo 100 épocas de demostración.
+
+![Puntos, curva suave y pérdidas logarítmicas](v0.5.3-notebook-tools.png)

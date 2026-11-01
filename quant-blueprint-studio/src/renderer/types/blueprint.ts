@@ -73,11 +73,24 @@ export interface ScalingAudit {
     constant: boolean;
   }[];
 }
+export interface NetworkSummary {
+  total_parameters: number;
+  trainable_parameters: number;
+  layers: {
+    name: string;
+    operation: string;
+    input_shape: number[];
+    output_shape: number[];
+    parameters: number;
+  }[];
+}
+export type ChartType = "line" | "area" | "bar" | "scatter" | "scatter_line";
 export interface StudyReport {
   id: string;
   title: string;
   topic: string;
   scope?: string;
+  architecture?: NetworkSummary | null;
   selected: string;
   features: string[];
   splits: { train: number; validation: number; test: number };
@@ -89,7 +102,7 @@ export interface StudyReport {
     rows: Record<string, string | number>[];
     series: string[];
     x_key: string;
-    chart_type: "line" | "area" | "bar";
+    chart_type: ChartType;
   }[];
 }
 export interface Field {
@@ -632,6 +645,7 @@ export const catalog: Record<Kind, Definition> = {
         options: [
           "Dense",
           "ReLU",
+          "Swish",
           "Tanh",
           "GELU",
           "Sigmoid",
@@ -645,7 +659,15 @@ export const catalog: Record<Kind, Definition> = {
         key: "activation",
         label: "Activation (Dense)",
         value: "ReLU",
-        options: ["ReLU", "Tanh", "GELU", "Sigmoid", "LeakyReLU", "Identity"],
+        options: [
+          "ReLU",
+          "Swish",
+          "Tanh",
+          "GELU",
+          "Sigmoid",
+          "LeakyReLU",
+          "Identity",
+        ],
       },
       {
         key: "rate",
@@ -689,6 +711,26 @@ export const catalog: Record<Kind, Definition> = {
     category: "05 / VISUALIZATION",
     color: "#ec9dd6",
     fields: [
+      { key: "x_column", label: "X column (blank = chart default)", value: "" },
+      {
+        key: "y_scale",
+        label: "Y scale",
+        value: "linear",
+        options: ["linear", "log"],
+      },
+      {
+        key: "scatter_columns",
+        label: "Point series for scatter_line",
+        value: "actual",
+      },
+      {
+        key: "skip_rows",
+        label: "Skip first observations / loss epochs",
+        value: 0,
+        min: 0,
+        max: 5000,
+      },
+
       {
         key: "study_chart",
         label: "Experiment chart index (starts at 0)",
@@ -746,7 +788,7 @@ export const catalog: Record<Kind, Definition> = {
         key: "chart_type",
         label: "Chart type",
         value: "line",
-        options: ["line", "area", "bar"],
+        options: ["line", "area", "bar", "scatter", "scatter_line"],
       },
       {
         key: "plot_columns",
@@ -967,6 +1009,7 @@ export function defaultGraph(): Graph {
 declare global {
   interface Window {
     quantEngine?: {
+      onNewBlueprint?: (callback: () => void) => () => void;
       execute: (graph: Graph) => Promise<unknown>;
       onProgress: (callback: (event: unknown) => void) => () => void;
     };
@@ -1113,7 +1156,7 @@ export function inputHandles(kind: Kind): Record<string, string> {
     handles.asset_b = "frame";
     handles.asset_c = "frame";
   }
-  if (kind === "model") handles.network = "network";
+  if (kind === "model" || kind === "curve_fit") handles.network = "network";
   if (kind === "merge") handles.frame_b = "frame";
   if (kind === "plot") {
     handles.frame = "frame";
@@ -1135,7 +1178,10 @@ export interface CustomPlot {
   origin?: string;
   colors?: Record<string, string>;
   labels?: Record<string, string>;
-  chart_type: "line" | "area" | "bar";
+  chart_type: ChartType;
+  y_scale?: "linear" | "log";
+  scatter_columns?: string[];
+  line_rows?: Record<string, string | number>[];
   source: string;
   x_key: string;
   series: string[];
@@ -1201,19 +1247,65 @@ export function networkBindings(graph: Graph): NetworkBinding[] {
     )
     .map((trainer) => {
       if (trainer.data.kind === "curve_fit") {
-        const p = trainer.data.params;
+        const p = effectiveParams(graph, trainer.id);
+        const count =
+          p.variant === "polynomial_net" ? Number(p.degree ?? 5) : 1;
+        const selected = Array.from(
+          { length: Math.max(1, Math.min(10, count)) },
+          (_, i) => (count === 1 ? "Coordinate" : `Coordinate^${i + 1}`),
+        );
+        const network = graph.edges.find(
+          (e) => e.target === trainer.id && e.targetHandle === "network",
+        );
+        let cursor = network?.source;
+        const visited = new Set<string>();
+        const blocks: string[] = [];
+        let input: BlueprintNode | undefined;
+        let complete = false;
+        while (cursor && !visited.has(cursor)) {
+          visited.add(cursor);
+          const node = graph.nodes.find((n) => n.id === cursor);
+          if (!node) break;
+          if (node.data.kind === "network_input") {
+            input = node;
+            break;
+          }
+          if (node.data.kind === "network_output") {
+            blocks.unshift("1 output");
+            complete = cursor === network?.source;
+          }
+          if (node.data.kind === "layer")
+            blocks.unshift(
+              node.data.params.layer_type === "Dense"
+                ? `${node.data.params.units} ${node.data.params.activation}`
+                : String(node.data.params.layer_type),
+            );
+          cursor = graph.edges.find(
+            (e) => e.target === node.id && e.targetHandle === "network",
+          )?.source;
+        }
+        const declared = Number(input?.data.params.input_features ?? count);
+        const issue = !featureOptions(graph, trainer.id).includes("Coordinate")
+          ? "Connect Monthly Curve Data first."
+          : network && p.variant === "ols"
+            ? "OLS does not use a network. Disconnect it or choose dense/polynomial_net."
+            : network && (!input || !complete)
+              ? "Connect Network Input → Layers → Network Output to Curve Fitting."
+              : network && declared !== count
+                ? `Input mismatch: selected ${count}, Network Input declares ${declared}. Enable automatic input size or correct the count.`
+                : undefined;
         return {
           trainerId: trainer.id,
-          selected: ["Coordinate"],
+          inputId: input?.id,
+          selected,
           unavailable: [],
-          declared: 1,
-          summary:
-            p.variant === "dense"
+          declared,
+          summary: network
+            ? [`${declared} inputs`, ...blocks].join(" → ")
+            : p.variant === "dense"
               ? `1 → ${String(p.widths).split(",").join(` ${p.activation} → `)} ${p.activation} → 1`
               : `1 coordinate → polynomial ${p.degree} → 1`,
-          issue: featureOptions(graph, trainer.id).includes("Coordinate")
-            ? undefined
-            : "Connect Monthly Curve Data first.",
+          issue,
         };
       }
       if (trainer.data.kind === "study") {

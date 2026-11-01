@@ -66,6 +66,45 @@ export function StudyDock({
                 {study.splits.test}
               </p>
             </header>
+            {study.architecture && (
+              <details className="network-summary">
+                <summary>
+                  Arquitectura ·{" "}
+                  {study.architecture.total_parameters.toLocaleString()}{" "}
+                  parámetros ·{" "}
+                  {study.architecture.trainable_parameters.toLocaleString()}{" "}
+                  entrenables
+                </summary>
+                <div className="study-table">
+                  <table>
+                    <thead>
+                      <tr>
+                        {[
+                          "Capa",
+                          "Operación",
+                          "Entrada",
+                          "Salida",
+                          "Parámetros",
+                        ].map((c) => (
+                          <th key={c}>{c}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {study.architecture.layers.map((layer) => (
+                        <tr key={layer.name}>
+                          <td>{layer.name}</td>
+                          <td>{layer.operation}</td>
+                          <td>{layer.input_shape.join(" × ")}</td>
+                          <td>{layer.output_shape.join(" × ")}</td>
+                          <td>{layer.parameters}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            )}
             <div className="study-metrics">
               {Object.entries(study.metrics).map(([key, v]) => (
                 <article key={key}>

@@ -12,6 +12,7 @@ interface Props {
   disabled: boolean;
   availableFeatures: string[];
   onDuplicate: () => void;
+  networkConnected?: boolean;
 }
 export function DetailsInspector({
   node,
@@ -20,6 +21,7 @@ export function DetailsInspector({
   disabled,
   availableFeatures,
   onDuplicate,
+  networkConnected = false,
 }: Props) {
   return (
     <aside className="inspector">
@@ -48,6 +50,14 @@ export function DetailsInspector({
               last: N features from the last bar. flatten: lookback × N inputs.
             </p>
           )}
+          {node.data.kind === "curve_fit" && (
+            <p className="inspector-hint">
+              Optional purple network pin: connect Network Input → Layers →
+              Network Output. Connected layers replace widths/activation
+              controls. Input size is 1 for dense or the polynomial degree for
+              polynomial_net. OLS uses no network.
+            </p>
+          )}
           {node.data.kind === "network_output" && (
             <p className="muted">
               Connect the purple output to the trainer’s purple network pin.
@@ -65,7 +75,9 @@ export function DetailsInspector({
               Preparation for TR/VA/TE, Model for predictions/loss, or Backtest
               for equity/signals. Yellow portfolio pins support asset_prices,
               equity, cumulative_log, drawdown and weights. Choose a source and
-              comma-separated series.{" "}
+              comma-separated series. For notebook points + smooth curve:
+              scatter_line, X=coordinate, point series=actual. For losses: chart
+              index 2, X=epoch, Y=log (positive values only).{" "}
               {availableFeatures.length > 0 && (
                 <p>Available columns: {availableFeatures.join(", ")}</p>
               )}
@@ -180,6 +192,11 @@ export function DetailsInspector({
                   </div>
                 ) : field.options ? (
                   <select
+                    disabled={
+                      networkConnected &&
+                      node.data.kind === "curve_fit" &&
+                      field.key === "activation"
+                    }
                     id={`param-${field.key}`}
                     value={String(node.data.params[field.key] ?? field.value)}
                     onChange={(e) => onChange(field.key, e.target.value)}
@@ -203,8 +220,11 @@ export function DetailsInspector({
                     type={typeof field.value === "number" ? "number" : "text"}
                     value={String(node.data.params[field.key] ?? field.value)}
                     disabled={
-                      field.key === "input_features" &&
-                      node.data.params.auto_features !== false
+                      (field.key === "input_features" &&
+                        node.data.params.auto_features !== false) ||
+                      (networkConnected &&
+                        node.data.kind === "curve_fit" &&
+                        field.key === "widths")
                     }
                     min={field.min}
                     max={field.max}

@@ -13,7 +13,8 @@
         "Inicio rápido: 100 épocas por red. La ficha de referencia configura 1500 épocas, 2000 en alta capacidad y 2500 en DNN. Puede tardar más.",
         "Selecciona una rama Curve Fitting para modificar capas, activación, optimizador, LR, normalización y L2. El modelo polinómico transforma una coordenada en cinco características.",
         "in_sample reproduce el ajuste completo; sus métricas no son de pronóstico. temporal usa media/escalas TR, checkpoint VA y error TE de extrapolación temporal.",
-        "Implementación PyTorch de arquitecturas Keras: no se prometen pesos, tiempos ni MSE idénticos. No se modifica ni ejecuta el notebook adjunto."
+        "Implementación PyTorch de arquitecturas Keras: no se prometen pesos, tiempos ni MSE idénticos. No se modifica ni ejecuta el notebook adjunto.",
+        "La rama de alta capacidad muestra capas moradas conectables: entrada 1 → 256 Swish → 256 Swish → 128 Swish → salida 1. Plot admite scatter_line con X=coordinate y pérdidas con Y=log. El resumen de capas aparece tras ejecutar."
       ],
       "graph": {
         "nodes": [
@@ -208,8 +209,8 @@
             "id": "capacity",
             "type": "blueprint",
             "position": {
-              "x": 650,
-              "y": 1050
+              "x": 1430,
+              "y": -100
             },
             "data": {
               "kind": "curve_fit",
@@ -281,8 +282,11 @@
                 "plot_source": "auto",
                 "plot_columns": "",
                 "study_chart": 0,
-                "chart_type": "line",
-                "color": "Mint"
+                "chart_type": "scatter_line",
+                "color": "Mint",
+                "x_column": "coordinate",
+                "scatter_columns": "actual",
+                "y_scale": "linear"
               }
             }
           },
@@ -300,9 +304,12 @@
                 "title": "Alta capacidad · curva suave",
                 "plot_source": "auto",
                 "plot_columns": "",
-                "study_chart": 1,
-                "chart_type": "line",
-                "color": "Orange"
+                "study_chart": 0,
+                "chart_type": "scatter_line",
+                "color": "Orange",
+                "x_column": "coordinate",
+                "scatter_columns": "actual",
+                "y_scale": "linear"
               }
             }
           },
@@ -322,7 +329,93 @@
                 "plot_columns": "",
                 "study_chart": 2,
                 "chart_type": "line",
-                "color": "Violet"
+                "color": "Violet",
+                "y_scale": "log",
+                "x_column": "epoch",
+                "skip_rows": 0
+              }
+            }
+          },
+          {
+            "id": "capacity-network-0",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": -360
+            },
+            "data": {
+              "kind": "network_input",
+              "label": "Entrada · 1 característica",
+              "params": {
+                "input_features": 1,
+                "auto_features": true,
+                "mode": "last"
+              }
+            }
+          },
+          {
+            "id": "capacity-network-1",
+            "type": "blueprint",
+            "position": {
+              "x": 280,
+              "y": -360
+            },
+            "data": {
+              "kind": "layer",
+              "label": "Dense 256 · Swish",
+              "params": {
+                "layer_type": "Dense",
+                "units": 256,
+                "activation": "Swish"
+              }
+            }
+          },
+          {
+            "id": "capacity-network-2",
+            "type": "blueprint",
+            "position": {
+              "x": 560,
+              "y": -360
+            },
+            "data": {
+              "kind": "layer",
+              "label": "Dense 256 · Swish",
+              "params": {
+                "layer_type": "Dense",
+                "units": 256,
+                "activation": "Swish"
+              }
+            }
+          },
+          {
+            "id": "capacity-network-3",
+            "type": "blueprint",
+            "position": {
+              "x": 840,
+              "y": -360
+            },
+            "data": {
+              "kind": "layer",
+              "label": "Dense 128 · Swish",
+              "params": {
+                "layer_type": "Dense",
+                "units": 128,
+                "activation": "Swish"
+              }
+            }
+          },
+          {
+            "id": "capacity-network-4",
+            "type": "blueprint",
+            "position": {
+              "x": 1120,
+              "y": -360
+            },
+            "data": {
+              "kind": "network_output",
+              "label": "Salida lineal · 1",
+              "params": {
+                "output_units": 1
               }
             }
           }
@@ -414,6 +507,46 @@
             "target": "plot-2",
             "sourceHandle": "tensor",
             "targetHandle": "tensor",
+            "animated": true
+          },
+          {
+            "id": "capacity-network-edge-0",
+            "source": "capacity-network-0",
+            "target": "capacity-network-1",
+            "sourceHandle": "network",
+            "targetHandle": "network",
+            "animated": true
+          },
+          {
+            "id": "capacity-network-edge-1",
+            "source": "capacity-network-1",
+            "target": "capacity-network-2",
+            "sourceHandle": "network",
+            "targetHandle": "network",
+            "animated": true
+          },
+          {
+            "id": "capacity-network-edge-2",
+            "source": "capacity-network-2",
+            "target": "capacity-network-3",
+            "sourceHandle": "network",
+            "targetHandle": "network",
+            "animated": true
+          },
+          {
+            "id": "capacity-network-edge-3",
+            "source": "capacity-network-3",
+            "target": "capacity-network-4",
+            "sourceHandle": "network",
+            "targetHandle": "network",
+            "animated": true
+          },
+          {
+            "id": "capacity-network-trainer",
+            "source": "capacity-network-4",
+            "target": "capacity",
+            "sourceHandle": "network",
+            "targetHandle": "network",
             "animated": true
           }
         ]

@@ -1,6 +1,13 @@
-import { app, BrowserWindow, ipcMain } from "electron";
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  Menu,
+  type MenuItemConstructorOptions,
+} from "electron";
 import path from "node:path";
-function createWindow(): void {
+const pendingNewBlueprints = new Set<number>();
+function createWindow(newBlueprint = false): void {
   const window = new BrowserWindow({
     width: 1560,
     height: 1000,
@@ -15,12 +22,19 @@ function createWindow(): void {
       sandbox: true,
     },
   });
+  const webContentsId = window.webContents.id;
+  if (newBlueprint) pendingNewBlueprints.add(webContentsId);
+  window.on("closed", () => pendingNewBlueprints.delete(webContentsId));
   window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   window.webContents.on("will-navigate", (event) => event.preventDefault());
   if (app.isPackaged || process.argv.includes("--production"))
     void window.loadFile(path.join(__dirname, "../renderer/index.html"));
   else void window.loadURL("http://127.0.0.1:5173");
 }
+ipcMain.on("blueprint:ready", (event) => {
+  if (pendingNewBlueprints.delete(event.sender.id))
+    event.sender.send("blueprint:new");
+});
 ipcMain.handle(
   "engine:execute",
   async (event, graph: unknown): Promise<unknown> => {
@@ -65,6 +79,32 @@ ipcMain.handle(
   },
 );
 void app.whenReady().then(() => {
+  const menu: MenuItemConstructorOptions[] = [];
+  if (process.platform === "darwin") menu.push({ role: "appMenu" });
+  menu.push(
+    {
+      label: "File",
+      submenu: [
+        {
+          label: "New",
+          accelerator: "CmdOrCtrl+N",
+          click: () => {
+            const target =
+              BrowserWindow.getFocusedWindow() ??
+              BrowserWindow.getAllWindows()[0];
+            if (target) target.webContents.send("blueprint:new");
+            else createWindow(true);
+          },
+        },
+        { type: "separator" },
+        { role: "close" },
+      ],
+    },
+    { role: "editMenu" },
+    { role: "viewMenu" },
+    { role: "windowMenu" },
+  );
+  Menu.setApplicationMenu(Menu.buildFromTemplate(menu));
   createWindow();
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

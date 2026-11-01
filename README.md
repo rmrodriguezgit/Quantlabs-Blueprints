@@ -2,7 +2,7 @@
 
 ![Quantlabs Blueprints](docs/banner.svg)
 
-[![Version](https://img.shields.io/github/v/tag/rmrodriguezgit/Quantlabs-Blueprints?label=version&color=6cc9ac)](https://github.com/rmrodriguezgit/Quantlabs-Blueprints/releases/tag/v0.5.2)
+[![Version](https://img.shields.io/github/v/tag/rmrodriguezgit/Quantlabs-Blueprints?label=version&color=6cc9ac)](https://github.com/rmrodriguezgit/Quantlabs-Blueprints/releases/tag/v0.5.3)
 ![Desktop](https://img.shields.io/badge/desktop-macOS%20%7C%20Windows-79b4ef)
 ![Electron](https://img.shields.io/badge/Electron-42-79b4ef)
 ![React](https://img.shields.io/badge/React-19-61dafb)
@@ -11,7 +11,7 @@
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.x-ee4c2c)
 ![Features](https://img.shields.io/badge/Blueprints-18%20templates%20%7C%2010%20infographics%20%7C%20ML%20%7C%20DL%20%7C%20RL-c49af8)
 
-**Versión actual: [v0.5.2](https://github.com/rmrodriguezgit/Quantlabs-Blueprints/releases/tag/v0.5.2)** · [Historial de cambios](CHANGELOG.md) · [Verificaciones](VERIFICATION.md)
+**Versión actual: [v0.5.3](https://github.com/rmrodriguezgit/Quantlabs-Blueprints/releases/tag/v0.5.3)** · [Historial de cambios](CHANGELOG.md) · [Verificaciones](VERIFICATION.md)
 
 Estudio de escritorio para investigación cuantitativa mediante un grafo visual de nodos: datos → indicadores → preparación temporal → aprendizaje profundo → backtest. Base funcional para macOS y Windows, con Electron, React y un motor Python local.
 
@@ -20,6 +20,8 @@ El código se encuentra en [`quant-blueprint-studio/`](quant-blueprint-studio/).
 ![Quantlabs Blueprints: pipeline ejecutado](docs/studio-preview.jpg)
 
 ## Biblioteca de aprendizaje y ejemplos
+
+**New** o **File → New** (⌘N / Ctrl+N) abre un lienzo vacío y conserva el diseño anterior en Personal. Puedes guardar/exportar un borrador vacío; para ejecutarlo debes añadir nodos.
 
 **Biblioteca / ejemplos** abre 18 blueprints editables: tres para el notebook EUR/USD, diez basados en las infografías de unidades 2–10 y ampliación cDCGAN, más cinco para datos/indicadores, estadística, red modular/backtest y portafolios. Cada ficha permite **cargar, ejecutar, guardar copias, importar y exportar**. El diseño anterior se archiva en Personal al cargar otra plantilla.
 

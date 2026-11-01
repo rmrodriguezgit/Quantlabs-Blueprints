@@ -1421,3 +1421,34 @@ i.portfolio {
 .scaling-dock details button {
   margin-top: 12px;
 }
+.network-summary {
+  border: 1px solid #344054;
+  border-radius: 6px;
+  padding: 12px;
+  margin: 16px 0;
+  background: #141e2b;
+}
+.network-summary summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: #c49af8;
+}
+.empty-blueprint {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #93a6bf;
+}
+.empty-blueprint h3 {
+  font-size: 22px;
+  color: #dce5f2;
+  margin: 0 0 10px;
+}
+.empty-blueprint p {
+  font-size: 12px;
+}

@@ -27,8 +27,25 @@ try {
   assert.equal(isGraph(broken.entries[0].graph),false);
   const future=structuredClone(original);future.entries[0].infographic='../../private.png';
   assert.throws(()=>parseLibrary(future),/invalid/);
+  const notebook=structuredClone(original.entries.find(e=>e.id==='notebook-curve-quick').graph);
+  assert.equal(require(path.join(temporary,'types/blueprint.js')).catalog.layer.fields.find(f=>f.key==='activation').options.includes('Swish'),true);
+  assert.equal(require(path.join(temporary,'types/blueprint.js')).inputHandles('curve_fit').network,'network');
+  const binding=networkBindings(notebook).find(b=>b.trainerId==='capacity');
+  assert.equal(binding.summary,'1 inputs → 256 Swish → 256 Swish → 128 Swish → 1 output');
+  assert.equal(binding.issue,undefined);
+  notebook.edges.find(e=>e.id==='capacity-network-trainer').target='polynomial';
+  const synchronized=syncNetworkInputs(notebook);
+  const polynomial=networkBindings(synchronized).find(b=>b.trainerId==='polynomial');
+  assert.equal(polynomial.declared,5);assert.equal(polynomial.issue,undefined);
+  const input=synchronized.nodes.find(n=>n.id===polynomial.inputId);
+  input.data.params.auto_features=false;input.data.params.input_features=4;
+  assert.match(networkBindings(synchronized).find(b=>b.trainerId==='polynomial').issue,/selected 5/);
+  assert.equal(isGraph({nodes:[],edges:[]}),true);
+  assert.equal(parseLibrary({nodes:[],edges:[]})[0].graph.nodes.length,0);
+  assert.equal(isGraph({nodes:[],edges:[{id:'dangling',source:'x',target:'y',sourceHandle:'frame',targetHandle:'frame'}]}),false);
   const memory=new Map();global.localStorage={getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)};
   storeSaved(original.entries);assert.deepEqual(readSaved(),original.entries);
+  storeSaved([{...original.entries[0],id:"blank",graph:{nodes:[],edges:[]}}]);assert.equal(readSaved()[0].graph.nodes.length,0);
   storeSaved([]);assert.deepEqual(readSaved(),[]);
   console.log('Library checks passed: 18 graphs, 10 references, versioned/legacy roundtrip, persistent storage, malformed pins, dimensions and metadata.');
 } finally {rmSync(temporary,{recursive:true,force:true});}

@@ -10,6 +10,7 @@ from torch import nn
 from sklearn.preprocessing import PolynomialFeatures
 from .scaling_nodes import fit_scaler, disabled_audit, affine_audit
 from .study_nodes import chart, metrics
+from .dl_nodes import NetworkSpec, custom_network, describe_network
 
 
 def monthly_curve(frame: pd.DataFrame, params: dict[str, Any]) -> pd.DataFrame:
@@ -42,12 +43,25 @@ def vectors(actual: np.ndarray,predicted: np.ndarray) -> dict[str,float]:
     return result
 
 
+class CurveNetwork(nn.Module):
+    def __init__(self, features: int, spec: NetworkSpec) -> None:
+        super().__init__()
+        self.encoder, width = custom_network(features, 1, spec)
+        self.head = nn.Linear(width, 1)
+
+    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+        return self.head(self.encoder(inputs.unsqueeze(1)))
+
+
 def curve_fit(frame: pd.DataFrame,p: dict[str,Any],progress: Callable[[dict[str,Any]],None] | None = None) -> dict[str,Any]:
     if not {'Close','Coordinate'}.issubset(frame.columns):
         raise ValueError('Connect Monthly Curve Data first; technical indicators are not required.')
     mode=str(p.get('evaluation','in_sample'))
     if mode not in ('in_sample','temporal'):raise ValueError('Evaluation must be in_sample or temporal.')
+    spec=p.get('_network')
+    if spec is not None and not isinstance(spec,NetworkSpec):raise ValueError('Invalid network specification.')
     variant=str(p.get('variant','ols'))
+    if spec is not None and variant=='ols':raise ValueError('OLS does not use a neural network. Disconnect the network pin or choose dense/polynomial_net.')
     if variant not in ('ols','polynomial_net','dense'):raise ValueError('Choose ols, polynomial_net or dense.')
     degree=int(p.get('degree',5)); epochs=int(p.get('epochs',1500)); batch=int(p.get('batch_size',32))
     lr=float(p.get('lr',.001)); l2=float(p.get('l2',0)); patience=int(p.get('patience',100))
@@ -67,6 +81,8 @@ def curve_fit(frame: pd.DataFrame,p: dict[str,Any],progress: Callable[[dict[str,
     grid=np.linspace(float(x.min()),float(x.max()),300)[:,None]
     scope='training' if mode=='temporal' else 'all fitting observations (in-sample)'
     audits=[affine_audit(raw[:a],mean,1.,'Target y: center only',scope,method='Center only')]
+    architecture=None
+    activation_label=str(p.get("activation","ReLU"))
     start=perf_counter(); history=[]; parameter_count=degree+1
     label=str(p.get('name','Curve fit'))
     if variant=='ols':
@@ -94,14 +110,19 @@ def curve_fit(frame: pd.DataFrame,p: dict[str,Any],progress: Callable[[dict[str,
         inputs_grid=scaler.transform(inputs_grid) if scaler else inputs_grid
         activation=str(p.get('activation','ReLU'))
         activations={'ReLU':nn.ReLU,'Swish':nn.SiLU,'Tanh':nn.Tanh,'GELU':nn.GELU,'Sigmoid':nn.Sigmoid}
-        if activation not in activations:raise ValueError('Unsupported activation.')
-        widths=[] if polynomial else [int(s.strip()) for s in str(p.get('widths','256')).split(',') if s.strip()]
-        if not polynomial and (not widths or len(widths)>5 or any(w<1 or w>512 for w in widths)):raise ValueError('Choose 1–5 hidden layers, 1–512 units each.')
+        if spec is None and activation not in activations:raise ValueError('Unsupported activation.')
+        widths=[] if polynomial or spec is not None else [int(s.strip()) for s in str(p.get('widths','256')).split(',') if s.strip()]
+        if spec is None and not polynomial and (not widths or len(widths)>5 or any(w<1 or w>512 for w in widths)):raise ValueError('Choose 1–5 hidden layers, 1–512 units each.')
         torch.manual_seed(int(p.get('seed',100)))
-        layers: list[nn.Module]=[]; dimension=inputs.shape[1]
-        for width in widths:
-            layers.extend([nn.Linear(dimension,width),activations[activation]()]); dimension=width
-        layers.append(nn.Linear(dimension,1)); net=nn.Sequential(*layers)
+        if isinstance(spec,NetworkSpec):
+            net: nn.Module=CurveNetwork(inputs.shape[1],spec)
+            activation_label=' → '.join(str(layer.get('activation','ReLU')) if layer.get('layer_type','Dense')=='Dense' else str(layer['layer_type']) for layer in spec.layers) or 'Linear'
+        else:
+            layers: list[nn.Module]=[]; dimension=inputs.shape[1]
+            for width in widths:
+                layers.extend([nn.Linear(dimension,width),activations[activation]()]); dimension=width
+            layers.append(nn.Linear(dimension,1)); net=nn.Sequential(*layers)
+        architecture=describe_network(net,torch.tensor(inputs[:2],dtype=torch.float32))
         parameter_count=sum(v.numel() for v in net.parameters())
         optimizer=str(p.get('optimizer','RMSprop'))
         optimizers={'Adam':torch.optim.Adam,'RMSprop':torch.optim.RMSprop,'SGD':torch.optim.SGD,'AdamW':torch.optim.AdamW}
@@ -113,6 +134,7 @@ def curve_fit(frame: pd.DataFrame,p: dict[str,Any],progress: Callable[[dict[str,
         for epoch in range(epochs):
             net.train()
             for idx in torch.randperm(a).split(batch):
+                if len(idx)<2 and any(isinstance(m,nn.BatchNorm1d) for m in net.modules()):continue
                 opt.zero_grad(set_to_none=True)
                 prediction=net(xt[idx]).squeeze(1)
                 data_loss=nn.functional.mse_loss(prediction,yt[idx])
@@ -140,7 +162,7 @@ def curve_fit(frame: pd.DataFrame,p: dict[str,Any],progress: Callable[[dict[str,
     evaluation=slice(b,None) if mode=='temporal' else slice(None)
     # Undo target centering for reported metrics; displayed curves stay centered.
     score=vectors(raw[evaluation],predicted[evaluation]+mean)
-    table=[{'model':label,'scope':'test / temporal extrapolation' if mode=='temporal' else 'in-sample curve fit','activation':'—' if variant!='dense' else str(p.get('activation','ReLU')),'optimizer':'OLS' if variant=='ols' else str(p.get('optimizer','RMSprop')),'parameters':parameter_count,'epochs':len(history),'X scaler':audits[0]['method'],'seconds':seconds,**score}]
+    table=[{'model':label,'scope':'test / temporal extrapolation' if mode=='temporal' else 'in-sample curve fit','activation':activation_label if variant=='dense' or spec is not None else '—','optimizer':'OLS' if variant=='ols' else str(p.get('optimizer','RMSprop')),'parameters':parameter_count,'epochs':len(history),'X scaler':audits[0]['method'],'seconds':seconds,**score}]
     dates=[str(d.date()) for d in frame.index]
     rows=[{'date':dates[i],'coordinate':float(x[i,0]),'actual':float(y[i]),'fitted':float(predicted[i])} for i in range(n)]
     charts=[chart('Monthly centered EUR/USD · full curve (fit / extrapolation)',rows,['actual','fitted']),chart('Smooth curve · artificial coordinate', [{'coordinate':float(v),'fitted':float(pred)} for v,pred in zip(grid[:,0],smooth)],['fitted'],'coordinate')]
@@ -155,4 +177,4 @@ def curve_fit(frame: pd.DataFrame,p: dict[str,Any],progress: Callable[[dict[str,
     for audit in audits:
         if audit['fit_rows']:
             audit.update({'fit_start':str(frame.index[0].date()),'fit_end':str(frame.index[a-1].date())})
-    return {'study':True,'topic':'curve_fit','selected':label,'scope':table[0]['scope'],'features':['Coordinate'],'splits':{'train':a,'validation':b-a,'test':n-b},'metrics':score,'scaling_audits':audits,'table':table,'charts':charts,'notes':[f'Target = monthly Close − fitted training mean ({mean:.8f} USD/EUR). Artificial coordinate spans −2…2; it is not an economic predictor.','In-sample errors measure approximation, not forecasting ability.' if mode=='in_sample' else 'Training mean and feature scaler use TR only. VA chooses the neural checkpoint; TE is temporal extrapolation, evaluated afterwards.','PyTorch implementation of the Keras architectures; initialization, optimizer defaults and timings differ. RMSE pips uses 0.0001 USD/EUR per pip.']}
+    return {'study':True,'topic':'curve_fit','selected':label,'scope':table[0]['scope'],'features':['Coordinate'],'splits':{'train':a,'validation':b-a,'test':n-b},'metrics':score,'architecture':architecture,'scaling_audits':audits,'table':table,'charts':charts,'notes':[f'Target = monthly Close − fitted training mean ({mean:.8f} USD/EUR). Artificial coordinate spans −2…2; it is not an economic predictor.','In-sample errors measure approximation, not forecasting ability.' if mode=='in_sample' else 'Training mean and feature scaler use TR only. VA chooses the neural checkpoint; TE is temporal extrapolation, evaluated afterwards.','PyTorch implementation of the Keras architectures; initialization, optimizer defaults and timings differ. RMSE pips uses 0.0001 USD/EUR per pip.']}

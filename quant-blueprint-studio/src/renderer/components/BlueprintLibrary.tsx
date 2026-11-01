@@ -124,6 +124,7 @@ export function BlueprintLibrary({
                   </button>
                   <button
                     className="execute-button"
+                    disabled={!entry.graph.nodes.length}
                     onClick={() => onLoad(entry, true)}
                   >
                     <Play size={14} />

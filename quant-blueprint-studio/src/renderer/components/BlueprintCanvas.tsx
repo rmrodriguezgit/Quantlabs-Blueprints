@@ -150,7 +150,8 @@ function VisualNode({ data, selected }: NodeProps<BlueprintNode>) {
               position={
                 id === "config" || id === "benchmark"
                   ? Position.Top
-                  : id === "network" && data.kind === "model"
+                  : id === "network" &&
+                      ["model", "curve_fit"].includes(data.kind)
                     ? Position.Bottom
                     : Position.Left
               }
@@ -159,7 +160,7 @@ function VisualNode({ data, selected }: NodeProps<BlueprintNode>) {
               style={
                 id === "config" ||
                 id === "benchmark" ||
-                (id === "network" && data.kind === "model")
+                (id === "network" && ["model", "curve_fit"].includes(data.kind))
                   ? {}
                   : {
                       top:
@@ -175,7 +176,7 @@ function VisualNode({ data, selected }: NodeProps<BlueprintNode>) {
               <span className="config-label">benchmark</span>
             )}
             {id === "config" && <span className="config-label">config</span>}
-            {id === "network" && data.kind === "model" && (
+            {id === "network" && ["model", "curve_fit"].includes(data.kind) && (
               <span className="network-label">network</span>
             )}
             {id === "frame_b" && <span className="second-input-label">B</span>}
@@ -386,6 +387,12 @@ export function BlueprintCanvas({
         <span className="live-dot" /> BLUEPRINT EDITOR <span>/</span> Research
         pipeline
       </div>
+      {graph.nodes.length === 0 && (
+        <div className="empty-blueprint">
+          <h3>New blueprint</h3>
+          <p>Click or drag a node from the library to begin.</p>
+        </div>
+      )}
       <ReactFlow<BlueprintNode>
         nodes={graph.nodes}
         edges={graph.edges}

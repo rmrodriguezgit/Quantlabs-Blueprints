@@ -4,6 +4,7 @@ import {
   Line,
   Area,
   Bar,
+  Scatter,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -63,10 +64,24 @@ export function PlotDock({
                 <CartesianGrid stroke="#29313d" strokeDasharray="3 5" />
                 <XAxis
                   dataKey={plot.x_key}
+                  type={
+                    typeof plot.rows[0]?.[plot.x_key] === "number"
+                      ? "number"
+                      : "category"
+                  }
+                  domain={
+                    typeof plot.rows[0]?.[plot.x_key] === "number"
+                      ? ["dataMin", "dataMax"]
+                      : undefined
+                  }
                   tick={{ fontSize: 10, fill: "#8898af" }}
                   minTickGap={50}
                 />
                 <YAxis
+                  scale={plot.y_scale ?? "linear"}
+                  domain={
+                    plot.y_scale === "log" ? ["dataMin", "dataMax"] : undefined
+                  }
                   tick={{ fontSize: 10, fill: "#8898af" }}
                   tickFormatter={(value: number) =>
                     ["equity", "drawdown", "weights"].includes(plot.source)
@@ -83,7 +98,18 @@ export function PlotDock({
                 />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
                 {plot.series.map((key, i) =>
-                  plot.chart_type === "bar" ? (
+                  plot.chart_type === "scatter" ||
+                  (plot.chart_type === "scatter_line" &&
+                    (plot.scatter_columns ?? ["actual"]).includes(key)) ? (
+                    <Scatter
+                      key={key}
+                      data={plot.rows}
+                      dataKey={key}
+                      name={plot.labels?.[key] ?? key}
+                      fill={plot.colors?.[key] ?? colors[i % colors.length]}
+                      isAnimationActive={false}
+                    />
+                  ) : plot.chart_type === "bar" ? (
                     <Bar
                       key={key}
                       dataKey={key}
@@ -103,6 +129,11 @@ export function PlotDock({
                     />
                   ) : (
                     <Line
+                      data={
+                        plot.chart_type === "scatter_line"
+                          ? plot.line_rows
+                          : undefined
+                      }
                       key={key}
                       dataKey={key}
                       name={plot.labels?.[key] ?? key}

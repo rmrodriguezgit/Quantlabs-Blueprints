@@ -13,8 +13,8 @@ PALETTE = {'Mint':'#6cc9ac', 'Violet':'#9c9af8', 'Orange':'#f2ad65', 'Blue':'#79
 def plot(value: Any, params: dict[str, Any], node_id: str) -> dict[str, Any]:
     mode = str(params.get('plot_source', 'auto'))
     kind = str(params.get('chart_type', 'line'))
-    if kind not in ('line', 'area', 'bar'):
-        raise ValueError('Plot chart type must be line, area or bar.')
+    if kind not in ('line', 'area', 'bar', 'scatter', 'scatter_line'):
+        raise ValueError('Plot chart type must be line, area, bar, scatter or scatter_line.')
     if isinstance(value, dict) and value.get('study'):
         index = int(params.get('study_chart', 0))
         charts = value['charts']
@@ -28,6 +28,7 @@ def plot(value: Any, params: dict[str, Any], node_id: str) -> dict[str, Any]:
     rows: list[dict[str, Any]]
     defaults: list[str]
     x_key = 'date'
+    requested_x=str(params.get('x_column','')).strip()
     if mode == 'study' and isinstance(value, dict) and value.get('study'):
         rows, defaults, x_key = chosen['rows'], chosen['series'], chosen['x_key']
     elif mode == 'asset_prices' and isinstance(value, (PortfolioData, PortfolioResult)):
@@ -56,7 +57,11 @@ def plot(value: Any, params: dict[str, Any], node_id: str) -> dict[str, Any]:
         missing = set(defaults) - set(numeric)
         if missing:
             raise ValueError(f'Plot columns unavailable: {", ".join(sorted(missing))}. Enable those indicators or change the selected columns.')
-        rows = [{'date': str(date.date()), **{column: float(row[column]) for column in defaults}} for date, row in value.iterrows()]
+        if requested_x and requested_x!='date':
+            if requested_x not in numeric: raise ValueError('Frame X column must be date or an available numeric column.')
+            rows=[{'date':str(date.date()),requested_x:float(row[requested_x]),**{column:float(row[column]) for column in defaults}} for date,row in value.iterrows()]
+        else:
+            rows = [{'date': str(date.date()), **{column: float(row[column]) for column in defaults}} for date, row in value.iterrows()]
     elif mode == 'decomposition' and isinstance(value, (PreparedData, ModelResult)):
         data = value.prepared if isinstance(value, ModelResult) else value
         rows, defaults = data.decomposition, ['TR', 'VA', 'TE']
@@ -73,9 +78,32 @@ def plot(value: Any, params: dict[str, Any], node_id: str) -> dict[str, Any]:
     series = [column.strip() for column in selected.split(',') if column.strip()] if selected else defaults
     if not rows:
         raise ValueError('No observations available for this plot. Increase data history or reduce indicator windows.')
+    if requested_x:
+        if requested_x not in rows[0]:raise ValueError(f'X column unavailable: {requested_x}. Available: {", ".join(rows[0])}.')
+        x_key=requested_x
+    skip=int(params.get('skip_rows',0))
+    if skip<0 or skip>=len(rows):raise ValueError(f'Skip rows must be 0–{len(rows)-1}. Reduce skip_rows or increase epochs.')
+    rows=rows[skip:]
     available = {key for key, number in rows[0].items() if key != x_key and isinstance(number, (int, float))}
     if not series or len(series) > 12 or len(series) != len(set(series)) or set(series) - available:
         raise ValueError(f'Choose 1–12 unique numeric series. Available: {", ".join(sorted(available))}.')
+    y_scale=str(params.get('y_scale','linear'))
+    if y_scale not in ('linear','log'):raise ValueError('Y scale must be linear or log.')
+    if y_scale=='log' and any(not np.isfinite(row[column]) or row[column]<=0 for row in rows for column in series):
+        raise ValueError('Logarithmic Y requires strictly positive finite values. Select positive loss series or use linear scale.')
+    scatter_columns=[s.strip() for s in str(params.get('scatter_columns','actual')).split(',') if s.strip()]
+    if kind=='scatter_line':
+        if set(scatter_columns)-set(series) or not scatter_columns:raise ValueError('Scatter columns must be selected plot series; use actual for notebook observations.')
+    if kind in ('scatter','scatter_line') and any(not isinstance(row[x_key],(int,float)) or not np.isfinite(row[x_key]) for row in rows):
+        raise ValueError('Scatter plots need a numeric X column, e.g. coordinate. Set x_column accordingly.')
+    line_rows=None
+    if kind=='scatter_line' and isinstance(value,dict) and value.get('topic')=='curve_fit' and int(params.get('study_chart',0))==0 and x_key=='coordinate':
+        smooth=value['charts'][1]['rows']
+        line_series=[column for column in series if column not in scatter_columns]
+        if line_series and all(column in smooth[0] for column in line_series):
+            line_rows=[{x_key:row[x_key],**{column:row[column] for column in line_series}} for row in smooth]
+    if y_scale=='log' and line_rows and any(not np.isfinite(row[column]) or row[column]<=0 for row in line_rows for column in row if column!=x_key):
+        raise ValueError('Logarithmic Y requires positive finite values in the smooth curve too.')
     palette_names = list(PALETTE)
     color = str(params.get('color','Auto'))
     if color != 'Auto' and color not in PALETTE:
@@ -92,7 +120,10 @@ def plot(value: Any, params: dict[str, Any], node_id: str) -> dict[str, Any]:
     title = str(params.get('title','')).strip()
     if not title or title == 'Custom plot':
         title = f'{origin} · {", ".join(series)}'
-    return {'id': node_id, 'title': title, 'origin': origin, 'colors': colors,
+    result={'id': node_id, 'title': title, 'origin': origin, 'colors': colors,
             'labels': {key: custom_labels[i] if custom_labels else key for i,key in enumerate(series)},
-            'chart_type': kind, 'source': mode, 'x_key': x_key, 'series': series,
+            'chart_type': kind, 'y_scale':y_scale,'scatter_columns':scatter_columns if kind=='scatter_line' else [],'source': mode, 'x_key': x_key, 'series': series,
             'rows': [{x_key: row[x_key], **{column: row[column] for column in series}} for row in rows]}
+
+    if line_rows is not None: result['line_rows']=line_rows
+    return result

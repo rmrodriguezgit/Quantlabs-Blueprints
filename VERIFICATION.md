@@ -1,6 +1,17 @@
-# Verificación del proyecto (v0.5.2)
+# Verificación del proyecto (v0.5.3)
 
 Fecha: 31 de octubre de 2026. Entorno local macOS, Python 3.12.12, Node.js 22.22.3, npm 10.9.8.
+
+## Herramientas del notebook y New (v0.5.3)
+
+- Build TypeScript/Vite/Electron y 55 pruebas Python aprobados; suites de grafos, portafolio UI, escalado UI y biblioteca correctas.
+- Swish verificada contra x·sigmoid(x). Resumen de capas conserva RNG y estadísticas BatchNorm; red conectada equivale a su configuración anterior y suma 99,329 parámetros.
+- Pin de red en Curve Fitting: validación de cadenas incompletas, dimensiones 1/5, sincronización automática y rechazo de arquitectura neuronal en OLS.
+- Plot: puntos sobre X numérica, curva suave de 300 coordenadas, log Y positivo, descarte de historial y errores de configuración comprobados.
+- Interfaz con EURUSD=X real: ficha rápida de 17 nodos ejecutada, 181 observaciones como puntos, curvas suaves y pérdida logarítmica visibles; resumen de red con capas Swish y 99,329 parámetros expandido.
+- New en barra: lienzo vacío de 0 nodos, ejecución desactivada, persistencia al recargar y recuperación del diseño anterior de 17 nodos desde Personal comprobadas en interfaz.
+- Electron compilado: File → New y atajo ⌘N comprobados con un nodo de prueba; lienzo vacío y copia del diseño anterior conservados. Ctrl+N configurado para Windows, sin verificación nativa en esa plataforma.
+- Capturas: docs/v0.5.3-new.png y docs/v0.5.3-notebook-tools.png. Se mantienen 18 fichas, se reutilizan los nodos de datos, escalado y entrenamiento existentes.
 
 ## Auditoría de StandardScaler (v0.5.2)
 

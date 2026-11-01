@@ -38,9 +38,11 @@ export function ExecutionPanel({
       <div className="network-overview">
         {bindings.length === 0 && (
           <p className="risk-conventions">
-            Portfolio / risk pipeline
+            {total === 0 ? "New blueprint" : "Portfolio / risk pipeline"}
             <br />
-            Inspect nodes for assets, benchmark, weights and holdout settings.
+            {total === 0
+              ? "Add nodes from the library to start your design."
+              : "Inspect nodes for assets, benchmark, weights and holdout settings."}
           </p>
         )}
         {bindings.map((binding) => (

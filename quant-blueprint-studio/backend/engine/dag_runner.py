@@ -24,6 +24,7 @@ for kind in ('features', 'prepare', 'model', 'backtest', 'curve_fit'):
     INPUTS[kind]['config'] = 'config'
 INPUTS['study'].update({'asset_b':'frame','asset_c':'frame'})
 INPUTS['model']['network'] = 'network'
+INPUTS['curve_fit']['network'] = 'network'
 INPUTS['merge']['frame_b'] = 'frame'
 INPUTS['plot'] = {'frame': 'frame', 'tensor': 'tensor', 'portfolio': 'portfolio'}
 INPUTS['risk'] = {'frame': 'frame', 'tensor': 'tensor', 'portfolio': 'portfolio', 'benchmark': 'frame'}
@@ -186,6 +187,7 @@ class DAGRunner:
                 elif kind == 'curve_data' and isinstance(upstream, pd.DataFrame):
                     output = monthly_curve(upstream, params)
                 elif kind == 'curve_fit' and isinstance(upstream, pd.DataFrame):
+                    if 'network' in inputs: params['_network']=inputs['network']
                     output = curve_fit(upstream, params, (lambda event: progress({'node':key,'status':'epoch',**event})) if progress else None)
                     report['studies'].append({'id':key,'title':node['data'].get('label','Curve fit'),**output})
                 elif kind == 'study' and isinstance(upstream, pd.DataFrame):

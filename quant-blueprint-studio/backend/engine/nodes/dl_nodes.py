@@ -45,7 +45,7 @@ def custom_network(features: int, steps: int, spec: NetworkSpec) -> tuple[nn.Seq
     width = features if spec.mode == 'last' else features * steps
     modules: list[nn.Module] = [SelectInput(spec.mode)]
     activations: dict[str, type[nn.Module]] = {'ReLU': nn.ReLU, 'Tanh': nn.Tanh, 'GELU': nn.GELU,
-                                            'Sigmoid': nn.Sigmoid, 'LeakyReLU': nn.LeakyReLU, 'Identity': nn.Identity}
+                                            'Sigmoid': nn.Sigmoid, 'Swish': nn.SiLU, 'LeakyReLU': nn.LeakyReLU, 'Identity': nn.Identity}
     for layer in spec.layers:
         kind = str(layer.get('layer_type', 'Dense'))
         if kind == 'Dense':
@@ -236,3 +236,25 @@ def train(data: PreparedData, params: dict[str, Any], progress: Callable[[dict[s
     metrics = {'MSE': mse, 'RMSE': float(np.sqrt(mse)), 'MAE': float(mean_absolute_error(data.y_test, prediction)),
                'R2': float(r2_score(data.y_test, prediction))}
     return ModelResult(data, prediction, metrics, history, signals, latent, reconstructed)
+
+
+def describe_network(model: nn.Module, example: torch.Tensor) -> dict[str, Any]:
+    """Report actual executed leaf layers without changing weights, BN stats or RNG."""
+    layers: list[dict[str, Any]] = []
+    hooks = []
+    training = model.training
+    def capture(name: str, module: nn.Module, inputs: tuple[torch.Tensor, ...], output: torch.Tensor) -> None:
+        layers.append({'name': name, 'operation': 'Swish' if isinstance(module, nn.SiLU) else type(module).__name__,
+                       'input_shape': list(inputs[0].shape[1:]), 'output_shape': list(output.shape[1:]),
+                       'parameters': sum(p.numel() for p in module.parameters(recurse=False))})
+    for name, module in model.named_modules():
+        if name and not list(module.children()):
+            hooks.append(module.register_forward_hook(lambda m, x, y, name=name: capture(name, m, x, y)))
+    try:
+        model.eval()
+        with torch.no_grad(): model(example)
+    finally:
+        for hook in hooks: hook.remove()
+        model.train(training)
+    return {'layers': layers, 'total_parameters': sum(p.numel() for p in model.parameters()),
+            'trainable_parameters': sum(p.numel() for p in model.parameters() if p.requires_grad)}

@@ -19,7 +19,6 @@ export function isGraph(value: unknown): value is Graph {
   const g = value as Partial<Graph>;
   if (
     !Array.isArray(g.nodes) ||
-    !g.nodes.length ||
     g.nodes.length > 50 ||
     !Array.isArray(g.edges) ||
     g.edges.length > 150
