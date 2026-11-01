@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.5.4 — 2026-11-01
+
+- Ver JSON, Editar, Guardar y Borrar en cada ejemplo incluido y personal. Editor con validación de grafo y protección de cambios pendientes.
+- Cambios locales a plantillas incluidas sin duplicarlas; actualización de diseños personales y opción de usar el lienzo actual.
+- Papelera recuperable para ejemplos incluidos y personales; restauración conserva nombre, parámetros y conexiones.
+- Persistencia con recuperación del estado anterior si falla una escritura; pruebas de JSON, almacenamiento y acciones de biblioteca.
+
 ## v0.5.3 — 2026-10-31
 
 - New en barra y File → New (⌘N / Ctrl+N): lienzo vacío persistente, archivo automático del diseño actual en Personal y ejecución bloqueada mientras esté vacío.

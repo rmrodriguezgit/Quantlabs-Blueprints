@@ -247,6 +247,12 @@ export default function App() {
     }
   };
   const newBlueprint = () => {
+    if (
+      !window.dispatchEvent(
+        new Event("quantlabs:before-new", { cancelable: true }),
+      )
+    )
+      return;
     if (running) {
       setMessage(
         "Wait for the current execution before creating a new blueprint.",

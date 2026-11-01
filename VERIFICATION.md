@@ -1,6 +1,14 @@
-# Verificación del proyecto (v0.5.3)
+# Verificación del proyecto (v0.5.4)
 
-Fecha: 31 de octubre de 2026. Entorno local macOS, Python 3.12.12, Node.js 22.22.3, npm 10.9.8.
+Fecha: 1 de noviembre de 2026. Entorno local macOS, Python 3.12.12, Node.js 22.22.3, npm 10.9.8.
+
+## Acciones de ejemplos (v0.5.4)
+
+- Compilación TypeScript/Vite/Electron y suites de catálogo, biblioteca, grafos, portafolio UI y escalado UI aprobadas.
+- Validación de JSON versionado y grafo antiguo, pines inválidos, ID inmutable, actualización sin duplicados, borrado/restauración de fichas incluidas y personales y colisiones de IDs comprobadas.
+- Fallo simulado de cuota de almacenamiento: ambas claves recuperan su estado anterior.
+- Interfaz: edición de título y parámetro persistente al recargar; JSON inválido rechazado; cierre con cambios pendientes bloqueado; borrado y restauración conservan la edición. La ficha de prueba se devolvió a su JSON original.
+- Captura: docs/v0.5.4-example-actions.png. Sin cambios en cálculos financieros o entrenamiento en esta versión; no se repitió la suite Python.
 
 ## Herramientas del notebook y New (v0.5.3)
 

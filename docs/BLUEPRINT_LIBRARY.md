@@ -1,4 +1,4 @@
-# Biblioteca de Blueprints — v0.5.3
+# Biblioteca de Blueprints — v0.5.4
 
 La aplicación incluye **18 diseños ejecutables**: tres variantes del [notebook EUR/USD](NOTEBOOK_EURUSD.md) y los quince diseños base descritos abajo: diez basados en las diez imágenes encontradas (unidades 2–10 y ampliación cDCGAN) y cinco ejemplos adicionales. No se encontró una undécima infografía; no se atribuye contenido inventado a ese material.
 
@@ -23,6 +23,20 @@ Pulsa **New** en la barra o **File → New** en Electron; atajo **⌘N** en macO
 El JSON lleva `format: quantlabs-blueprint-library` y `schemaVersion: 1`. Se admiten también los grafos JSON antiguos con `nodes`/`edges`. Se validan tipos de nodos, conexiones, pines, dimensiones configuradas, valores finitos y ausencia de ciclos. Hay un máximo de 100 fichas personales; exporta y elimina copias para liberar espacio. El límite por archivo es 10 MB.
 
 El autoguardado del lienzo continúa funcionando. Los datos de Personal y el lienzo se guardan en localStorage; navegador, Electron de desarrollo y Electron compilado pueden tener almacenamientos distintos. Usa JSON para transferir entre ellos. Se guardan **diseños y parámetros**, no cotizaciones, pesos entrenados ni resultados. Cada ejecución descarga/genera los datos y vuelve a entrenar. Las imágenes originales vienen con la aplicación y se referencian por nombre; un JSON aislado requiere la misma versión de la aplicación para mostrarlas.
+
+## Ver, editar, guardar y borrar un ejemplo
+
+Cada ficha ofrece **Ver JSON**, **Editar**, **Guardar** y **Borrar**, tanto en ejemplos incluidos como en Personal.
+
+1. **Ver JSON** muestra el documento completo en modo de lectura.
+2. **Editar** habilita el editor y Guardar. Puedes cambiar título, área, instrucciones, nodos, parámetros y conexiones; el identificador de la ficha se conserva.
+3. **Guardar** o **Guardar cambios** valida el JSON y el grafo antes de actualizar esa ficha. Los parámetros específicos del entrenamiento se comprueban al ejecutar. Un JSON inválido no reemplaza el guardado. **Cancelar** descarta el borrador; los cambios pendientes protegen el cierre y New.
+4. **Usar lienzo actual** copia el grafo del lienzo al borrador del editor. Después pulsa Guardar. **Guardar copia**, en el pie, crea una ficha personal independiente.
+5. **Borrar** mueve la ficha a **Papelera**. Abre Papelera y pulsa **Restaurar** para recuperar su nombre, parámetros y conexiones. No hay borrado definitivo desde esta pantalla.
+
+Los cambios a ejemplos incluidos se guardan como modificaciones locales: los archivos originales distribuidos con la aplicación se conservan. Las fichas modificadas llevan una marca. Guardar exactamente el JSON original elimina la modificación local. Exportar biblioteca incluye las versiones activas modificadas y excluye las fichas de Papelera. Exporta JSON para trasladar cambios entre equipos o perfiles; el guardado local no sincroniza con GitHub.
+
+![Acciones y editor JSON](v0.5.4-example-actions.png)
 
 ## Plantillas e implementación
 

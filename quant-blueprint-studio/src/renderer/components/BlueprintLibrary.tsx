@@ -1,13 +1,35 @@
 import { useEffect, useRef, useState } from "react";
 import builtinLibrary from "../data/library.json";
-import { X, BookOpen, Download, Upload, Save, Play } from "lucide-react";
+import {
+  X,
+  BookOpen,
+  Download,
+  Upload,
+  Save,
+  Play,
+  Code2,
+  Pencil,
+  Trash2,
+  Undo2,
+} from "lucide-react";
 import {
   downloadLibrary,
   parseLibrary,
   readSaved,
-  storeSaved,
   type LibraryEntry,
 } from "../library";
+import {
+  deleteExample,
+  emptyCatalog,
+  entryJSON,
+  parseEditedEntry,
+  persistWorkspace,
+  readCatalog,
+  resolveExamples,
+  restoreExample,
+  saveExample,
+  type LibraryWorkspace,
+} from "../catalog";
 import type { Graph } from "../types/blueprint";
 export function BlueprintLibrary({
   graph,
@@ -23,26 +45,135 @@ export function BlueprintLibrary({
   const [builtins] = useState<LibraryEntry[]>(() =>
     parseLibrary(builtinLibrary),
   );
-  const [saved, setSaved] = useState(readSaved);
+  const [initial] = useState(() => {
+    try {
+      return {
+        workspace: { saved: readSaved(), catalog: readCatalog() },
+        error: "",
+      };
+    } catch (error) {
+      return {
+        workspace: { saved: readSaved(), catalog: emptyCatalog() },
+        error: `No se pudo leer el catálogo: ${String(error)}. No se guardarán cambios sobre este estado.`,
+      };
+    }
+  });
+  const [workspace, setWorkspace] = useState<LibraryWorkspace>(
+    initial.workspace,
+  );
   const [imageExpanded, setImageExpanded] = useState(false);
   const [selected, setSelected] = useState("unit-2");
   const [area, setArea] = useState("All");
   const [name, setName] = useState(title);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState(false);
+  const [message, setMessage] = useState(initial.error);
+  const [error, setError] = useState(Boolean(initial.error));
+  const [editor, setEditor] = useState<"view" | "edit" | null>(null);
+  const [draft, setDraft] = useState("");
+  const [showTrash, setShowTrash] = useState(false);
   const file = useRef<HTMLInputElement>(null);
-  const all = [...builtins, ...saved];
+  const builtinIds = new Set(builtins.map((e) => e.id));
+  const all = resolveExamples(builtins, workspace);
   const entry = all.find((e) => e.id === selected);
+  const dirty = editor === "edit" && draft !== (entry ? entryJSON(entry) : "");
+  function fail(err: unknown) {
+    setError(true);
+    setMessage(err instanceof Error ? err.message : String(err));
+  }
+  function canLeave(): boolean {
+    if (!dirty) return true;
+    fail(
+      "Guarda los cambios o pulsa Cancelar antes de cambiar de ficha o cerrar.",
+    );
+    return false;
+  }
+  function close() {
+    if (canLeave()) onClose();
+  }
   useEffect(() => {
-    const key = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+    const key = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        if (imageExpanded) setImageExpanded(false);
+        else close();
+      }
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [onClose]);
-  function persist(next: LibraryEntry[]) {
-    storeSaved(next);
-    setSaved(next);
+  }, [onClose, dirty, imageExpanded]);
+  useEffect(() => {
+    const guard = (event: Event) => {
+      if (dirty) {
+        event.preventDefault();
+        fail("Guarda o cancela la edición antes de crear un blueprint nuevo.");
+      }
+    };
+    window.addEventListener("quantlabs:before-new", guard);
+    return () => window.removeEventListener("quantlabs:before-new", guard);
+  }, [dirty]);
+  function commit(next: LibraryWorkspace) {
+    if (initial.error) throw new Error(initial.error);
+    persistWorkspace(next);
+    setWorkspace(next);
+  }
+  function choose(id: string) {
+    if (!canLeave()) return;
+    setSelected(id);
+    setImageExpanded(false);
+    setEditor(null);
+    setDraft("");
+    setShowTrash(false);
+    setError(false);
+    setMessage("");
+  }
+  function openEditor(mode: "view" | "edit") {
+    if (!entry || !canLeave()) return;
+    setDraft(entryJSON(entry));
+    setEditor(mode);
+    setError(false);
+    setMessage(
+      mode === "edit"
+        ? "Edita nombre, área, parámetros, nodos o conexiones y pulsa Guardar. El id se conserva."
+        : "JSON del ejemplo guardado. Pulsa Editar para modificarlo.",
+    );
+  }
+  function save() {
+    if (!entry || editor !== "edit") return;
+    try {
+      const edited = parseEditedEntry(draft, entry);
+      commit(
+        saveExample(
+          workspace,
+          edited,
+          builtinIds,
+          builtins.find((e) => e.id === edited.id),
+        ),
+      );
+      setDraft(entryJSON(edited));
+      setEditor("view");
+      setArea("All");
+      setError(false);
+      setMessage(
+        "Cambios guardados en este equipo. Exporta JSON para transferirlos a otro equipo.",
+      );
+    } catch (err) {
+      fail(err);
+    }
+  }
+  function remove() {
+    if (!entry || !canLeave()) return;
+    try {
+      const next = deleteExample(workspace, entry, builtinIds);
+      commit(next);
+      setSelected(resolveExamples(builtins, next)[0]?.id ?? "");
+      setArea("All");
+      setEditor(null);
+      setImageExpanded(false);
+      setError(false);
+      setMessage(
+        `«${entry.title}» se movió a la Papelera. Puedes restaurarlo.`,
+      );
+    } catch (err) {
+      fail(err);
+    }
   }
   return (
     <div className="library-backdrop">
@@ -59,127 +190,292 @@ export function BlueprintLibrary({
               <BookOpen size={22} /> Biblioteca de Blueprints
             </h2>
             <p>
-              {builtins.length} blueprints · 10 infografías · notebook y
-              ejemplos por área
+              {all.length} diseños disponibles · ejemplos y copias personales
             </p>
           </div>
-          <button onClick={onClose} aria-label="Close library">
+          <button onClick={close} aria-label="Close library">
             <X size={20} />
           </button>
         </header>
         <div className="library-tools">
           <label>
             Área{" "}
-            <select value={area} onChange={(e) => setArea(e.target.value)}>
+            <select
+              disabled={showTrash}
+              value={area}
+              onChange={(e) => {
+                if (canLeave()) setArea(e.target.value);
+              }}
+            >
               {["All", ...new Set(all.map((e) => e.area))].map((a) => (
                 <option key={a}>{a}</option>
               ))}
             </select>
           </label>
-          <button onClick={() => file.current?.click()}>
+          <button
+            onClick={() => {
+              if (canLeave()) file.current?.click();
+            }}
+          >
             <Upload size={14} />
             Importar JSON
           </button>
-          <button disabled={!all.length} onClick={() => downloadLibrary(all)}>
+          <button
+            disabled={!all.length}
+            onClick={() => {
+              if (canLeave()) downloadLibrary(all);
+            }}
+          >
             <Download size={14} />
             Exportar biblioteca
           </button>
+          <button
+            aria-pressed={showTrash}
+            onClick={() => {
+              if (canLeave()) {
+                setShowTrash(!showTrash);
+                setEditor(null);
+              }
+            }}
+          >
+            <Trash2 size={14} />
+            Papelera ({workspace.catalog.trash.length})
+          </button>
         </div>
-        <div className="library-body">
-          <nav aria-label="Library templates">
-            {all
-              .filter((e) => area === "All" || e.area === area)
-              .map((e) => (
-                <button
-                  key={e.id}
-                  className={selected === e.id ? "active" : ""}
-                  onClick={() => {
-                    setSelected(e.id);
-                    setImageExpanded(false);
-                  }}
-                >
-                  <small>{e.area}</small>
-                  <strong>{e.title}</strong>
-                  <span>
-                    {e.graph.nodes.length} nodos ·{" "}
-                    {e.infographic ? "Infografía" : "Ejemplo"}
-                  </span>
-                </button>
-              ))}
-          </nav>
-          {entry ? (
-            <article className="library-detail">
-              <div className="library-detail-copy">
-                <small>{entry.area}</small>
-                <h3>{entry.title}</h3>
-                <p>{entry.description}</p>
-                <ol>
-                  {entry.instructions.map((s, i) => (
-                    <li key={i}>{s}</li>
-                  ))}
-                </ol>
-                <div className="library-actions">
-                  <button onClick={() => onLoad(entry, false)}>
-                    Cargar y editar
-                  </button>
+        {showTrash ? (
+          <div className="library-trash">
+            <h3>Papelera</h3>
+            <p>
+              Los diseños borrados se conservan aquí hasta que los restaures.
+            </p>
+            {!workspace.catalog.trash.length ? (
+              <p>No hay ejemplos borrados.</p>
+            ) : (
+              workspace.catalog.trash.map((item) => (
+                <article key={item.token}>
+                  <div>
+                    <strong>{item.entry.title}</strong>
+                    <small>
+                      {item.entry.area} · {item.entry.graph.nodes.length} nodos
+                      · {new Date(item.deletedAt).toLocaleString()}
+                    </small>
+                  </div>
                   <button
-                    className="execute-button"
-                    disabled={!entry.graph.nodes.length}
-                    onClick={() => onLoad(entry, true)}
+                    onClick={() => {
+                      try {
+                        const restored = restoreExample(workspace, item.token);
+                        commit(restored.workspace);
+                        setSelected(restored.id);
+                        setArea("All");
+                        setShowTrash(false);
+                        setEditor(null);
+                        setError(false);
+                        setMessage(
+                          "Ejemplo restaurado con sus nodos, parámetros y metadatos.",
+                        );
+                      } catch (err) {
+                        fail(err);
+                      }
+                    }}
                   >
-                    <Play size={14} />
-                    Cargar y ejecutar
+                    <Undo2 size={14} />
+                    Restaurar
                   </button>
+                </article>
+              ))
+            )}
+          </div>
+        ) : (
+          <div className="library-body">
+            <nav aria-label="Library templates">
+              {all
+                .filter((e) => area === "All" || e.area === area)
+                .map((e) => (
                   <button
-                    onClick={() => downloadLibrary([entry], `${entry.id}.json`)}
+                    key={e.id}
+                    className={selected === e.id ? "active" : ""}
+                    onClick={() => choose(e.id)}
                   >
-                    Exportar
+                    <small>{e.area}</small>
+                    <strong>{e.title}</strong>
+                    <span>
+                      {e.graph.nodes.length} nodos ·{" "}
+                      {e.infographic ? "Infografía" : "Ejemplo"}
+                      {workspace.catalog.overrides.some((o) => o.id === e.id)
+                        ? " · Modificado"
+                        : ""}
+                    </span>
                   </button>
-                  {saved.some((e) => e.id === entry.id) && (
+                ))}
+            </nav>
+            {entry ? (
+              <article
+                className={
+                  editor ? "library-detail json-open" : "library-detail"
+                }
+              >
+                <div className="library-detail-copy">
+                  <small>{entry.area}</small>
+                  <h3>{entry.title}</h3>
+                  <p>{entry.description}</p>
+                  <div
+                    className="library-actions library-crud"
+                    aria-label="Example actions"
+                  >
+                    <button onClick={() => openEditor("view")}>
+                      <Code2 size={14} />
+                      Ver JSON
+                    </button>
+                    <button onClick={() => openEditor("edit")}>
+                      <Pencil size={14} />
+                      Editar
+                    </button>
+                    <button disabled={editor !== "edit"} onClick={save}>
+                      <Save size={14} />
+                      Guardar
+                    </button>
+                    <button onClick={remove}>
+                      <Trash2 size={14} />
+                      Borrar
+                    </button>
+                  </div>
+                  {editor ? (
+                    <section
+                      className="library-json-editor"
+                      aria-label="Example JSON editor"
+                    >
+                      <div>
+                        <strong>
+                          {editor === "edit" ? "Editar JSON" : "Ver JSON"}
+                        </strong>
+                        <span>
+                          {dirty
+                            ? "Cambios sin guardar"
+                            : editor === "edit"
+                              ? "Edición habilitada"
+                              : "Sólo lectura"}
+                        </span>
+                      </div>
+                      <label htmlFor="example-json">JSON del ejemplo</label>
+                      <textarea
+                        id="example-json"
+                        aria-label="JSON del ejemplo"
+                        spellCheck={false}
+                        readOnly={editor === "view"}
+                        maxLength={10_000_000}
+                        value={draft}
+                        onChange={(e) => setDraft(e.target.value)}
+                      />
+                      <p>
+                        Formato de biblioteca con una ficha, o un grafo
+                        nodes/edges. Guardar valida estructura, pines y ciclos;
+                        las configuraciones del modelo se revisan al ejecutar.
+                      </p>
+                      {editor === "edit" && (
+                        <div className="library-actions">
+                          <button onClick={save}>Guardar cambios</button>
+                          <button
+                            onClick={() => {
+                              setDraft(entryJSON(entry));
+                              setEditor("view");
+                              setError(false);
+                              setMessage(
+                                "Edición cancelada. Se conserva la versión guardada.",
+                              );
+                            }}
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            onClick={() => {
+                              try {
+                                const edited = parseEditedEntry(draft, entry);
+                                setDraft(
+                                  entryJSON({
+                                    ...edited,
+                                    graph: structuredClone(graph),
+                                  }),
+                                );
+                                setError(false);
+                                setMessage(
+                                  "JSON actualizado con el lienzo actual. Pulsa Guardar para confirmar los cambios.",
+                                );
+                              } catch (err) {
+                                fail(err);
+                              }
+                            }}
+                          >
+                            Usar lienzo actual
+                          </button>
+                        </div>
+                      )}
+                    </section>
+                  ) : (
+                    <ol>
+                      {entry.instructions.map((s, i) => (
+                        <li key={i}>{s}</li>
+                      ))}
+                    </ol>
+                  )}
+                  <div className="library-actions">
                     <button
                       onClick={() => {
-                        try {
-                          persist(saved.filter((e) => e.id !== entry.id));
-                          setSelected("unit-2");
-                        } catch (e) {
-                          setMessage(String(e));
-                          setError(true);
-                        }
+                        if (canLeave()) onLoad(entry, false);
                       }}
                     >
-                      Eliminar copia
+                      Cargar y editar
                     </button>
-                  )}
+                    <button
+                      className="execute-button"
+                      disabled={!entry.graph.nodes.length}
+                      onClick={() => {
+                        if (canLeave()) onLoad(entry, true);
+                      }}
+                    >
+                      <Play size={14} />
+                      Cargar y ejecutar
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (canLeave())
+                          downloadLibrary([entry], `${entry.id}.json`);
+                      }}
+                    >
+                      Exportar
+                    </button>
+                  </div>
                 </div>
-              </div>
-              {entry.infographic && (
-                <button
-                  className={
-                    imageExpanded
-                      ? "infographic-preview expanded"
-                      : "infographic-preview"
-                  }
-                  onClick={() => setImageExpanded(!imageExpanded)}
-                  title={
-                    imageExpanded ? "Cerrar ampliación" : "Ampliar infografía"
-                  }
-                  aria-label={
-                    imageExpanded
-                      ? "Cerrar infografía ampliada"
-                      : "Ampliar infografía"
-                  }
-                >
-                  <img
-                    src={`./infographics/${entry.infographic}`}
-                    alt={`Infografía: ${entry.title}`}
-                  />
-                </button>
-              )}
-            </article>
-          ) : (
-            <p className="muted">Selecciona una plantilla.</p>
-          )}
-        </div>
+                {!editor && entry.infographic && (
+                  <button
+                    className={
+                      imageExpanded
+                        ? "infographic-preview expanded"
+                        : "infographic-preview"
+                    }
+                    onClick={() => setImageExpanded(!imageExpanded)}
+                    title={
+                      imageExpanded ? "Cerrar ampliación" : "Ampliar infografía"
+                    }
+                    aria-label={
+                      imageExpanded
+                        ? "Cerrar infografía ampliada"
+                        : "Ampliar infografía"
+                    }
+                  >
+                    <img
+                      src={`./infographics/${entry.infographic}`}
+                      alt={`Infografía: ${entry.title}`}
+                    />
+                  </button>
+                )}
+              </article>
+            ) : (
+              <p className="muted">
+                Selecciona una plantilla o restaura un ejemplo de la Papelera.
+              </p>
+            )}
+          </div>
+        )}
         <footer>
           <div>
             <label>
@@ -194,6 +490,7 @@ export function BlueprintLibrary({
             <button
               disabled={!name.trim()}
               onClick={() => {
+                if (!canLeave()) return;
                 try {
                   const item: LibraryEntry = {
                     id: crypto.randomUUID(),
@@ -205,16 +502,17 @@ export function BlueprintLibrary({
                     ],
                     graph: structuredClone(graph),
                   };
-                  persist([...saved, item]);
+                  commit({ ...workspace, saved: [...workspace.saved, item] });
                   setSelected(item.id);
                   setArea("All");
+                  setShowTrash(false);
+                  setEditor(null);
                   setError(false);
                   setMessage(
-                    "Copia guardada en este equipo. Exporta JSON para llevarla a otro equipo.",
+                    "Copia guardada en Personal. Exporta JSON para llevarla a otro equipo.",
                   );
-                } catch (e) {
-                  setError(true);
-                  setMessage(String(e));
+                } catch (err) {
+                  fail(err);
                 }
               }}
             >
@@ -224,7 +522,7 @@ export function BlueprintLibrary({
           </div>
           <p role="status" className={error ? "library-error" : ""}>
             {message ||
-              "Al cargar se archiva automáticamente el diseño actual en Personal. El JSON guarda nodos y parámetros; los modelos se entrenan de nuevo al ejecutar."}
+              "Ver JSON, Editar y Guardar modifican la ficha seleccionada. Borrar la mueve a Papelera. Los cambios se conservan en este equipo."}
           </p>
         </footer>
         <input
@@ -246,14 +544,18 @@ export function BlueprintLibrary({
                 id: crypto.randomUUID(),
                 area: "Personal",
               }));
-              persist([...saved, ...imported]);
+              commit({
+                ...workspace,
+                saved: [...workspace.saved, ...imported],
+              });
               setSelected(imported[0].id);
               setArea("All");
+              setShowTrash(false);
+              setEditor(null);
               setError(false);
               setMessage(`${imported.length} blueprints importados.`);
             } catch (err) {
-              setError(true);
-              setMessage(err instanceof Error ? err.message : String(err));
+              fail(err);
             }
           }}
         />
