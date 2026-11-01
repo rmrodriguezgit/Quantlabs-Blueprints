@@ -15,7 +15,7 @@ from torch import nn
 from sklearn.decomposition import PCA
 from sklearn.linear_model import Ridge
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from sklearn.preprocessing import StandardScaler
+from .scaling_nodes import fit_scaler, affine_audit, disabled_audit
 from scipy.stats import wasserstein_distance
 
 FEATURES = ['LogReturn', 'Volatility', 'RSI', 'EMA', 'SMA', 'VWAP', 'MACD', 'MACDSignal', 'BBUpper', 'BBMiddle', 'BBLower']
@@ -55,10 +55,14 @@ def samples(frame: pd.DataFrame, p: dict[str, Any]) -> Samples:
     return Samples(x, y, [str(d.date()) for d in frame.index[window:]], gap, y / 10000, a, b, names)
 
 
-def scaled(x: np.ndarray, fit_end: int) -> np.ndarray:
+def scaled(x: np.ndarray, fit_end: int, audits: list[dict[str,Any]] | None = None, names: list[str] | None = None, scope: str = 'training') -> np.ndarray:
     # Fit on the union of observed training rows, without overweighting overlap.
+    if x.ndim!=3 or not 1<=fit_end<=len(x) or not np.isfinite(x).all():
+        raise ValueError('Sequence scaler needs finite samples × time × features and a valid training boundary.')
     fit = np.concatenate([x[0], x[1:fit_end, -1]], axis=0)
-    scaler = StandardScaler().fit(fit)
+    scaler,audit = fit_scaler(fit,names or [f'feature_{i+1}' for i in range(x.shape[-1])],scope=scope)
+    audit['note']+=' Fit uses unique observed training bars, not repeated overlapping windows.'
+    if audits is not None: audits.append(audit)
     return scaler.transform(x.reshape(-1,x.shape[-1])).reshape(x.shape).astype(np.float32)
 
 
@@ -176,7 +180,8 @@ def trading(s: Samples, predictions: np.ndarray, p: dict[str,Any], classificatio
 
 def supervised(s: Samples, p: dict[str,Any], progress: Progress | None) -> dict[str,Any]:
     topic = str(p['topic'])
-    x = scaled(s.x,s.train)
+    audits: list[dict[str,Any]] = []
+    x = scaled(s.x,s.train,audits,s.names)
     base = {'kind':'MLP','widths':[int(v) for v in str(p.get('widths','64,32')).split(',')]}
     if not base['widths'] or len(base['widths'])>4 or any(v<2 or v>512 for v in base['widths']): raise ValueError('Choose 1–4 hidden widths, each 2–512.')
     candidates: list[dict[str,Any]] = [{**base,'name':'MLP'}]
@@ -196,8 +201,9 @@ def supervised(s: Samples, p: dict[str,Any], progress: Progress | None) -> dict[
             scores=[]
             for fraction in (.5,.75):
                 a, b = int(s.train*fraction), min(s.train,int(s.train*(fraction+.25)))
-                fold = scaled(s.x[:b],a)
+                fold = scaled(s.x[:b],a,audits,s.names,f'TR-only CV trial {trial+1}, fold {fraction}')
                 net,_,_,ys = fit_predictor(fold,s.y[:b],a,b,cfg,p,progress)
+                audits.append(affine_audit(s.y[:a],ys[0],ys[1],f'CV trial {trial+1}, fold {fraction}: target y',scope='TR-only CV training'))
                 scores.append(metrics(s.y[a:b],predict(net,fold[a:b],ys))['RMSE'])
             cfg['cv_RMSE_bps'] = float(np.mean(scores))
             candidates.append(cfg)
@@ -214,6 +220,8 @@ def supervised(s: Samples, p: dict[str,Any], progress: Progress | None) -> dict[
     assert winner is not None
     net,ys,cfg,history = winner
     classification = bool(cfg.get('classification'))
+    if not classification: audits.append(affine_audit(s.y[:s.train],ys[0],ys[1],'Regression target y'))
+    else: audits.append(disabled_audit(s.train,'Binary target y','training','Binary labels stay 0/1. Sigmoid probabilities are not standardized.'))
     predicted = predict(net,x[s.validation:],ys,classification)
     actual = (s.y[s.validation:]>0).astype(float) if classification else s.y[s.validation:]
     summary = metrics(actual,predicted)
@@ -225,7 +233,7 @@ def supervised(s: Samples, p: dict[str,Any], progress: Progress | None) -> dict[
     stats,equity = trading(s,predicted,p,classification)
     summary.update(stats)
     rows = [{'date':d,'actual':float(a),'predicted':float(b)} for d,a,b in zip(s.dates[s.validation:],actual,predicted)]
-    return {'selected':cfg['name'],'table':table,'metrics':summary,'charts':[chart('Direction probability' if classification else 'Next-session intraday log return · bps',rows,['actual','predicted']),chart('Selected checkpoint · data loss',history,['train','validation'],'epoch'),equity]}
+    return {'selected':cfg['name'],'scaling_audits':audits,'table':table,'metrics':summary,'charts':[chart('Direction probability' if classification else 'Next-session intraday log return · bps',rows,['actual','predicted']),chart('Selected checkpoint · data loss',history,['train','validation'],'epoch'),equity]}
 
 
 class Autoencoder(nn.Module):
@@ -238,7 +246,8 @@ class Autoencoder(nn.Module):
 
 
 def autoencoders(s: Samples,p: dict[str,Any],progress: Progress | None) -> dict[str,Any]:
-    x = scaled(s.x[:,-1:,:],s.train)[:,0,:]
+    audits: list[dict[str,Any]] = []
+    x = scaled(s.x[:,-1:,:],s.train,audits,s.names)[:,0,:]
     xt = torch.tensor(x)
     z = min(int(p.get('latent_dim',3)),x.shape[1],s.train)
     pca = PCA(n_components=z).fit(x[:s.train])
@@ -277,7 +286,7 @@ def autoencoders(s: Samples,p: dict[str,Any],progress: Progress | None) -> dict[
         summary[f'{name} downstream RMSE (bps)'] = metrics(s.y[s.validation:],forecast)['RMSE']
         for row,v in zip(rows,forecast): row[name] = float(v)
     errors = [{'date':d,**{name:float(np.mean((recon[s.validation+i]-x[s.validation+i])**2)) for name,(_,recon) in outputs.items()}} for i,d in enumerate(s.dates[s.validation:])]
-    return {'selected':selected,'table':table,'metrics':summary,'charts':[chart('Latent factors → Ridge · intraday bps',rows,['actual','PCA','AE','DAE']),chart('Holdout reconstruction MSE · standardized features',errors,['PCA','AE','DAE'])]}
+    return {'selected':selected,'scaling_audits':audits,'table':table,'metrics':summary,'charts':[chart('Latent factors → Ridge · intraday bps',rows,['actual','PCA','AE','DAE']),chart('Holdout reconstruction MSE · standardized features',errors,['PCA','AE','DAE'])]}
 
 
 class ConditionalGenerator(nn.Module):
@@ -365,7 +374,9 @@ def generative(frame: pd.DataFrame,p: dict[str,Any],progress: Progress | None, a
     if any(np.sum(g==i)<8 for i in range(3)): raise ValueError('Generative windows need ≥8 wholly contained examples per split. Increase history or reduce horizon.')
     mean,std=float(raw[g==0].mean()),max(float(raw[g==0].std()),1e-8)
     x=(raw-mean)/std
-    c[:,:3]=StandardScaler().fit(c[g==0,:3]).transform(c[:,:3])
+    condition_scaler,condition_audit=fit_scaler(c[g==0,:3],['log_volatility','momentum','log_volume'],title='Causal conditions (asset IDs excluded)')
+    c[:,:3]=condition_scaler.transform(c[:,:3])
+    audits=[condition_audit,affine_audit(raw[g==0],mean,std,'Training return windows',method='Train mean/std (global return scale)',inverse=False)]
     c=c.astype(np.float32)
     xt,ct=torch.tensor(x,dtype=torch.float32),torch.tensor(c)
     train_idx=np.flatnonzero(g==0); vi=np.flatnonzero(g==1); ti=np.flatnonzero(g==2)
@@ -433,7 +444,7 @@ def generative(frame: pd.DataFrame,p: dict[str,Any],progress: Progress | None, a
         same_z=torch.randn(1,z).repeat(3,1); cc=ct[ti[:1]].repeat(3,1); cc[:,1]=torch.tensor([-1.,0.,1.])
         with torch.no_grad(): regimes=net(same_z,cc).numpy()*std+mean
         charts.append(chart('Same noise · first asset regime conditions', [{'step':i+1,**{name:float(np.cumsum(regimes[j])[i]) for j,name in enumerate(['Bear','Sideways','Bull'])}} for i in range(horizon)],['Bear','Sideways','Bull'],'step'))
-    return {'selected':selected,'table':table,'metrics':summary,'charts':charts,'splits':{'train':int(np.sum(g==0)),'validation':int(np.sum(g==1)),'test':int(np.sum(g==2))},'notes':['Complete windows are purged at split boundaries. Conditions use the 20 preceding sessions.','Scenarios are hypothetical; no calibrated prediction intervals. Asset embeddings are fitted jointly to connected asset frames.']}
+    return {'selected':selected,'table':table,'metrics':summary,'charts':charts,'scaling_audits':audits,'splits':{'train':int(np.sum(g==0)),'validation':int(np.sum(g==1)),'test':int(np.sum(g==2))},'notes':['Complete windows are purged at split boundaries. Conditions use the 20 preceding sessions.','Scenarios are hypothetical; no calibrated prediction intervals. Asset embeddings are fitted jointly to connected asset frames.']}
 
 
 class QNetwork(nn.Module):
@@ -445,7 +456,8 @@ class QNetwork(nn.Module):
 
 def double_dqn(s: Samples,p: dict[str,Any],progress: Progress | None) -> dict[str,Any]:
     seed=int(p.get('seed',42)); random.seed(seed); torch.manual_seed(seed)
-    x=scaled(s.x[:,-1:,:],s.train)[:,0,:]
+    audits: list[dict[str,Any]] = []
+    x=scaled(s.x[:,-1:,:],s.train,audits,s.names)[:,0,:]
     cost=float(p.get('cost_bps',5))/10000
     actions=np.array([-1,0,1])
     online=QNetwork(x.shape[1]); target=deepcopy(online).eval()
@@ -513,7 +525,7 @@ def double_dqn(s: Samples,p: dict[str,Any],progress: Progress | None) -> dict[st
         table.append(score)
         if name=='Double DQN': summary={k:v for k,v in score.items() if isinstance(v,(float,int))}
         for row,v in zip(rows,equity): row[name]=float(v-1)
-    return {'selected':'Double DQN','table':table,'metrics':summary,'charts':[chart('Greedy holdout · gap + intraday − turnover costs',rows,list(policies)),chart('Checkpoint selection · validation net ROI',history,['validation'],'epoch')],'notes':['Replay contains training transitions only. Terminal targets omit bootstrap value. Validation and test use greedy actions without updates.']}
+    return {'selected':'Double DQN','scaling_audits':audits,'table':table,'metrics':summary,'charts':[chart('Greedy holdout · gap + intraday − turnover costs',rows,list(policies)),chart('Checkpoint selection · validation net ROI',history,['validation'],'epoch')],'notes':['Replay contains training transitions only. Terminal targets omit bootstrap value. Validation and test use greedy actions without updates.']}
 
 
 def study(frame: pd.DataFrame,p: dict[str,Any],progress: Progress | None = None, additional: list[pd.DataFrame] | None = None) -> dict[str,Any]:

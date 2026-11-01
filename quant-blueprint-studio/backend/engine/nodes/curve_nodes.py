@@ -7,7 +7,8 @@ import numpy as np
 import pandas as pd
 import torch
 from torch import nn
-from sklearn.preprocessing import PolynomialFeatures, StandardScaler
+from sklearn.preprocessing import PolynomialFeatures
+from .scaling_nodes import fit_scaler, disabled_audit, affine_audit
 from .study_nodes import chart, metrics
 
 
@@ -60,20 +61,35 @@ def curve_fit(frame: pd.DataFrame,p: dict[str,Any],progress: Callable[[dict[str,
         if min(a,b-a,n-b)<3:raise ValueError('Each temporal split needs at least 3 monthly observations.')
     x=frame.Coordinate.to_numpy(dtype=np.float64)[:,None]
     raw=frame.Close.to_numpy(dtype=np.float64)
+    if not np.isfinite(x).all() or not np.isfinite(raw).all():
+        raise ValueError('Curve inputs and target must be finite before fitting or scaling.')
     mean=float(raw[:a].mean()); y=raw-mean
     grid=np.linspace(float(x.min()),float(x.max()),300)[:,None]
+    scope='training' if mode=='temporal' else 'all fitting observations (in-sample)'
+    audits=[affine_audit(raw[:a],mean,1.,'Target y: center only',scope,method='Center only')]
     start=perf_counter(); history=[]; parameter_count=degree+1
     label=str(p.get('name','Curve fit'))
     if variant=='ols':
+        audits.insert(0,disabled_audit(a,'Input X: OLS polynomial',scope,'OLS uses the raw polynomial coordinate; no StandardScaler is fitted.'))
         coefficients=np.polynomial.polynomial.polyfit(x[:a,0],y[:a],degree)
         predicted=np.polynomial.polynomial.polyval(x[:,0],coefficients)
         smooth=np.polynomial.polynomial.polyval(grid[:,0],coefficients)
     else:
         polynomial=PolynomialFeatures(degree=degree,include_bias=False) if variant=='polynomial_net' else None
-        inputs=polynomial.fit_transform(x) if polynomial else x
+        if polynomial is not None:
+            polynomial.fit(x[:a])
+        inputs=polynomial.transform(x) if polynomial else x
         inputs_grid=polynomial.transform(grid) if polynomial else grid
-        normalize=bool(p.get('normalize',True)) or polynomial is not None
-        scaler=StandardScaler().fit(inputs[:a]) if normalize else None
+        if not isinstance(p.get('normalize',True),bool):
+            raise ValueError('Normalize inputs must be a boolean true/false, not a string.')
+        normalize=p.get('normalize',True)
+        names=[f'Coordinate^{i}' for i in range(1,degree+1)] if polynomial else ['Coordinate']
+        scaler=None
+        if normalize:
+            scaler,audit=fit_scaler(inputs[:a],names,scope=scope)
+            audits.insert(0,audit)
+        else:
+            audits.insert(0,disabled_audit(a,'Input features X',scope,'Normalize inputs is off. This branch uses unscaled inputs; enable it explicitly to compare.'))
         inputs=scaler.transform(inputs) if scaler else inputs
         inputs_grid=scaler.transform(inputs_grid) if scaler else inputs_grid
         activation=str(p.get('activation','ReLU'))
@@ -122,8 +138,9 @@ def curve_fit(frame: pd.DataFrame,p: dict[str,Any],progress: Callable[[dict[str,
             smooth=net(torch.tensor(inputs_grid,dtype=torch.float32)).squeeze(1).numpy().astype(float)
     seconds=perf_counter()-start
     evaluation=slice(b,None) if mode=='temporal' else slice(None)
-    score=vectors(y[evaluation],predicted[evaluation])
-    table=[{'model':label,'scope':'test / temporal extrapolation' if mode=='temporal' else 'in-sample curve fit','activation':'—' if variant!='dense' else str(p.get('activation','ReLU')),'optimizer':'OLS' if variant=='ols' else str(p.get('optimizer','RMSprop')),'parameters':parameter_count,'epochs':len(history),'seconds':seconds,**score}]
+    # Undo target centering for reported metrics; displayed curves stay centered.
+    score=vectors(raw[evaluation],predicted[evaluation]+mean)
+    table=[{'model':label,'scope':'test / temporal extrapolation' if mode=='temporal' else 'in-sample curve fit','activation':'—' if variant!='dense' else str(p.get('activation','ReLU')),'optimizer':'OLS' if variant=='ols' else str(p.get('optimizer','RMSprop')),'parameters':parameter_count,'epochs':len(history),'X scaler':audits[0]['method'],'seconds':seconds,**score}]
     dates=[str(d.date()) for d in frame.index]
     rows=[{'date':dates[i],'coordinate':float(x[i,0]),'actual':float(y[i]),'fitted':float(predicted[i])} for i in range(n)]
     charts=[chart('Monthly centered EUR/USD · full curve (fit / extrapolation)',rows,['actual','fitted']),chart('Smooth curve · artificial coordinate', [{'coordinate':float(v),'fitted':float(pred)} for v,pred in zip(grid[:,0],smooth)],['fitted'],'coordinate')]
@@ -135,4 +152,7 @@ def curve_fit(frame: pd.DataFrame,p: dict[str,Any],progress: Callable[[dict[str,
             fit=np.polynomial.polynomial.polyval(x[:,0],coef)
             learning.append({'samples':count,'training_MSE':vectors(y[:count],fit[:count])['MSE'],'remaining_MSE':vectors(y[count:],fit[count:])['MSE'] if count<n else 0.})
         charts.append(chart('Cubic prefix fit · extrapolation, not training-only error',learning,['training_MSE','remaining_MSE'],'samples'))
-    return {'study':True,'topic':'curve_fit','selected':label,'scope':table[0]['scope'],'features':['Coordinate'],'splits':{'train':a,'validation':b-a,'test':n-b},'metrics':score,'table':table,'charts':charts,'notes':[f'Target = monthly Close − fitted training mean ({mean:.8f} USD/EUR). Artificial coordinate spans −2…2; it is not an economic predictor.','In-sample errors measure approximation, not forecasting ability.' if mode=='in_sample' else 'Training mean and feature scaler use TR only. VA chooses the neural checkpoint; TE is temporal extrapolation, evaluated afterwards.','PyTorch implementation of the Keras architectures; initialization, optimizer defaults and timings differ. RMSE pips uses 0.0001 USD/EUR per pip.']}
+    for audit in audits:
+        if audit['fit_rows']:
+            audit.update({'fit_start':str(frame.index[0].date()),'fit_end':str(frame.index[a-1].date())})
+    return {'study':True,'topic':'curve_fit','selected':label,'scope':table[0]['scope'],'features':['Coordinate'],'splits':{'train':a,'validation':b-a,'test':n-b},'metrics':score,'scaling_audits':audits,'table':table,'charts':charts,'notes':[f'Target = monthly Close − fitted training mean ({mean:.8f} USD/EUR). Artificial coordinate spans −2…2; it is not an economic predictor.','In-sample errors measure approximation, not forecasting ability.' if mode=='in_sample' else 'Training mean and feature scaler use TR only. VA chooses the neural checkpoint; TE is temporal extrapolation, evaluated afterwards.','PyTorch implementation of the Keras architectures; initialization, optimizer defaults and timings differ. RMSE pips uses 0.0001 USD/EUR per pip.']}

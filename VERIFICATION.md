@@ -1,6 +1,16 @@
-# Verificación del proyecto (v0.5.1)
+# Verificación del proyecto (v0.5.2)
 
 Fecha: 31 de octubre de 2026. Entorno local macOS, Python 3.12.12, Node.js 22.22.3, npm 10.9.8.
+
+## Auditoría de StandardScaler (v0.5.2)
+
+- 50 pruebas Python aprobadas (14 nuevas de escalado), compilación TypeScript/Vite/Electron y suites de grafos/biblioteca/portafolio UI/escalado UI correctas.
+- Ajustes comprobados sólo con TR, límites exactos de barras antes de expandir ventanas, columnas constantes, transformaciones de VA/TE sin reajuste, y escaladores nuevos por fold HPO.
+- Invariancia de predicciones y MSE al cambiar −2…2 por −1…1 con StandardScaler, tanto en red densa como polinomio neuronal.
+- Corrección del checkbox polinómico comprobada capturando llamadas reales a StandardScaler.fit: desactivado no ajusta scaler; activado recibe únicamente columnas polinómicas TR.
+- Diagnósticos distinguibles para StandardScaler, centrado de y, MinMax y ramas desactivadas. Compatibilidad con resultados antiguos sin auditorías.
+- Interfaz ejecutada con la ficha temporal EUR/USD real: 12 nodos completados, seis ramas neuronales escaladas. Auditoría muestra 117 filas TR hasta 2021-06-30, media transformada 2.29636e−16 y desviación 1 para Coordinate.
+- Documentación en docs/SCALING.md; captura docs/v0.5.2-scaler-audit.png. Los grafos personales existentes conservan su selección de normalización; cargar la ficha temporal actualizada activa las seis ramas neuronales.
 
 ## Blueprint del notebook EUR/USD (v0.5.1)
 

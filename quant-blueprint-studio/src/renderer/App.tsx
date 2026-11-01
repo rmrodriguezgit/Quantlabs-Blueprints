@@ -1,4 +1,5 @@
 import { BlueprintLibrary } from "./components/BlueprintLibrary";
+import { ScalingDock } from "./components/ScalingDock";
 import { StudyDock } from "./components/StudyDock";
 import {
   isGraph,
@@ -477,6 +478,15 @@ export default function App() {
             index,
           ),
         )}
+        onInspect={(id) => {
+          setSelected(id);
+          document
+            .querySelector(".workspace")
+            ?.scrollIntoView({ behavior: "smooth" });
+        }}
+      />
+      <ScalingDock
+        audits={result?.scaling_audits ?? []}
         onInspect={(id) => {
           setSelected(id);
           document

@@ -51,6 +51,10 @@ flowchart LR
 
 ![Ejecución del blueprint en Electron](v0.5.1-notebook.png)
 
+## StandardScaler
+
+Desde v0.5.2, la ficha temporal activa StandardScaler en todas las ramas neuronales. Las fichas rápida y original mantienen las decisiones del notebook. El checkbox de normalización se respeta también en los polinomios neuronales. Después de ejecutar, **Normalización · auditoría** muestra el método, filas, centro y divisor de cada rama. [Detalle y pruebas](SCALING.md).
+
 ## Interpretación y diferencias controladas
 
 - **in_sample** ajusta y evalúa las mismas observaciones, igual que el ejercicio. No mide éxito de pronóstico. El benchmark lo identifica explícitamente.

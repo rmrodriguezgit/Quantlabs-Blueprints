@@ -4,6 +4,7 @@ from typing import Any, Callable
 import numpy as np
 import pandas as pd
 import torch
+from .nodes.scaling_nodes import affine_audit
 from .nodes.curve_nodes import monthly_curve, curve_fit
 from .nodes.study_nodes import study
 from .nodes.data_nodes import source, features, merge_features
@@ -87,7 +88,7 @@ class DAGRunner:
         return order
 
     def execute(self, progress: Callable[[dict[str, Any]], None] | None = None) -> dict[str, Any]:
-        report: dict[str, Any] = {'decomposition': [], 'predictions': [], 'backtest': [], 'metrics': {}, 'history': [], 'nodes': [], 'plots': [], 'portfolios': [], 'risk_reports': [], 'studies': []}
+        report: dict[str, Any] = {'decomposition': [], 'predictions': [], 'backtest': [], 'metrics': {}, 'history': [], 'nodes': [], 'plots': [], 'portfolios': [], 'risk_reports': [], 'studies': [], 'scaling_audits': []}
         order = self.topological_sort()
         for key in order:
             node = self.nodes[key]
@@ -205,6 +206,7 @@ class DAGRunner:
                     report['metrics'] = output.metrics
                     report['history'] = output.history
                     report['predictions'] = [{'date': d, 'actual': float(y), 'predicted': float(p)} for d, y, p in zip(upstream.dates, upstream.y_test, output.predicted)]
+                    report['scaling_audits'].append({'id':key,'node_title':node['data'].get('label',kind),**affine_audit(upstream.y_train,float(upstream.y_train.mean()),max(float(upstream.y_train.std()),1e-8),'Regression target y')})
                     report['target'] = upstream.target
                     if output.latent is not None:
                         report['autoencoder'] = {'latent': output.latent, 'reconstructed': output.reconstructed, 'space': 'scaled features'}
@@ -217,6 +219,8 @@ class DAGRunner:
                 if progress:
                     progress({'node': key, 'status': 'error', 'detail': str(exc)})
                 raise ValueError(f'{node["data"].get("label") or kind}: {exc}') from exc
+            audits = output.scaling_audits if isinstance(output, PreparedData) else output.get('scaling_audits',[]) if isinstance(output,dict) else []
+            report['scaling_audits'].extend({'id':key,'node_title':node['data'].get('label',kind),**audit} for audit in audits)
             self.outputs[key] = output
             summary = {'id': key, 'kind': kind, 'status': 'complete'}
             if isinstance(output, pd.DataFrame):

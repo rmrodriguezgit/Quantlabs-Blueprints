@@ -2,7 +2,7 @@
 
 ![Quantlabs Blueprints](docs/banner.svg)
 
-[![Version](https://img.shields.io/github/v/tag/rmrodriguezgit/Quantlabs-Blueprints?label=version&color=6cc9ac)](https://github.com/rmrodriguezgit/Quantlabs-Blueprints/releases/tag/v0.5.1)
+[![Version](https://img.shields.io/github/v/tag/rmrodriguezgit/Quantlabs-Blueprints?label=version&color=6cc9ac)](https://github.com/rmrodriguezgit/Quantlabs-Blueprints/releases/tag/v0.5.2)
 ![Desktop](https://img.shields.io/badge/desktop-macOS%20%7C%20Windows-79b4ef)
 ![Electron](https://img.shields.io/badge/Electron-42-79b4ef)
 ![React](https://img.shields.io/badge/React-19-61dafb)
@@ -11,7 +11,7 @@
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.x-ee4c2c)
 ![Features](https://img.shields.io/badge/Blueprints-18%20templates%20%7C%2010%20infographics%20%7C%20ML%20%7C%20DL%20%7C%20RL-c49af8)
 
-**Versión actual: [v0.5.1](https://github.com/rmrodriguezgit/Quantlabs-Blueprints/releases/tag/v0.5.1)** · [Historial de cambios](CHANGELOG.md) · [Verificaciones](VERIFICATION.md)
+**Versión actual: [v0.5.2](https://github.com/rmrodriguezgit/Quantlabs-Blueprints/releases/tag/v0.5.2)** · [Historial de cambios](CHANGELOG.md) · [Verificaciones](VERIFICATION.md)
 
 Estudio de escritorio para investigación cuantitativa mediante un grafo visual de nodos: datos → indicadores → preparación temporal → aprendizaje profundo → backtest. Base funcional para macOS y Windows, con Electron, React y un motor Python local.
 
@@ -25,7 +25,7 @@ El código se encuentra en [`quant-blueprint-studio/`](quant-blueprint-studio/).
 
 Incluye comparación de optimizadores y regularización, búsqueda temporal de hiperparámetros, CNN/LSTM/GRU, PCA/AE/DAE, CVAE/cGAN/cDCGAN multiactivo y Double DQN. Los experimentos temporales muestran selección por validación, métricas, tablas y gráficos fuera de muestra, con escaladores sólo TR y test separado. Los diseños del notebook distinguen explícitamente ajuste completo y extrapolación temporal.
 
-[Guía del notebook EUR/USD](docs/NOTEBOOK_EURUSD.md) · [Guía de biblioteca, protocolos y alcance](docs/BLUEPRINT_LIBRARY.md) · [Colección JSON](quant-blueprint-studio/public/blueprints/library.json)
+[Auditoría de escalado](docs/SCALING.md) · [Guía del notebook EUR/USD](docs/NOTEBOOK_EURUSD.md) · [Guía de biblioteca, protocolos y alcance](docs/BLUEPRINT_LIBRARY.md) · [Colección JSON](quant-blueprint-studio/public/blueprints/library.json)
 
 ![Biblioteca de Blueprints](docs/v0.5-library.png)
 

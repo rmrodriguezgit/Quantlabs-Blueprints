@@ -27,6 +27,7 @@ export type BlueprintNode = Node<BlueprintData, "blueprint">;
 export type Graph = { nodes: BlueprintNode[]; edges: Edge[] };
 export interface Result {
   studies?: StudyReport[];
+  scaling_audits?: ScalingAudit[];
   decomposition: { date: string; TR: number; VA: number; TE: number }[];
   predictions: { date: string; actual: number; predicted: number }[];
   backtest: {
@@ -49,6 +50,28 @@ export interface Result {
     sharpe: number;
     turnover: number;
   };
+}
+export interface ScalingAudit {
+  id: string;
+  node_title: string;
+  title: string;
+  method: string;
+  scope: string;
+  fit_rows: number;
+  note: string;
+  fit_start?: string;
+  fit_end?: string;
+  inverse_before_metrics: boolean;
+  columns: {
+    name: string;
+    mean: number;
+    variance: number;
+    center: number;
+    scale: number;
+    transformed_mean: number;
+    transformed_std: number;
+    constant: boolean;
+  }[];
 }
 export interface StudyReport {
   id: string;

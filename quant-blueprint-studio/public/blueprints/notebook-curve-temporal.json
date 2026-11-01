@@ -13,7 +13,8 @@
         "Inicio rápido: 100 épocas por red. La ficha de referencia configura 1500 épocas, 2000 en alta capacidad y 2500 en DNN. Puede tardar más.",
         "Selecciona una rama Curve Fitting para modificar capas, activación, optimizador, LR, normalización y L2. El modelo polinómico transforma una coordenada en cinco características.",
         "in_sample reproduce el ajuste completo; sus métricas no son de pronóstico. temporal usa media/escalas TR, checkpoint VA y error TE de extrapolación temporal.",
-        "Implementación PyTorch de arquitecturas Keras: no se prometen pesos, tiempos ni MSE idénticos. No se modifica ni ejecuta el notebook adjunto."
+        "Implementación PyTorch de arquitecturas Keras: no se prometen pesos, tiempos ni MSE idénticos. No se modifica ni ejecuta el notebook adjunto.",
+        "En la ficha temporal todas las ramas neuronales usan StandardScaler. La auditoría Normalización muestra estadísticas TR y métodos por rama; OLS no necesita escalado."
       ],
       "graph": {
         "nodes": [
@@ -98,7 +99,7 @@
                 "degree": 5,
                 "activation": "ReLU",
                 "optimizer": "RMSprop",
-                "normalize": false,
+                "normalize": true,
                 "epochs": 100,
                 "batch_size": 32,
                 "lr": 0.001,
@@ -253,7 +254,7 @@
                 "degree": 5,
                 "activation": "ReLU",
                 "optimizer": "RMSprop",
-                "normalize": false,
+                "normalize": true,
                 "epochs": 100,
                 "batch_size": 32,
                 "lr": 0.001,

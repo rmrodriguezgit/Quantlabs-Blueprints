@@ -1,9 +1,10 @@
 """Chronological preparation: at time t, predict the target at t+1."""
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from .scaling_nodes import fit_scaler
 from statsmodels.tsa.seasonal import seasonal_decompose
 
 
@@ -21,6 +22,7 @@ class PreparedData:
     decomposition: list[dict[str, Any]]
     target: str
     feature_names: list[str]
+    scaling_audits: list[dict[str, Any]] = field(default_factory=list)
 
 
 def prepare(frame: pd.DataFrame, params: dict[str, Any]) -> PreparedData:
@@ -43,6 +45,8 @@ def prepare(frame: pd.DataFrame, params: dict[str, Any]) -> PreparedData:
     if missing:
         raise ValueError(f'Selected features unavailable: {", ".join(sorted(missing))}. Enable their indicators first.')
     values = frame[names].to_numpy(dtype=np.float64)
+    if not np.isfinite(values).all():
+        raise ValueError('Selected input features must be finite before scaling; remove NaN/infinite values upstream.')
     count = len(values) - lookback
     train_end, val_end = int(count * train_ratio), int(count * (train_ratio + val_ratio))
     if min(train_end, val_end - train_end, count - val_end) < 3:
@@ -60,8 +64,9 @@ def prepare(frame: pd.DataFrame, params: dict[str, Any]) -> PreparedData:
     if len(frame) < 2 * period:
         raise ValueError(f'Decomposition period={period} needs {2 * period} usable rows; only {len(frame)} available. Reduce the decomposition period or increase data history.')
     # Training windows end at lookback + train_end - 2. Fit nowhere else.
-    scaler = MinMaxScaler() if params.get('scaler') == 'minmax' else StandardScaler()
-    scaler.fit(values[:lookback + train_end - 1])
+    scaler, audit = fit_scaler(values[:lookback + train_end - 1],names,str(params.get('scaler','standard')))
+    audit.update({'fit_start':str(frame.index[0].date()), 'fit_end':str(frame.index[lookback+train_end-2].date()),
+                  'note':audit['note']+' Fit on unique input bars, before expanding overlapping windows; never on target-only or held-out bars.'})
     scaled = scaler.transform(values).astype(np.float32)
     x = np.stack([scaled[i-lookback:i] for i in range(lookback, len(values))])
     y = frame[target].to_numpy(dtype=np.float32)[lookback:]
@@ -72,4 +77,4 @@ def prepare(frame: pd.DataFrame, params: dict[str, Any]) -> PreparedData:
                      if np.isfinite(tr) and np.isfinite(va) and np.isfinite(te)]
     return PreparedData(x[:train_end], y[:train_end], x[train_end:val_end], y[train_end:val_end],
                         x[val_end:], y[val_end:], frame['LogReturn'].to_numpy()[lookback+val_end:],
-                        [str(d.date()) for d in frame.index[lookback+val_end:]], scaler, decomposition, target, names)
+                        [str(d.date()) for d in frame.index[lookback+val_end:]], scaler, decomposition, target, names, [audit])

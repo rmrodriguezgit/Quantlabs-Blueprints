@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.5.2 — 2026-10-31
+
+- Auditoría de escalado por nodo: método, ámbito/filas de ajuste, centro/divisor y estadísticas antes/después; distingue X, y, columnas constantes y ramas sin escalado.
+- Corrección del checkbox normalize en polinomios: ahora puede desactivar realmente StandardScaler. Todas las redes de la ficha temporal EUR/USD se normalizan; las fichas originales conservan sus opciones.
+- Ajuste explícito de PolynomialFeatures con TR, validación de matrices finitas/nombres de escalador y métricas de curvas tras invertir el centrado.
+- Pruebas de límites temporales, columnas constantes, ventanas sin duplicación, folds HPO, objetivo en unidades originales e invariancia al cambiar −2…2 por −1…1.
+
+
 ## v0.5.1 — 2026-10-31
 
 - Blueprint del notebook documentado EUR/USD: fuente de 15 años, cierre mensual y coordenada artificial; siete ramas OLS/neuronales con benchmark conjunto.

@@ -1391,3 +1391,33 @@ i.portfolio {
   height: 100%;
   object-fit: contain;
 }
+.scaling-dock details {
+  border: 1px solid #293544;
+  border-radius: 6px;
+  background: #141e2b;
+  margin: 10px 0;
+  padding: 12px;
+}
+.scaling-dock summary {
+  cursor: pointer;
+  font-size: 12px;
+  display: list-item;
+}
+.scaling-dock summary span {
+  margin-left: 14px;
+  color: #99acc3;
+}
+.scaling-dock summary .scaler-on {
+  color: #6cc9ac;
+}
+.scaling-dock summary .scaler-off {
+  color: #f2ad65;
+}
+.scaling-dock details p {
+  font-size: 12px;
+  color: #9aabc0;
+  line-height: 1.6;
+}
+.scaling-dock details button {
+  margin-top: 12px;
+}
