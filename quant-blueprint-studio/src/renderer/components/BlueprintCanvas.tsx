@@ -37,6 +37,8 @@ import {
 } from "../types/blueprint";
 import "@xyflow/react/dist/style.css";
 const icons = {
+  curve_data: Layers3,
+  curve_fit: BrainCircuit,
   study: BrainCircuit,
   source: Database,
   features: SlidersHorizontal,
@@ -56,6 +58,10 @@ const icons = {
 function nodeSummary(data: BlueprintNode["data"]): string {
   const p = data.params;
   switch (data.kind) {
+    case "curve_data":
+      return "Daily Close → monthly last → artificial coordinate";
+    case "curve_fit":
+      return `${p.name} · ${p.evaluation} · ${p.epochs} epochs`;
     case "study":
       return studyArchitecture(p);
     case "source":

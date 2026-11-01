@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.5.1 — 2026-10-31
+
+- Blueprint del notebook documentado EUR/USD: fuente de 15 años, cierre mensual y coordenada artificial; siete ramas OLS/neuronales con benchmark conjunto.
+- Tres fichas: inicio rápido, épocas/arquitecturas originales y evaluación temporal separada. Biblioteca ampliada a 18 diseños.
+- Nodos Monthly Curve Data y Curve Fitting / Benchmark: activaciones, optimizadores, L2, ReduceLR, épocas y protocolos configurables.
+- Métricas vectoriales sin broadcasting, RMSE en pips y tiempos; guías, mapa de celdas y notebook acompañante ejecutable con el motor del proyecto.
+
+
 ## v0.5.0 — 2026-10-31
 
 - Biblioteca integrada con diez infografías originales y 15 blueprints ejecutables, organizados por área.

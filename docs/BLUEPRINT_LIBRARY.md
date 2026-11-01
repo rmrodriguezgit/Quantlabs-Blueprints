@@ -1,6 +1,6 @@
-# Biblioteca de Blueprints — v0.5.0
+# Biblioteca de Blueprints — v0.5.1
 
-La aplicación incluye **15 diseños ejecutables**: diez basados en las diez imágenes encontradas (unidades 2–10 y ampliación cDCGAN) y cinco ejemplos adicionales. No se encontró una undécima infografía; no se atribuye contenido inventado a ese material.
+La aplicación incluye **18 diseños ejecutables**: tres variantes del [notebook EUR/USD](NOTEBOOK_EURUSD.md) y los quince diseños base descritos abajo: diez basados en las diez imágenes encontradas (unidades 2–10 y ampliación cDCGAN) y cinco ejemplos adicionales. No se encontró una undécima infografía; no se atribuye contenido inventado a ese material.
 
 ![Biblioteca integrada](v0.5-library.png)
 
@@ -44,7 +44,7 @@ Para cDCGAN, el pin principal es el primer activo; `asset_b` y `asset_c` admiten
 
 ## Objetivos, costes y lectura de resultados
 
-Los ejemplos usan datos **sintéticos** por defecto para funcionar sin internet. Cambia Market Data a `yfinance` para datos ajustados reales. Seleccionar SPY sin cambiar la fuente no transforma datos sintéticos en cotizaciones de SPY.
+Los quince ejemplos base usan datos **sintéticos** por defecto para funcionar sin internet. Las tres fichas nuevas del notebook EUR/USD usan yfinance por defecto, como su documento de referencia. Cambia Market Data a `yfinance` para datos ajustados reales. Seleccionar SPY sin cambiar la fuente no transforma datos sintéticos en cotizaciones de SPY.
 
 En las unidades supervisadas, una ventana termina al cierre de t y predice `10000 × log(Close[t+1] / Open[t+1])`: retorno intradía siguiente en puntos básicos. Las operaciones supervisadas entran en la apertura, salen al cierre y quedan en efectivo durante el gap. Cobran dos cambios de posición por sesión (entrada y salida), a 5 bps cada uno por defecto. El gráfico de referencia usa también sólo intradía, sin costes, para comparar el mismo intervalo. ROI, Sharpe y drawdown del experimento corresponden a este protocolo.
 
@@ -60,4 +60,4 @@ Los informes aparecen debajo del lienzo: métricas, selección, tablas y gráfic
 
 Esta versión es una implementación educativa ejecutable de las arquitecturas y protocolos principales, no una reproducción literal de los notebooks de origen. Emplea fracciones cronológicas configurables en vez de fechas fijas 2023/2024/2025, ejecuta PyTorch en CPU y admite salida de texto/JSON para diseños. No incluye CUDA/AMP, Optuna, exportación de modelos preentrenados ni inferencia desde pesos guardados. Early stopping, inicialización, escaladores, selección y test son internos a cada experimento. La ejecución se puede reproducir con los mismos datos y semilla; descargar nuevas cotizaciones puede cambiar los resultados.
 
-Las diez imágenes se copiaron sin edición del proyecto local Forecast Lab. `public/infographics/manifest.json` conserva nombres y hashes SHA256 originales, verificados por la suite. La ampliación cDCGAN se identifica como material complementario de Quantlabs Neurolab en el manifiesto. Las 15 fichas están disponibles como JSON individuales en `quant-blueprint-studio/public/blueprints/`, y su colección completa en `library.json`.
+Las diez imágenes se copiaron sin edición del proyecto local Forecast Lab. `public/infographics/manifest.json` conserva nombres y hashes SHA256 originales, verificados por la suite. La ampliación cDCGAN se identifica como material complementario de Quantlabs Neurolab en el manifiesto. Las 18 fichas están disponibles como JSON individuales en `quant-blueprint-studio/public/blueprints/`, y su colección completa en `library.json`.

@@ -1,0 +1,62 @@
+{
+  "filename": "B_13Oct26_Ibero_de_05_IA_01_documentado.ipynb",
+  "sha256": "a3c98e26028498783e458d4b5bb33e1dbce1eb378aea9914193cfa3fb8dee2e3",
+  "cells": 82,
+  "mapping": {
+    "daily_data": [
+      7
+    ],
+    "monthly_last": [
+      9
+    ],
+    "center_and_coordinate": [
+      13,
+      15
+    ],
+    "safe_metrics": [
+      21
+    ],
+    "ols": [
+      23,
+      24,
+      25
+    ],
+    "prefix_extrapolation": [
+      30
+    ],
+    "baseline_mlp": [
+      37,
+      40,
+      42
+    ],
+    "polynomial_net": [
+      46,
+      47,
+      49,
+      52
+    ],
+    "swish": [
+      53,
+      54,
+      56,
+      59
+    ],
+    "polynomial_l2": [
+      60,
+      62,
+      63,
+      66
+    ],
+    "high_capacity": [
+      68,
+      70,
+      72
+    ],
+    "deep_relu": [
+      74,
+      75,
+      77,
+      79
+    ]
+  }
+}

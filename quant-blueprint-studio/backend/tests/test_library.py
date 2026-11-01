@@ -25,7 +25,9 @@ class LibraryTests(unittest.TestCase):
             with self.subTest(entry=entry['id']):
                 graph=deepcopy(entry['graph'])
                 for node in graph['nodes']:
-                    if node['data']['kind'] in ('study','model'):
+                    if node['data']['kind']=='source' and entry['id'].startswith('notebook-'):
+                        node['data']['params']['source']='synthetic'
+                    if node['data']['kind'] in ('study','model','curve_fit'):
                         node['data']['params']['epochs']=2
                         node['data']['params']['trials']=2
                 result=DAGRunner(graph).execute()

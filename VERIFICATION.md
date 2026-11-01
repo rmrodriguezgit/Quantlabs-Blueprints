@@ -1,6 +1,16 @@
-# Verificación del proyecto (v0.5.0)
+# Verificación del proyecto (v0.5.1)
 
 Fecha: 31 de octubre de 2026. Entorno local macOS, Python 3.12.12, Node.js 22.22.3, npm 10.9.8.
+
+## Blueprint del notebook EUR/USD (v0.5.1)
+
+- 36 pruebas Python y suites TypeScript/grafos/portafolio UI/biblioteca aprobadas; 18 diseños válidos y compilación Electron/Vite correcta.
+- Remuestreo al último cierre mensual, coordenada artificial, dimensiones 769/6 parámetros y protección contra broadcasting comprobados; cambios sólo TE no modifican media TR ni checkpoint neuronal temporal.
+- Descarga real EURUSD=X de 15 años: 181 meses, 2011-10-31 a 2026-10-31. Las siete ramas del modo rápido (100 épocas) completadas en CLI y Electron; benchmark y gráficos visibles.
+- Ficha de referencia con datos reales: completó 1500/1500/1500/1500/2000/2500 épocas en las seis redes; MSE descriptivo de la DNN de tres capas: 0.0002478107. Este error es in-sample y no se interpreta como pronóstico.
+- Notebook acompañante: todas sus celdas de código ejecutadas con datos sintéticos, tabla de siete modelos, SVG y exportaciones JSON/CSV comprobadas. `ipykernel` opcional instalado en la .venv; `pip check` correcto.
+- Original adjunto leído sin ejecución ni modificaciones. Procedencia y mapa de celdas en docs/NOTEBOOK_CURVE_SOURCE.json; alcance en docs/NOTEBOOK_EURUSD.md.
+- No se afirma equivalencia numérica entre PyTorch y TensorFlow/Keras. Los modos in_sample son ajustes descriptivos; la extensión temporal evalúa extrapolación.
 
 ## Biblioteca y experimentos (v0.5.0)
 

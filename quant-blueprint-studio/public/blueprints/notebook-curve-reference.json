@@ -1,0 +1,423 @@
+{
+  "format": "quantlabs-blueprint-library",
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "notebook-curve-reference",
+      "title": "Notebook EUR/USD · arquitectura y épocas originales",
+      "area": "Notebook · aproximación EUR/USD",
+      "description": "Flujo del notebook documentado: cierres mensuales, coordenada artificial, OLS de grado 5 y seis variantes neuronales; benchmark con tiempos y errores sin broadcasting.",
+      "instructions": [
+        "La fuente descarga EURUSD=X con yfinance, 15 años. Para ejecutar sin internet selecciona synthetic en Market Data (los resultados serán ilustrativos).",
+        "Cargar y ejecutar inicia las siete ramas. El benchmark conjunto y los gráficos aparecen debajo del lienzo.",
+        "Inicio rápido: 100 épocas por red. La ficha de referencia configura 1500 épocas, 2000 en alta capacidad y 2500 en DNN. Puede tardar más.",
+        "Selecciona una rama Curve Fitting para modificar capas, activación, optimizador, LR, normalización y L2. El modelo polinómico transforma una coordenada en cinco características.",
+        "in_sample reproduce el ajuste completo; sus métricas no son de pronóstico. temporal usa media/escalas TR, checkpoint VA y error TE de extrapolación temporal.",
+        "Implementación PyTorch de arquitecturas Keras: no se prometen pesos, tiempos ni MSE idénticos. No se modifica ni ejecuta el notebook adjunto."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "eurusd",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 450
+            },
+            "data": {
+              "kind": "source",
+              "label": "EUR/USD · 15 años · diario ajustado",
+              "params": {
+                "source": "yfinance",
+                "ticker": "EURUSD=X",
+                "years": 15
+              }
+            }
+          },
+          {
+            "id": "monthly",
+            "type": "blueprint",
+            "position": {
+              "x": 300,
+              "y": 450
+            },
+            "data": {
+              "kind": "curve_data",
+              "label": "Cierre mensual → coordenada −2…2",
+              "params": {
+                "exclude_incomplete_month": false
+              }
+            }
+          },
+          {
+            "id": "ols",
+            "type": "blueprint",
+            "position": {
+              "x": 650,
+              "y": 0
+            },
+            "data": {
+              "kind": "curve_fit",
+              "label": "OLS · grado 5",
+              "params": {
+                "name": "OLS · grado 5",
+                "evaluation": "in_sample",
+                "variant": "ols",
+                "widths": "256",
+                "degree": 5,
+                "activation": "ReLU",
+                "optimizer": "RMSprop",
+                "normalize": true,
+                "epochs": 1500,
+                "batch_size": 32,
+                "lr": 0.001,
+                "l2": 0,
+                "reduce_lr": false,
+                "train_ratio": 0.65,
+                "val_ratio": 0.15,
+                "patience": 100,
+                "seed": 100
+              }
+            }
+          },
+          {
+            "id": "baseline",
+            "type": "blueprint",
+            "position": {
+              "x": 650,
+              "y": 210
+            },
+            "data": {
+              "kind": "curve_fit",
+              "label": "MLP · 1→256 ReLU→1",
+              "params": {
+                "name": "MLP · 1→256 ReLU→1",
+                "evaluation": "in_sample",
+                "variant": "dense",
+                "widths": "256",
+                "degree": 5,
+                "activation": "ReLU",
+                "optimizer": "RMSprop",
+                "normalize": false,
+                "epochs": 1500,
+                "batch_size": 32,
+                "lr": 0.001,
+                "l2": 0,
+                "reduce_lr": false,
+                "train_ratio": 0.65,
+                "val_ratio": 0.15,
+                "patience": 100,
+                "seed": 100
+              }
+            }
+          },
+          {
+            "id": "polynomial",
+            "type": "blueprint",
+            "position": {
+              "x": 650,
+              "y": 420
+            },
+            "data": {
+              "kind": "curve_fit",
+              "label": "Polinomio neuronal · 5→1",
+              "params": {
+                "name": "Polinomio neuronal · 5→1",
+                "evaluation": "in_sample",
+                "variant": "polynomial_net",
+                "widths": "256",
+                "degree": 5,
+                "activation": "ReLU",
+                "optimizer": "Adam",
+                "normalize": true,
+                "epochs": 1500,
+                "batch_size": 32,
+                "lr": 0.01,
+                "l2": 0,
+                "reduce_lr": false,
+                "train_ratio": 0.65,
+                "val_ratio": 0.15,
+                "patience": 100,
+                "seed": 100
+              }
+            }
+          },
+          {
+            "id": "swish",
+            "type": "blueprint",
+            "position": {
+              "x": 650,
+              "y": 630
+            },
+            "data": {
+              "kind": "curve_fit",
+              "label": "MLP · 1→128→64 Swish→1",
+              "params": {
+                "name": "MLP · 1→128→64 Swish→1",
+                "evaluation": "in_sample",
+                "variant": "dense",
+                "widths": "128,64",
+                "degree": 5,
+                "activation": "Swish",
+                "optimizer": "Adam",
+                "normalize": true,
+                "epochs": 1500,
+                "batch_size": 32,
+                "lr": 0.001,
+                "l2": 0,
+                "reduce_lr": false,
+                "train_ratio": 0.65,
+                "val_ratio": 0.15,
+                "patience": 100,
+                "seed": 100
+              }
+            }
+          },
+          {
+            "id": "regularized",
+            "type": "blueprint",
+            "position": {
+              "x": 650,
+              "y": 840
+            },
+            "data": {
+              "kind": "curve_fit",
+              "label": "Polinomio · L2 + ReduceLR",
+              "params": {
+                "name": "Polinomio · L2 + ReduceLR",
+                "evaluation": "in_sample",
+                "variant": "polynomial_net",
+                "widths": "256",
+                "degree": 5,
+                "activation": "ReLU",
+                "optimizer": "Adam",
+                "normalize": true,
+                "epochs": 1500,
+                "batch_size": 32,
+                "lr": 0.05,
+                "l2": 0.01,
+                "reduce_lr": true,
+                "train_ratio": 0.65,
+                "val_ratio": 0.15,
+                "patience": 100,
+                "seed": 100
+              }
+            }
+          },
+          {
+            "id": "capacity",
+            "type": "blueprint",
+            "position": {
+              "x": 650,
+              "y": 1050
+            },
+            "data": {
+              "kind": "curve_fit",
+              "label": "Alta capacidad · 1→256→256→128→1",
+              "params": {
+                "name": "Alta capacidad · 1→256→256→128→1",
+                "evaluation": "in_sample",
+                "variant": "dense",
+                "widths": "256,256,128",
+                "degree": 5,
+                "activation": "Swish",
+                "optimizer": "Adam",
+                "normalize": true,
+                "epochs": 2000,
+                "batch_size": 32,
+                "lr": 0.001,
+                "l2": 0,
+                "reduce_lr": false,
+                "train_ratio": 0.65,
+                "val_ratio": 0.15,
+                "patience": 100,
+                "seed": 100
+              }
+            }
+          },
+          {
+            "id": "deep",
+            "type": "blueprint",
+            "position": {
+              "x": 650,
+              "y": 1260
+            },
+            "data": {
+              "kind": "curve_fit",
+              "label": "DNN · 1→256→256→256 ReLU→1",
+              "params": {
+                "name": "DNN · 1→256→256→256 ReLU→1",
+                "evaluation": "in_sample",
+                "variant": "dense",
+                "widths": "256,256,256",
+                "degree": 5,
+                "activation": "ReLU",
+                "optimizer": "RMSprop",
+                "normalize": false,
+                "epochs": 2500,
+                "batch_size": 32,
+                "lr": 0.001,
+                "l2": 0,
+                "reduce_lr": false,
+                "train_ratio": 0.65,
+                "val_ratio": 0.15,
+                "patience": 100,
+                "seed": 100
+              }
+            }
+          },
+          {
+            "id": "plot-0",
+            "type": "blueprint",
+            "position": {
+              "x": 1030,
+              "y": 180
+            },
+            "data": {
+              "kind": "plot",
+              "label": "OLS · datos y curva",
+              "params": {
+                "title": "OLS · datos y curva",
+                "plot_source": "auto",
+                "plot_columns": "",
+                "study_chart": 0,
+                "chart_type": "line",
+                "color": "Mint"
+              }
+            }
+          },
+          {
+            "id": "plot-1",
+            "type": "blueprint",
+            "position": {
+              "x": 1030,
+              "y": 430
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Alta capacidad · curva suave",
+              "params": {
+                "title": "Alta capacidad · curva suave",
+                "plot_source": "auto",
+                "plot_columns": "",
+                "study_chart": 1,
+                "chart_type": "line",
+                "color": "Orange"
+              }
+            }
+          },
+          {
+            "id": "plot-2",
+            "type": "blueprint",
+            "position": {
+              "x": 1030,
+              "y": 680
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Alta capacidad · pérdida",
+              "params": {
+                "title": "Alta capacidad · pérdida",
+                "plot_source": "auto",
+                "plot_columns": "",
+                "study_chart": 2,
+                "chart_type": "line",
+                "color": "Violet"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "eurusd-monthly",
+            "source": "eurusd",
+            "target": "monthly",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "monthly-ols",
+            "source": "monthly",
+            "target": "ols",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "monthly-baseline",
+            "source": "monthly",
+            "target": "baseline",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "monthly-polynomial",
+            "source": "monthly",
+            "target": "polynomial",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "monthly-swish",
+            "source": "monthly",
+            "target": "swish",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "monthly-regularized",
+            "source": "monthly",
+            "target": "regularized",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "monthly-capacity",
+            "source": "monthly",
+            "target": "capacity",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "monthly-deep",
+            "source": "monthly",
+            "target": "deep",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "ols-plot-0",
+            "source": "ols",
+            "target": "plot-0",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          },
+          {
+            "id": "capacity-plot-1",
+            "source": "capacity",
+            "target": "plot-1",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          },
+          {
+            "id": "capacity-plot-2",
+            "source": "capacity",
+            "target": "plot-2",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          }
+        ]
+      }
+    }
+  ]
+}

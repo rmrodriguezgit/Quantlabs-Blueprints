@@ -1,0 +1,3 @@
+-r requirements.txt
+# Optional: open/run the companion .ipynb in a Jupyter-compatible editor.
+ipykernel>=6.29,<8

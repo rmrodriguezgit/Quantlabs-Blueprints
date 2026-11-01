@@ -9,7 +9,7 @@ try {
   const {parseLibrary,isGraph,readSaved,storeSaved}=require(path.join(temporary,'library.js'));
   const {networkBindings,syncNetworkInputs}=require(path.join(temporary,'types/blueprint.js'));
   const original=JSON.parse(readFileSync('public/blueprints/library.json','utf8'));
-  assert.equal(parseLibrary(original).length,15);
+  assert.equal(parseLibrary(original).length,18);
   assert.equal(parseLibrary(original).filter(e=>e.infographic).length,10);
   for(const entry of original.entries) {
     assert.ok(isGraph(entry.graph),entry.id);
@@ -30,5 +30,5 @@ try {
   const memory=new Map();global.localStorage={getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)};
   storeSaved(original.entries);assert.deepEqual(readSaved(),original.entries);
   storeSaved([]);assert.deepEqual(readSaved(),[]);
-  console.log('Library checks passed: 15 graphs, 10 references, versioned/legacy roundtrip, persistent storage, malformed pins, dimensions and metadata.');
+  console.log('Library checks passed: 18 graphs, 10 references, versioned/legacy roundtrip, persistent storage, malformed pins, dimensions and metadata.');
 } finally {rmSync(temporary,{recursive:true,force:true});}

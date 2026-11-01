@@ -4,6 +4,7 @@ from typing import Any, Callable
 import numpy as np
 import pandas as pd
 import torch
+from .nodes.curve_nodes import monthly_curve, curve_fit
 from .nodes.study_nodes import study
 from .nodes.data_nodes import source, features, merge_features
 from .nodes.stats_nodes import PreparedData, prepare
@@ -13,12 +14,12 @@ from .nodes.plot_nodes import plot
 from .nodes.metrics_nodes import RiskAnalysis, analyze, frame_returns
 from .nodes.portfolio_nodes import PortfolioData, PortfolioResult, portfolio_data, build_portfolio
 
-PINS = {'study': ('frame', 'tensor'), 'source': (None, 'frame'), 'features': ('frame', 'frame'), 'prepare': ('frame', 'tensor'),
+PINS = {'curve_data': ('frame','frame'), 'curve_fit': ('frame','tensor'), 'study': ('frame', 'tensor'), 'source': (None, 'frame'), 'features': ('frame', 'frame'), 'prepare': ('frame', 'tensor'),
         'model': ('tensor', 'tensor'), 'backtest': ('tensor', None), 'config': (None, 'config'),
         'network_input': (None, 'network'), 'layer': ('network', 'network'),
         'network_output': ('network', 'network'), 'merge': ('frame', 'frame'), 'plot': (None, None), 'portfolio_data': (None, 'portfolio'), 'portfolio': ('portfolio', 'portfolio'), 'risk': (None, 'portfolio')}
 INPUTS = {kind: ({pin: pin} if pin else {}) for kind, (pin, _) in PINS.items()}
-for kind in ('features', 'prepare', 'model', 'backtest'):
+for kind in ('features', 'prepare', 'model', 'backtest', 'curve_fit'):
     INPUTS[kind]['config'] = 'config'
 INPUTS['study'].update({'asset_b':'frame','asset_c':'frame'})
 INPUTS['model']['network'] = 'network'
@@ -181,6 +182,11 @@ class DAGRunner:
                         output = NetworkSpec(upstream.input_features, upstream.mode, [*upstream.layers, params])
                 elif kind == 'merge' and isinstance(upstream, pd.DataFrame) and isinstance(inputs.get('frame_b'), pd.DataFrame):
                     output = merge_features(upstream, inputs['frame_b'])
+                elif kind == 'curve_data' and isinstance(upstream, pd.DataFrame):
+                    output = monthly_curve(upstream, params)
+                elif kind == 'curve_fit' and isinstance(upstream, pd.DataFrame):
+                    output = curve_fit(upstream, params, (lambda event: progress({'node':key,'status':'epoch',**event})) if progress else None)
+                    report['studies'].append({'id':key,'title':node['data'].get('label','Curve fit'),**output})
                 elif kind == 'study' and isinstance(upstream, pd.DataFrame):
                     output = study(upstream, params, (lambda event: progress({'node': key, 'status': 'epoch', **event})) if progress else None, [inputs[k] for k in ('asset_b','asset_c') if k in inputs])
                     report['studies'].append({'id': key, 'title': node['data'].get('label', 'Experiment'), **output})

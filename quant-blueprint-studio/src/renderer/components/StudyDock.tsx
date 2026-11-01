@@ -7,8 +7,48 @@ export function StudyDock({
   studies: StudyReport[];
   onInspect: (id: string) => void;
 }) {
+  const curves = studies.filter((study) => study.topic === "curve_fit");
+  const benchmark = curves.flatMap((study) => study.table);
+  const columns = [...new Set(benchmark.flatMap((row) => Object.keys(row)))];
   return (
     <>
+      {curves.length > 0 && (
+        <section className="study-dock" aria-label="Notebook benchmark">
+          <header>
+            <small>NOTEBOOK / BENCHMARK</small>
+            <h2>EUR/USD · comparación de {curves.length} modelos</h2>
+            <p>
+              Errores en USD/EUR; RMSE pips usa 0.0001. Los tiempos corresponden
+              a este equipo y ejecución.
+            </p>
+          </header>
+          <div className="study-table">
+            <table>
+              <thead>
+                <tr>
+                  {columns.map((c) => (
+                    <th key={c}>{c}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {benchmark.map((row, i) => (
+                  <tr key={i}>
+                    {columns.map((c) => (
+                      <td key={c}>
+                        {typeof row[c] === "number"
+                          ? Number(row[c]).toPrecision(6)
+                          : (row[c] ?? "—")}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
       {studies.map((study) => {
         const columns = [
           ...new Set(study.table.flatMap((row) => Object.keys(row))),
@@ -19,6 +59,7 @@ export function StudyDock({
               <small>LEARNING EXPERIMENT / {study.topic}</small>
               <h2>{study.title}</h2>
               <p>
+                {study.scope && <strong>{study.scope} · </strong>}
                 Seleccionado: <strong>{study.selected}</strong> ·{" "}
                 {study.features.length} características · TR{" "}
                 {study.splits.train} / VA {study.splits.validation} / TE{" "}

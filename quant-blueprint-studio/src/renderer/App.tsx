@@ -185,11 +185,13 @@ export default function App() {
       setMessage(
         value.portfolios?.length
           ? `Completed ${executionGraph.nodes.length} nodes · ${value.portfolios.length} portfolio report(s) · ${value.portfolios[0].metrics[0]?.observations ?? 0} holdout observations`
-          : value.studies?.length
-            ? `Completed ${executionGraph.nodes.length} nodes · ${value.studies[0].selected} selected · ${value.studies[0].splits.test} holdout samples`
-            : value.risk_reports?.length
-              ? `Completed ${executionGraph.nodes.length} nodes · ${value.risk_reports.length} risk report(s)`
-              : `Completed ${executionGraph.nodes.length} nodes · ${value.features?.length ?? "auto"} input features · ${value.predictions.length} out-of-sample observations`,
+          : value.studies?.some((s) => s.topic === "curve_fit")
+            ? `Completed ${executionGraph.nodes.length} nodes · ${value.studies.length} curve benchmarks · ${value.studies[0].scope ?? "curve fitting"}`
+            : value.studies?.length
+              ? `Completed ${executionGraph.nodes.length} nodes · ${value.studies[0].selected} selected · ${value.studies[0].splits.test} holdout samples`
+              : value.risk_reports?.length
+                ? `Completed ${executionGraph.nodes.length} nodes · ${value.risk_reports.length} risk report(s)`
+                : `Completed ${executionGraph.nodes.length} nodes · ${value.features?.length ?? "auto"} input features · ${value.predictions.length} out-of-sample observations`,
       );
     } catch (e) {
       setError(true);

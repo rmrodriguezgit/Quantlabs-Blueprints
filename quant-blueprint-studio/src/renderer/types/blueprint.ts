@@ -1,5 +1,7 @@
 import type { Edge, Node } from "@xyflow/react";
 export type Kind =
+  | "curve_data"
+  | "curve_fit"
   | "study"
   | "source"
   | "features"
@@ -52,6 +54,7 @@ export interface StudyReport {
   id: string;
   title: string;
   topic: string;
+  scope?: string;
   selected: string;
   features: string[];
   splits: { train: number; validation: number; test: number };
@@ -85,6 +88,122 @@ export interface Definition {
   fields: Field[];
 }
 export const catalog: Record<Kind, Definition> = {
+  curve_data: {
+    label: "Monthly Curve Data",
+    subtitle: "Monthly last Close · coordinate −2…2",
+    category: "07 / NOTEBOOK",
+    color: "#f2ad65",
+    input: "frame",
+    output: "frame",
+    fields: [
+      {
+        key: "exclude_incomplete_month",
+        label: "Exclude unfinished current month",
+        value: true,
+      },
+    ],
+  },
+  curve_fit: {
+    label: "Curve Fitting / Benchmark",
+    subtitle: "Notebook approximation · OLS / neural",
+    category: "07 / NOTEBOOK",
+    color: "#ec9dd6",
+    input: "frame",
+    output: "tensor",
+    fields: [
+      { key: "name", label: "Benchmark name", value: "MLP 1 → 256 → 1" },
+      {
+        key: "variant",
+        label: "Model family",
+        value: "dense",
+        options: ["ols", "polynomial_net", "dense"],
+      },
+      {
+        key: "evaluation",
+        label: "Evaluation protocol",
+        value: "in_sample",
+        options: ["in_sample", "temporal"],
+      },
+      { key: "degree", label: "Polynomial degree", value: 5, min: 1, max: 10 },
+      { key: "widths", label: "Hidden widths (comma separated)", value: "256" },
+      {
+        key: "activation",
+        label: "Hidden activation",
+        value: "ReLU",
+        options: ["ReLU", "Swish", "Tanh", "GELU", "Sigmoid"],
+      },
+      {
+        key: "optimizer",
+        label: "Optimizer",
+        value: "RMSprop",
+        options: ["RMSprop", "Adam", "SGD", "AdamW"],
+      },
+      {
+        key: "epochs",
+        label: "Epochs (notebook: 1500 / 2000 / 2500)",
+        value: 100,
+        min: 1,
+        max: 5000,
+      },
+      { key: "batch_size", label: "Batch size", value: 32, min: 2, max: 1024 },
+      {
+        key: "lr",
+        label: "Learning rate",
+        value: 0.001,
+        min: 0.000001,
+        max: 0.1,
+        step: 0.0001,
+      },
+      {
+        key: "normalize",
+        label: "Normalize inputs using training rows",
+        value: true,
+      },
+      {
+        key: "l2",
+        label: "L2 weight penalty (exclude bias)",
+        value: 0,
+        min: 0,
+        max: 1,
+        step: 0.001,
+      },
+      {
+        key: "reduce_lr",
+        label: "Reduce LR on plateau (factor .5, patience 30)",
+        value: false,
+      },
+      {
+        key: "train_ratio",
+        label: "Temporal training fraction",
+        value: 0.65,
+        min: 0.3,
+        max: 0.9,
+        step: 0.05,
+      },
+      {
+        key: "val_ratio",
+        label: "Temporal validation fraction",
+        value: 0.15,
+        min: 0.05,
+        max: 0.5,
+        step: 0.05,
+      },
+      {
+        key: "patience",
+        label: "Temporal early stopping patience",
+        value: 100,
+        min: 1,
+        max: 1000,
+      },
+      {
+        key: "seed",
+        label: "Random seed",
+        value: 100,
+        min: 0,
+        max: 2147483647,
+      },
+    ],
+  },
   study: {
     label: "Learning Experiment",
     subtitle: "Validation selection · isolated holdout",
@@ -220,7 +339,7 @@ export const catalog: Record<Kind, Definition> = {
         options: ["synthetic", "yfinance"],
       },
       { key: "ticker", label: "Ticker", value: "SPY" },
-      { key: "years", label: "History / years", value: 3, min: 1, max: 10 },
+      { key: "years", label: "History / years", value: 3, min: 1, max: 20 },
     ],
   },
   features: {
@@ -935,6 +1054,7 @@ export function featureOptions(
       ),
     ),
   ];
+  if (node.data.kind === "curve_data") return ["Close", "Coordinate"];
   if (node.data.kind === "source")
     return ["Open", "High", "Low", "Close", "Volume"];
   if (node.data.kind !== "features") return base;
@@ -964,7 +1084,7 @@ export function featureOptions(
 export function inputHandles(kind: Kind): Record<string, string> {
   const primary = catalog[kind].input;
   const handles: Record<string, string> = primary ? { [primary]: primary } : {};
-  if (["features", "prepare", "model", "backtest"].includes(kind))
+  if (["features", "prepare", "model", "backtest", "curve_fit"].includes(kind))
     handles.config = "config";
   if (kind === "study") {
     handles.asset_b = "frame";
@@ -1050,8 +1170,29 @@ export function studyArchitecture(params: Record<string, Param>): string {
 }
 export function networkBindings(graph: Graph): NetworkBinding[] {
   return graph.nodes
-    .filter((n) => n.data.kind === "model" || n.data.kind === "study")
+    .filter(
+      (n) =>
+        n.data.kind === "model" ||
+        n.data.kind === "study" ||
+        n.data.kind === "curve_fit",
+    )
     .map((trainer) => {
+      if (trainer.data.kind === "curve_fit") {
+        const p = trainer.data.params;
+        return {
+          trainerId: trainer.id,
+          selected: ["Coordinate"],
+          unavailable: [],
+          declared: 1,
+          summary:
+            p.variant === "dense"
+              ? `1 → ${String(p.widths).split(",").join(` ${p.activation} → `)} ${p.activation} → 1`
+              : `1 coordinate → polynomial ${p.degree} → 1`,
+          issue: featureOptions(graph, trainer.id).includes("Coordinate")
+            ? undefined
+            : "Connect Monthly Curve Data first.",
+        };
+      }
       if (trainer.data.kind === "study") {
         const selected = String(trainer.data.params.feature_columns ?? "")
           .split(",")

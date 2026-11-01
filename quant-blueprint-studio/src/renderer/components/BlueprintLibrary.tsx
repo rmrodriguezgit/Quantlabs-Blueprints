@@ -58,7 +58,10 @@ export function BlueprintLibrary({
             <h2>
               <BookOpen size={22} /> Biblioteca de Blueprints
             </h2>
-            <p>10 infografías · ejemplos por área · diseños editables</p>
+            <p>
+              {builtins.length} blueprints · 10 infografías · notebook y
+              ejemplos por área
+            </p>
           </div>
           <button onClick={onClose} aria-label="Close library">
             <X size={20} />

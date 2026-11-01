@@ -6,8 +6,8 @@ import pandas as pd
 
 def source(params: dict[str, Any]) -> pd.DataFrame:
     years = int(params.get('years', 3))
-    if not 1 <= years <= 10:
-        raise ValueError('Years must be between 1 and 10.')
+    if not 1 <= years <= 20:
+        raise ValueError('Years must be between 1 and 20.')
     if params.get('source', 'synthetic') not in ('synthetic', 'yfinance'):
         raise ValueError('Source must be synthetic or yfinance.')
     if params.get('source', 'synthetic') == 'synthetic':
