@@ -24,5 +24,17 @@ const connected={nodes,edges:[edge(source,features)]};
 const disconnected={...connected,edges:[]};
 assert(validConnection(disconnected,c(source,features)));
 assert.equal(disconnected.nodes.length,connected.nodes.length);
+for (const kind of ['curve_fit','study','prepare']) {
+ const src=createNode(kind,0),risk=createNode('risk',1),backtest=createNode('backtest',2),model=createNode('model',3),chart=createNode('plot',4);
+ const g={nodes:[src,risk,backtest,model,chart],edges:[]};
+ assert(!validConnection(g,c(src,risk,'tensor','tensor')));
+ assert(!validConnection(g,c(src,backtest,'tensor','tensor')));
+ assert.equal(validConnection(g,c(src,model,'tensor','tensor')),kind==='prepare');
+ assert(validConnection(g,c(src,chart,'tensor','tensor')));
+}
+for (const kind of ['model','backtest']) {
+ const src=createNode(kind,0),risk=createNode('risk',1);
+ assert(validConnection({nodes:[src,risk],edges:[]},c(src,risk,'tensor','tensor')));
+}
 console.log('Connection checks passed: compatible types, occupied pins, cycles, merge inputs, exclusive plots, reconnection.');
 } finally {rmSync(temp,{recursive:true,force:true});}

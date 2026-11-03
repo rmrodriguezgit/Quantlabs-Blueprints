@@ -1,5 +1,12 @@
 import type { Connection, Edge } from "@xyflow/react";
-import { catalog, inputHandles, type Graph } from "./types/blueprint";
+import { catalog, inputHandles, type Graph, type Kind } from "./types/blueprint";
+export function acceptsPayload(source: Kind, target: Kind, pin: string): boolean {
+  if (pin !== "tensor") return true;
+  if (target === "model") return source === "prepare";
+  if (target === "backtest") return source === "model";
+  if (target === "risk") return source === "model" || source === "backtest";
+  return target === "plot";
+}
 export function validConnection(
   graph: Graph,
   connection: Connection | Edge,
@@ -10,6 +17,7 @@ export function validConnection(
     !src ||
     !dst ||
     src.id === dst.id ||
+    !acceptsPayload(src.data.kind, dst.data.kind, connection.targetHandle ?? "") ||
     !connection.targetHandle ||
     !connection.sourceHandle ||
     (dst.data.kind === "study" &&

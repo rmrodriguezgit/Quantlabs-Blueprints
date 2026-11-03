@@ -1,4 +1,4 @@
-# Verificación del proyecto (v0.5.7)
+# Verificación del proyecto (v0.5.8)
 
 Fecha: 2 de noviembre de 2026. Entorno local macOS, Python 3.12.12, Node.js 22.22.3, npm 10.9.8.
 
@@ -157,3 +157,7 @@ Electron con el blueprint del usuario EURUSD=X, 15 años: ejecución 5/5 complet
 ## Grosor de gráficos (v0.5.7)
 
 Build TypeScript/Vite/Electron verificado. Scatter fija área de puntos en 12 px² mediante ZAxis, sin borde; líneas en 1.1 px. Cambio sólo de representación.
+
+## Compatibilidad de pines azules (v0.5.8)
+
+Build TypeScript/Vite/Electron, suites de conexiones y biblioteca (18 diseños) aprobados. Pruebas Python de rechazo previo a ejecutar para Curve Fitting/Study/Preparation → Risk/Backtest y aceptación de rutas válidas.

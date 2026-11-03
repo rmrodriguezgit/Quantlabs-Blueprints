@@ -66,6 +66,10 @@ class DAGRunner:
             out_pin, in_pin = edge.get('sourceHandle'), edge.get('targetHandle')
             if out_pin is None or out_pin != PINS[src][1] or INPUTS[dst].get(in_pin) != out_pin:
                 raise ValueError('Incompatible or missing pin handles.')
+            tensor_sources = {'model': {'prepare'}, 'backtest': {'model'}, 'risk': {'model', 'backtest'},
+                              'plot': {'prepare', 'model', 'backtest', 'curve_fit', 'study'}}
+            if in_pin == 'tensor' and src not in tensor_sources.get(dst, set()):
+                raise ValueError(f'Incompatible data: {src} → {dst}. Curve Fitting and Learning Experiment reports connect to Plot; Risk Metrics requires returns, a forecasting model, backtest or portfolio.')
             if any(e.get('targetHandle') == in_pin for e in self.incoming[edge['target']]):
                 raise ValueError('Only one connection per input pin is allowed.')
             self.incoming[edge['target']].append(edge)

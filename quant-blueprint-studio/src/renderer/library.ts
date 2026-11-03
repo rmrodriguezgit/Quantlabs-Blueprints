@@ -1,3 +1,4 @@
+import { acceptsPayload } from "./connections";
 import { catalog, inputHandles, type Graph } from "./types/blueprint";
 export interface LibraryEntry {
   id: string;
@@ -61,6 +62,7 @@ export function isGraph(value: unknown): value is Graph {
       !src ||
       !dst ||
       src.id === dst.id ||
+      !acceptsPayload(src.data.kind, dst.data.kind, e.targetHandle ?? "") ||
       !e.sourceHandle ||
       !e.targetHandle ||
       e.sourceHandle !== catalog[src.data.kind].output ||

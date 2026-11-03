@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.5.8 — 2026-11-02
+
+- Compatibilidad de contenido para pines azules: informes Curve Fitting/Learning Experiment se conectan a Plot, no a Risk Metrics, Deep Learning ni Backtest.
+- Preparación alimenta Deep Learning; modelos alimentan Backtest y Risk Metrics; backtests alimentan Risk Metrics. Menú, arrastre, JSON y motor rechazan conexiones incompatibles antes de entrenar.
+
+
 ## v0.5.7 — 2026-11-02
 
 - Puntos Scatter pequeños (área 12 px², radio aproximado 2 px), sin borde y opacidad 0.8 para evitar bandas gruesas por superposición.
