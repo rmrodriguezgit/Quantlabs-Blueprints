@@ -1,6 +1,6 @@
 {
   "name": "quant-blueprint-studio",
-  "version": "0.5.4",
+  "version": "0.5.5",
   "private": true,
   "main": "dist/main/main.js",
   "scripts": {
@@ -15,7 +15,8 @@
     "test:portfolio-ui": "node scripts/test_portfolio_ui.cjs",
     "test:library": "node scripts/test_library.cjs",
     "test:scaling-ui": "node scripts/test_scaling_ui.cjs",
-    "test:catalog": "node scripts/test_catalog.cjs"
+    "test:catalog": "node scripts/test_catalog.cjs",
+    "test:connections": "node scripts/test_connections.cjs"
   },
   "dependencies": {
     "@xyflow/react": "^12.9.0",

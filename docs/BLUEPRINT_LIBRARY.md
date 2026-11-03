@@ -81,3 +81,9 @@ Los informes aparecen debajo del lienzo: métricas, selección, tablas y gráfic
 Esta versión es una implementación educativa ejecutable de las arquitecturas y protocolos principales, no una reproducción literal de los notebooks de origen. Emplea fracciones cronológicas configurables en vez de fechas fijas 2023/2024/2025, ejecuta PyTorch en CPU y admite salida de texto/JSON para diseños. No incluye CUDA/AMP, Optuna, exportación de modelos preentrenados ni inferencia desde pesos guardados. Early stopping, inicialización, escaladores, selección y test son internos a cada experimento. La ejecución se puede reproducir con los mismos datos y semilla; descargar nuevas cotizaciones puede cambiar los resultados.
 
 Las diez imágenes se copiaron sin edición del proyecto local Forecast Lab. `public/infographics/manifest.json` conserva nombres y hashes SHA256 originales, verificados por la suite. La ampliación cDCGAN se identifica como material complementario de Quantlabs Neurolab en el manifiesto. Las 18 fichas están disponibles como JSON individuales en `quant-blueprint-studio/public/blueprints/`, y su colección completa en `library.json`.
+
+## Conexiones del lienzo (v0.5.5)
+
+Haz doble clic en un pin de entrada o salida (o enfócalo y pulsa Enter). El panel muestra los enlaces actuales con **Desconectar**, los nodos compatibles libres y, en las salidas, **Añadir y conectar un nodo**. Las opciones indican nodo y pin; no se ofrecen conexiones con ciclos, tipos incompatibles ni entradas ocupadas. Desconecta primero para sustituir una entrada.
+
+**Desconectar nodo completo** retira sus enlaces entrantes y salientes y conserva el nodo y sus parámetros. También puedes pulsar un cable y **Desconectar enlace**. Escape o clic en el fondo cierra el panel. Durante un cálculo estas acciones están bloqueadas. Los cambios se autoguardan con el diseño.

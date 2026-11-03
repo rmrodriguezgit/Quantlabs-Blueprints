@@ -1,4 +1,10 @@
-import { useCallback, useEffect } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+} from "react";
 import {
   ReactFlow,
   Background,
@@ -36,6 +42,7 @@ import {
   type Kind,
 } from "../types/blueprint";
 import "@xyflow/react/dist/style.css";
+import { validConnection } from "../connections";
 const icons = {
   curve_data: Layers3,
   curve_fit: BrainCircuit,
@@ -103,7 +110,24 @@ function nodeSummary(data: BlueprintNode["data"]): string {
       return "Overrides connected parameters";
   }
 }
-function VisualNode({ data, selected }: NodeProps<BlueprintNode>) {
+interface Pin {
+  node: string;
+  handle: string;
+  direction: "source" | "target";
+}
+const PinContext = createContext<(pin: Pin) => void>(() => {});
+function visibleInputs(node: BlueprintNode): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(inputHandles(node.data.kind)).filter(
+      ([id]) =>
+        node.data.kind !== "study" ||
+        node.data.params.topic === "cdcgan" ||
+        !id.startsWith("asset_"),
+    ),
+  );
+}
+function VisualNode({ id: nodeId, data, selected }: NodeProps<BlueprintNode>) {
+  const openPin = useContext(PinContext);
   const def = catalog[data.kind];
   const Icon = icons[data.kind];
   return (
@@ -146,6 +170,20 @@ function VisualNode({ data, selected }: NodeProps<BlueprintNode>) {
         .map(([id, type], i) => (
           <div key={id}>
             <Handle
+              aria-label={`Entrada ${id}: ${type}`}
+              title={`${id}: ${type} · Doble clic para conectar o desconectar`}
+              tabIndex={0}
+              onDoubleClick={(event) => {
+                event.stopPropagation();
+                openPin({ node: nodeId, handle: id, direction: "target" });
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.stopPropagation();
+                  event.preventDefault();
+                  openPin({ node: nodeId, handle: id, direction: "target" });
+                }
+              }}
               type="target"
               position={
                 id === "config" || id === "benchmark"
@@ -196,6 +234,24 @@ function VisualNode({ data, selected }: NodeProps<BlueprintNode>) {
         ))}
       {def.output && (
         <Handle
+          aria-label={`Salida ${def.output}`}
+          title={`${def.output} · Doble clic para ver alternativas de conexión`}
+          tabIndex={0}
+          onDoubleClick={(event) => {
+            event.stopPropagation();
+            openPin({ node: nodeId, handle: def.output!, direction: "source" });
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.stopPropagation();
+              event.preventDefault();
+              openPin({
+                node: nodeId,
+                handle: def.output!,
+                direction: "source",
+              });
+            }
+          }}
           type="source"
           position={Position.Right}
           id={def.output}
@@ -314,50 +370,86 @@ export function BlueprintCanvas({
       setGraph((g) => ({ ...g, edges: applyEdgeChanges(changes, g.edges) })),
     [setGraph],
   );
-  const valid = (connection: Connection | Edge): boolean => {
-    const src = graph.nodes.find((n) => n.id === connection.source);
-    const dst = graph.nodes.find((n) => n.id === connection.target);
-    if (
-      !src ||
-      !dst ||
-      src.id === dst.id ||
-      !connection.targetHandle ||
-      !connection.sourceHandle ||
-      inputHandles(dst.data.kind)[connection.targetHandle] !==
-        connection.sourceHandle
-    )
-      return false;
-    if (
-      graph.edges.some(
-        (e) =>
-          e.target === dst.id && e.targetHandle === connection.targetHandle,
-      )
-    )
-      return false;
-    if (
-      dst.data.kind === "plot" &&
-      graph.edges.some((e) => e.target === dst.id)
-    )
-      return false;
-    if (
-      dst.data.kind === "risk" &&
-      connection.targetHandle !== "benchmark" &&
-      graph.edges.some(
-        (e) => e.target === dst.id && e.targetHandle !== "benchmark",
-      )
-    )
-      return false;
-    const visited = new Set<string>();
-    const reaches = (id: string): boolean => {
-      if (id === src.id) return true;
-      if (visited.has(id)) return false;
-      visited.add(id);
-      return graph.edges
-        .filter((e) => e.source === id)
-        .some((e) => reaches(e.target));
-    };
-    return !reaches(dst.id);
+  const [pin, setPin] = useState<Pin | null>(null);
+  const [edgeId, setEdgeId] = useState<string | null>(null);
+  const valid = (connection: Connection | Edge) =>
+    validConnection(graph, connection);
+  const connect = (connection: Connection) => {
+    if (disabled) return;
+    setGraph((g) =>
+      validConnection(g, connection)
+        ? { ...g, edges: addEdge({ ...connection, animated: true }, g.edges) }
+        : g,
+    );
+    setPin(null);
   };
+  const disconnect = (ids: string[]) => {
+    if (disabled) return;
+    setGraph((g) => ({
+      ...g,
+      edges: g.edges.filter((e) => !ids.includes(e.id)),
+    }));
+    setEdgeId(null);
+  };
+  const pinNode = graph.nodes.find((n) => n.id === pin?.node);
+  const links = pin
+    ? graph.edges.filter((e) =>
+        pin.direction === "source"
+          ? e.source === pin.node && e.sourceHandle === pin.handle
+          : e.target === pin.node && e.targetHandle === pin.handle,
+      )
+    : [];
+  const options: { label: string; connection: Connection }[] = [];
+  if (pin && pinNode)
+    for (const node of graph.nodes) {
+      const handles =
+        pin.direction === "source"
+          ? visibleInputs(node)
+          : catalog[node.data.kind].output
+            ? {
+                [catalog[node.data.kind].output!]:
+                  catalog[node.data.kind].output!,
+              }
+            : {};
+      for (const handle of Object.keys(handles)) {
+        const connection: Connection =
+          pin.direction === "source"
+            ? {
+                source: pin.node,
+                sourceHandle: pin.handle,
+                target: node.id,
+                targetHandle: handle,
+              }
+            : {
+                source: node.id,
+                sourceHandle: handle,
+                target: pin.node,
+                targetHandle: pin.handle,
+              };
+        if (valid(connection))
+          options.push({
+            label: `${node.data.label} · ${handle} (${node.id.slice(0, 6)})`,
+            connection,
+          });
+      }
+    }
+  const selectedEdge = graph.edges.find((e) => e.id === edgeId);
+  useEffect(() => {
+    if (disabled) {
+      setPin(null);
+      setEdgeId(null);
+    }
+  }, [disabled]);
+  useEffect(() => {
+    const close = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setPin(null);
+        setEdgeId(null);
+      }
+    };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, []);
   return (
     <div
       className="canvas"
@@ -393,39 +485,201 @@ export function BlueprintCanvas({
           <p>Click or drag a node from the library to begin.</p>
         </div>
       )}
-      <ReactFlow<BlueprintNode>
-        nodes={graph.nodes}
-        edges={graph.edges}
-        nodeTypes={nodeTypes}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={(c) =>
-          setGraph((g) => ({
-            ...g,
-            edges: addEdge({ ...c, animated: true }, g.edges),
-          }))
-        }
-        isValidConnection={valid}
-        onNodeClick={(_, node) => onSelect(node.id)}
-        onPaneClick={() => onSelect(null)}
-        nodesDraggable={!disabled}
-        nodesConnectable={!disabled}
-        deleteKeyCode={disabled ? null : ["Backspace", "Delete"]}
-        fitView
-        fitViewOptions={{ padding: 0.14 }}
-        minZoom={0.25}
-        maxZoom={1.7}
-        colorMode="dark"
+      <PinContext.Provider
+        value={(p) => {
+          if (!disabled) {
+            setPin(p);
+            setEdgeId(null);
+          }
+        }}
       >
-        <Background gap={22} size={1} color="#29313d" />
-        <Controls showInteractive={false} />
-        <MiniMap
-          nodeColor={(n) => catalog[(n as BlueprintNode).data.kind].color}
-          maskColor="#0d1118bb"
-          pannable
-          zoomable
-        />
-      </ReactFlow>
+        <ReactFlow<BlueprintNode>
+          nodes={graph.nodes}
+          edges={graph.edges}
+          nodeTypes={nodeTypes}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={connect}
+          isValidConnection={valid}
+          onNodeClick={(_, node) => onSelect(node.id)}
+          onEdgeClick={(_, edge) => {
+            setPin(null);
+            setEdgeId(edge.id);
+          }}
+          onEdgeDoubleClick={(_, edge) => {
+            setPin(null);
+            setEdgeId(edge.id);
+          }}
+          onPaneClick={() => {
+            onSelect(null);
+            setPin(null);
+            setEdgeId(null);
+          }}
+          zoomOnDoubleClick={false}
+          nodesDraggable={!disabled}
+          nodesConnectable={!disabled}
+          deleteKeyCode={disabled ? null : ["Backspace", "Delete"]}
+          fitView
+          fitViewOptions={{ padding: 0.14 }}
+          minZoom={0.25}
+          maxZoom={1.7}
+          colorMode="dark"
+        >
+          <Background gap={22} size={1} color="#29313d" />
+          <Controls showInteractive={false} />
+          <MiniMap
+            nodeColor={(n) => catalog[(n as BlueprintNode).data.kind].color}
+            maskColor="#0d1118bb"
+            pannable
+            zoomable
+          />
+        </ReactFlow>
+      </PinContext.Provider>
+      {pin && pinNode && !disabled && (
+        <section
+          className="connection-menu nodrag nowheel"
+          role="dialog"
+          aria-label="Alternativas de conexión"
+        >
+          <header>
+            <strong>
+              {pinNode.data.label} · {pin.handle}
+            </strong>
+            <button onClick={() => setPin(null)} aria-label="Cerrar conexiones">
+              ×
+            </button>
+          </header>
+          <h4>Conexiones actuales</h4>
+          {links.length ? (
+            links.map((edge) => (
+              <div key={edge.id}>
+                <span>
+                  {
+                    graph.nodes.find(
+                      (n) =>
+                        n.id ===
+                        (pin.direction === "source"
+                          ? edge.target
+                          : edge.source),
+                    )?.data.label
+                  }{" "}
+                  ·{" "}
+                  {pin.direction === "source"
+                    ? edge.targetHandle
+                    : edge.sourceHandle}
+                </span>
+                <button onClick={() => disconnect([edge.id])}>
+                  Desconectar
+                </button>
+              </div>
+            ))
+          ) : (
+            <p>Este conector no tiene enlaces.</p>
+          )}
+          {links.length > 1 && (
+            <button onClick={() => disconnect(links.map((e) => e.id))}>
+              Desconectar todos los enlaces del conector
+            </button>
+          )}
+          <button
+            disabled={
+              !graph.edges.some(
+                (e) => e.source === pin.node || e.target === pin.node,
+              )
+            }
+            onClick={() =>
+              disconnect(
+                graph.edges
+                  .filter((e) => e.source === pin.node || e.target === pin.node)
+                  .map((e) => e.id),
+              )
+            }
+          >
+            Desconectar nodo completo
+          </button>
+          <h4>Conectar a un nodo existente</h4>
+          {options.length ? (
+            options.map((option) => (
+              <button
+                key={JSON.stringify(option.connection)}
+                onClick={() => connect(option.connection)}
+              >
+                {option.label}
+              </button>
+            ))
+          ) : (
+            <p>
+              No hay entradas o salidas compatibles libres. Añade un nodo o
+              desconecta un enlace.
+            </p>
+          )}
+          {pin.direction === "source" && (
+            <>
+              <h4>Añadir y conectar un nodo</h4>
+              {(Object.keys(catalog) as Kind[]).flatMap((kind) => {
+                const node = createNode(kind, graph.nodes.length, {
+                  x: pinNode.position.x + 360,
+                  y: pinNode.position.y + links.length * 100,
+                });
+                return Object.keys(visibleInputs(node))
+                  .filter((handle) =>
+                    validConnection(
+                      { ...graph, nodes: [...graph.nodes, node] },
+                      {
+                        source: pin.node,
+                        sourceHandle: pin.handle,
+                        target: node.id,
+                        targetHandle: handle,
+                      },
+                    ),
+                  )
+                  .map((handle) => (
+                    <button
+                      key={`${kind}-${handle}`}
+                      onClick={() => {
+                        setGraph((g) => {
+                          const next = { ...g, nodes: [...g.nodes, node] };
+                          const connection = {
+                            source: pin.node,
+                            sourceHandle: pin.handle,
+                            target: node.id,
+                            targetHandle: handle,
+                          };
+                          return validConnection(next, connection)
+                            ? {
+                                ...next,
+                                edges: addEdge(
+                                  { ...connection, animated: true },
+                                  g.edges,
+                                ),
+                              }
+                            : g;
+                        });
+                        setPin(null);
+                        onSelect(node.id);
+                      }}
+                    >
+                      + {catalog[kind].label} · {handle}
+                    </button>
+                  ));
+              })}
+            </>
+          )}
+        </section>
+      )}
+      {selectedEdge && !disabled && (
+        <div className="connection-menu edge-menu">
+          <span>
+            {graph.nodes.find((n) => n.id === selectedEdge.source)?.data.label}{" "}
+            →{" "}
+            {graph.nodes.find((n) => n.id === selectedEdge.target)?.data.label}
+          </span>
+          <button onClick={() => disconnect([selectedEdge.id])}>
+            Desconectar enlace
+          </button>
+          <button onClick={() => setEdgeId(null)}>Cerrar</button>
+        </div>
+      )}
       <div className="canvas-foot">
         {graph.nodes.length} nodes <span>·</span> {graph.edges.length}{" "}
         connections <span>·</span> DAG execution

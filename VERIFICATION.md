@@ -1,6 +1,12 @@
-# Verificación del proyecto (v0.5.4)
+# Verificación del proyecto (v0.5.5)
 
-Fecha: 1 de noviembre de 2026. Entorno local macOS, Python 3.12.12, Node.js 22.22.3, npm 10.9.8.
+Fecha: 2 de noviembre de 2026. Entorno local macOS, Python 3.12.12, Node.js 22.22.3, npm 10.9.8.
+
+## Conectores (v0.5.5)
+
+- Compilación TypeScript/Vite/Electron y pruebas de conexiones y grafos aprobadas: tipos, pines ocupados, ciclos, entrada B, exclusividad de Plot y reconexión.
+- Electron: doble clic en salida frame muestra conexiones actuales y alternativas; desconexión reduce 4 a 3 enlaces conservando 5 nodos y reconexión devuelve 4 enlaces. Diseño original conservado.
+- Versión 0.5.5 cargada en escritorio. Captura docs/v0.5.5-connections.png. Sin cambios a cálculos Python.
 
 ## Acciones de ejemplos (v0.5.4)
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.5.5 — 2026-11-02
+
+- Doble clic o Enter en conectores: alternativas compatibles existentes y creación de nodos conectados desde salidas.
+- Desconexión por enlace, conector o nodo completo sin eliminar nodos; clic en cable muestra Desconectar.
+- Validación compartida con arrastre: tipos, ciclos, entradas ocupadas y entradas exclusivas; acciones desactivadas durante ejecución.
+
+
 ## v0.5.4 — 2026-11-01
 
 - Ver JSON, Editar, Guardar y Borrar en cada ejemplo incluido y personal. Editor con validación de grafo y protección de cambios pendientes.
