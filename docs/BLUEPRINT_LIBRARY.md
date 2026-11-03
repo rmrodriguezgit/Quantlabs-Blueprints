@@ -1,6 +1,6 @@
-# Biblioteca de Blueprints — v0.5.4
+# Biblioteca de Blueprints — v0.5.9
 
-La aplicación incluye **18 diseños ejecutables**: tres variantes del [notebook EUR/USD](NOTEBOOK_EURUSD.md) y los quince diseños base descritos abajo: diez basados en las diez imágenes encontradas (unidades 2–10 y ampliación cDCGAN) y cinco ejemplos adicionales. No se encontró una undécima infografía; no se atribuye contenido inventado a ese material.
+La aplicación incluye **19 diseños ejecutables**: tres variantes del [notebook EUR/USD](NOTEBOOK_EURUSD.md) y los quince diseños base descritos abajo: diez basados en las diez imágenes encontradas (unidades 2–10 y ampliación cDCGAN) y cinco ejemplos adicionales. Se incorpora además la infografía Keras 1→256→1 adjuntada por el usuario, con su propio ejemplo; son 11 imágenes.
 
 ![Biblioteca integrada](v0.5-library.png)
 
@@ -91,3 +91,11 @@ Haz doble clic en un pin de entrada o salida (o enfócalo y pulsa Enter). El pan
 Desde v0.5.6, Scatter con X column vacío usa automáticamente Coordinate de Monthly Curve Data o coordinate del gráfico principal de Curve Fitting. Las líneas conservan las fechas. Una X explícita tiene prioridad y debe ser numérica para Scatter.
 
 Desde v0.5.8 las recomendaciones distinguen el contenido de los pines azules: Curve Fitting y Learning Experiment entregan informes para Plot; Risk Metrics recibe rendimientos, modelos de pronóstico, backtests o portafolios. Un informe de ajuste no se interpreta como retornos de una estrategia. Para ver MSE, RMSE, MAE y R² de Curve Fitting usa su informe automático.
+
+## Infografía Keras · 1 → 256 ReLU → 1 (v0.5.9)
+
+En Biblioteca selecciona **Infografía Keras · 1 → 256 ReLU → 1**, área Notebook · arquitectura neuronal, y pulsa Cargar y ejecutar. Las capas moradas conectadas al entrenador son Entrada 1 → Dense 256 ReLU → Output 1 lineal. El resumen de arquitectura muestra **512 + 257 = 769 parámetros**.
+
+La fuente de ejemplo es EURUSD=X de 15 años, con último cierre mensual, coordenada −2…2 y precios centrados. Usa synthetic para ejecutar sin internet. La infografía no especifica datos, épocas, batch ni tasa de aprendizaje: la ficha añade una demostración con 100 épocas, batch 32 y LR 0.001. MSE y RMSprop siguen la imagen; no usa StandardScaler ni L2 por defecto.
+
+El protocolo in_sample mide ajuste de la muestra completa y no pronóstico. El motor implementa la arquitectura con PyTorch, sin garantizar identidad numérica con Keras. Los tres Plot muestran cierre mensual, muestra centrada y ajuste suave, y MSE por época. Archivo importable: [notebook-keras-1-256-1.json](../quant-blueprint-studio/public/blueprints/notebook-keras-1-256-1.json).

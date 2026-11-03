@@ -34,7 +34,13 @@ class LibraryTests(unittest.TestCase):
                 result=DAGRunner(graph).execute()
                 self.assertEqual(len(result['nodes']),len(graph['nodes']))
                 json.dumps(result,allow_nan=False)
-                if entry.get('infographic'):
+                if entry['id']=='notebook-keras-1-256-1':
+                    report=result['studies'][0]
+                    self.assertEqual(report['architecture']['total_parameters'],769)
+                    self.assertEqual(len(result['plots']),3)
+                    self.assertEqual(result['plots'][1]['x_key'],'coordinate')
+                    self.assertEqual(len(result['plots'][1]['line_rows']),300)
+                if entry.get('infographic') and not entry['id'].startswith('notebook-'):
                     report=result['studies'][0]
                     self.assertTrue(report['selected'])
                     self.assertTrue(report['metrics'])
@@ -45,7 +51,7 @@ class LibraryTests(unittest.TestCase):
     def test_reference_integrity_and_bundled_copy(self) -> None:
         original=json.loads((ROOT/'public/infographics/manifest.json').read_text())
         files=[entry for item in original for entry in [item,*item.get('supplements',[])]]
-        self.assertEqual(len(files),10)
+        self.assertEqual(len(files),11)
         for entry in files:
             self.assertEqual(hashlib.sha256((ROOT/'public/infographics'/entry['asset']).read_bytes()).hexdigest(),entry['sha256'])
         public=json.loads((ROOT/'public/blueprints/library.json').read_text())

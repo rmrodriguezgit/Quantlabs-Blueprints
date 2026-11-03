@@ -3983,6 +3983,267 @@
           }
         ]
       }
+    },
+    {
+      "id": "notebook-keras-1-256-1",
+      "title": "Infografía Keras · 1 → 256 ReLU → 1",
+      "area": "Notebook · arquitectura neuronal",
+      "description": "Regresión de una entrada con Dense(256, ReLU), salida lineal, MSE y RMSprop. Arquitectura explícita: 512 + 257 = 769 parámetros.",
+      "instructions": [
+        "Arquitectura de la infografía implementada con el motor PyTorch del proyecto; no ejecuta Keras ni promete pesos o resultados numéricos idénticos.",
+        "Market Data usa EURUSD=X, 15 años. Selecciona synthetic para trabajar sin internet. El activo y los datos son un ejemplo; la imagen no especifica un dataset.",
+        "Monthly Curve Data toma el último cierre mensual y crea Coordinate entre −2 y 2. Curve Fitting centra Close con la media completa; protocolo in_sample, sin validación separada ni evaluación de pronóstico.",
+        "Las capas moradas son editables: entrada 1, Dense 256 ReLU y salida lineal 1. El informe ejecutado muestra 512 parámetros ocultos y 257 de salida: total 769.",
+        "Entrenamiento de demostración: 100 épocas, batch 32, LR 0.001, RMSprop, MSE, sin L2 ni StandardScaler. Estos valores de entrenamiento no están especificados en la infografía.",
+        "Los tres Plot muestran cierre mensual, muestra centrada con ajuste suave y MSE por época. Para sólo puntos elige scatter y Series=actual.",
+        "Consulta MSE, RMSE, MAE y R² en el informe de Curve Fitting. Su salida es un informe para Plot; no se conecta a Risk Metrics."
+      ],
+      "infographic": "keras-1-256-1.png",
+      "graph": {
+        "nodes": [
+          {
+            "id": "data",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 280
+            },
+            "data": {
+              "kind": "source",
+              "label": "EUR/USD · diario · 15 años",
+              "params": {
+                "source": "yfinance",
+                "ticker": "EURUSD=X",
+                "years": 15
+              }
+            }
+          },
+          {
+            "id": "monthly",
+            "type": "blueprint",
+            "position": {
+              "x": 330,
+              "y": 280
+            },
+            "data": {
+              "kind": "curve_data",
+              "label": "Cierre mensual · coordenada −2…2",
+              "params": {
+                "exclude_incomplete_month": false
+              }
+            }
+          },
+          {
+            "id": "input",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": -80
+            },
+            "data": {
+              "kind": "network_input",
+              "label": "Entrada · 1 característica",
+              "params": {
+                "input_features": 1,
+                "auto_features": true,
+                "mode": "last"
+              }
+            }
+          },
+          {
+            "id": "hidden",
+            "type": "blueprint",
+            "position": {
+              "x": 330,
+              "y": -80
+            },
+            "data": {
+              "kind": "layer",
+              "label": "Dense 256 · ReLU · 512 parámetros",
+              "params": {
+                "layer_type": "Dense",
+                "units": 256,
+                "activation": "ReLU"
+              }
+            }
+          },
+          {
+            "id": "output",
+            "type": "blueprint",
+            "position": {
+              "x": 660,
+              "y": -80
+            },
+            "data": {
+              "kind": "network_output",
+              "label": "Salida lineal · 1 · 257 parámetros",
+              "params": {
+                "output_units": 1
+              }
+            }
+          },
+          {
+            "id": "trainer",
+            "type": "blueprint",
+            "position": {
+              "x": 1000,
+              "y": 280
+            },
+            "data": {
+              "kind": "curve_fit",
+              "label": "MSE · RMSprop · 769 parámetros",
+              "params": {
+                "name": "Infografía · 1 → 256 ReLU → 1",
+                "evaluation": "in_sample",
+                "variant": "dense",
+                "widths": "256",
+                "degree": 5,
+                "activation": "ReLU",
+                "optimizer": "RMSprop",
+                "normalize": false,
+                "epochs": 100,
+                "batch_size": 32,
+                "lr": 0.001,
+                "l2": 0,
+                "reduce_lr": false,
+                "train_ratio": 0.65,
+                "val_ratio": 0.15,
+                "patience": 100,
+                "seed": 100
+              }
+            }
+          },
+          {
+            "id": "monthly-plot",
+            "type": "blueprint",
+            "position": {
+              "x": 670,
+              "y": 540
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Cierre mensual",
+              "params": {
+                "plot_source": "columns",
+                "plot_columns": "Close",
+                "chart_type": "line",
+                "title": "EUR/USD · cierre mensual",
+                "color": "Blue"
+              }
+            }
+          },
+          {
+            "id": "sample-plot",
+            "type": "blueprint",
+            "position": {
+              "x": 1370,
+              "y": 160
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Muestra centrada y ajuste",
+              "params": {
+                "study_chart": 0,
+                "plot_source": "auto",
+                "plot_columns": "actual,fitted",
+                "x_column": "coordinate",
+                "chart_type": "scatter_line",
+                "scatter_columns": "actual",
+                "title": "Sample Data Set · 1 → 256 ReLU → 1",
+                "series_colors": "Coral,Mint",
+                "series_labels": "Muestra centrada,Ajuste neuronal"
+              }
+            }
+          },
+          {
+            "id": "loss-plot",
+            "type": "blueprint",
+            "position": {
+              "x": 1370,
+              "y": 470
+            },
+            "data": {
+              "kind": "plot",
+              "label": "MSE por época",
+              "params": {
+                "study_chart": 2,
+                "plot_source": "auto",
+                "plot_columns": "train",
+                "x_column": "epoch",
+                "chart_type": "line",
+                "title": "Entrenamiento · MSE · RMSprop",
+                "color": "Violet"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "data-monthly",
+            "source": "data",
+            "target": "monthly",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "monthly-trainer",
+            "source": "monthly",
+            "target": "trainer",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "monthly-monthly-plot",
+            "source": "monthly",
+            "target": "monthly-plot",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "input-hidden",
+            "source": "input",
+            "target": "hidden",
+            "sourceHandle": "network",
+            "targetHandle": "network",
+            "animated": true
+          },
+          {
+            "id": "hidden-output",
+            "source": "hidden",
+            "target": "output",
+            "sourceHandle": "network",
+            "targetHandle": "network",
+            "animated": true
+          },
+          {
+            "id": "output-trainer",
+            "source": "output",
+            "target": "trainer",
+            "sourceHandle": "network",
+            "targetHandle": "network",
+            "animated": true
+          },
+          {
+            "id": "trainer-sample-plot",
+            "source": "trainer",
+            "target": "sample-plot",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          },
+          {
+            "id": "trainer-loss-plot",
+            "source": "trainer",
+            "target": "loss-plot",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          }
+        ]
+      }
     }
   ]
 }

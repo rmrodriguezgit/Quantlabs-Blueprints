@@ -61,5 +61,12 @@
     "originalFilename": "Imagen de ChatGPT 25 oct 2026, 01_33_05 p.m (1).png",
     "asset": "unidad-10.png",
     "sha256": "2e1c24c99c5545cfca410fce28a608e82665c3b4c702466df3b363cf287d6153"
+  },
+  {
+    "unit": "keras-1-256-1",
+    "originalFilename": "codex-clipboard-d1d1efea-e5ad-4e9b-a600-da4068d1edcc.png",
+    "asset": "keras-1-256-1.png",
+    "sha256": "207036519685363b34b5f0f045be556c625a2aab9ea7a4bd23e270c0b5e1532d",
+    "source": "Infografía adjuntada por el usuario; arquitectura Keras 1–256–1."
   }
 ]

@@ -1,4 +1,4 @@
-# Verificación del proyecto (v0.5.8)
+# Verificación del proyecto (v0.5.9)
 
 Fecha: 2 de noviembre de 2026. Entorno local macOS, Python 3.12.12, Node.js 22.22.3, npm 10.9.8.
 
@@ -161,3 +161,9 @@ Build TypeScript/Vite/Electron verificado. Scatter fija área de puntos en 12 px
 ## Compatibilidad de pines azules (v0.5.8)
 
 Build TypeScript/Vite/Electron, suites de conexiones y biblioteca (18 diseños) aprobados. Pruebas Python de rechazo previo a ejecutar para Curve Fitting/Study/Preparation → Risk/Backtest y aceptación de rutas válidas.
+
+## Infografía Keras 1–256–1 (v0.5.9)
+
+Biblioteca validada con 19 grafos y 11 imágenes. Prueba de integración ejecuta los diseños con datos sintéticos y presupuesto reducido; la nueva ficha comprueba 769 parámetros, tres Plot y curva suave de 300 puntos. Integridad SHA256 de imágenes y equivalencia de biblioteca pública/embebida comprobadas.
+
+Electron: ficha seleccionada desde Biblioteca y ejecutada con yfinance EURUSD=X; 9/9 nodos completados, 180 meses y tres gráficos visibles. Captura docs/v0.5.9-keras.png. La ficha quedó cargada en el lienzo.

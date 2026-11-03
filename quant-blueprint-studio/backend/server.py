@@ -40,7 +40,7 @@ class Graph(BaseModel):
     edges: list[Edge] = Field(default_factory=list, max_length=150)
 
 
-app = FastAPI(title='Quant Blueprint Engine', version='0.5.8')
+app = FastAPI(title='Quant Blueprint Engine', version='0.5.9')
 app.add_middleware(CORSMiddleware, allow_origins=['http://127.0.0.1:5173', 'http://localhost:5173'],
                    allow_methods=['GET', 'POST'], allow_headers=['Content-Type'])
 execution_lock = threading.Lock()

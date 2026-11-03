@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.5.9 — 2026-11-02
+
+- Ejemplo de infografía Keras 1 → Dense 256 ReLU → salida lineal 1, con arquitectura conectable, MSE/RMSprop y 769 parámetros.
+- Infografía original incorporada sin edición; blueprint JSON individual e integrado en biblioteca (19 diseños, 11 imágenes).
+- Datos mensuales EUR/USD y tres gráficos: cierre, muestra centrada/ajuste y pérdida por época; ejecución con motor PyTorch.
+
+
 ## v0.5.8 — 2026-11-02
 
 - Compatibilidad de contenido para pines azules: informes Curve Fitting/Learning Experiment se conectan a Plot, no a Risk Metrics, Deep Learning ni Backtest.

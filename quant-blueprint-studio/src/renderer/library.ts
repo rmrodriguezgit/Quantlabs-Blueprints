@@ -126,6 +126,7 @@ export function parseLibrary(value: unknown): LibraryEntry[] {
         Array.isArray(e.instructions) &&
         e.instructions.every((s) => typeof s === "string") &&
         (e.infographic === undefined ||
+          e.infographic === "keras-1-256-1.png" ||
           /^unidad-(?:[2-9]|10)(?:-cdcgan)?\.png$/.test(e.infographic)) &&
         isGraph(e.graph),
     )

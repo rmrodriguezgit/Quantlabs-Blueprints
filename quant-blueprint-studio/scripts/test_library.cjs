@@ -9,13 +9,14 @@ try {
   const {parseLibrary,isGraph,readSaved,storeSaved}=require(path.join(temporary,'library.js'));
   const {networkBindings,syncNetworkInputs}=require(path.join(temporary,'types/blueprint.js'));
   const original=JSON.parse(readFileSync('public/blueprints/library.json','utf8'));
-  assert.equal(parseLibrary(original).length,18);
-  assert.equal(parseLibrary(original).filter(e=>e.infographic).length,10);
+  assert.equal(parseLibrary(original).length,19);
+  assert.equal(parseLibrary(original).filter(e=>e.infographic).length,11);
   for(const entry of original.entries) {
     assert.ok(isGraph(entry.graph),entry.id);
     assert.equal(networkBindings(syncNetworkInputs(entry.graph)).find(b=>b.issue),undefined,entry.id);
     assert.deepEqual(parseLibrary(JSON.parse(JSON.stringify({...original,entries:[entry]})))[0],entry);
   }
+  assert.equal(networkBindings(original.entries.find(e=>e.id==='notebook-keras-1-256-1').graph)[0].summary,'1 inputs → 256 ReLU → 1 output');
   assert.equal(parseLibrary(original.entries[0].graph)[0].area,'Personal');
   assert.throws(()=>parseLibrary({...original,schemaVersion:2}),/version/);
   const invalid=structuredClone(original);invalid.entries[0].graph.edges[0].target='missing';
@@ -47,5 +48,5 @@ try {
   storeSaved(original.entries);assert.deepEqual(readSaved(),original.entries);
   storeSaved([{...original.entries[0],id:"blank",graph:{nodes:[],edges:[]}}]);assert.equal(readSaved()[0].graph.nodes.length,0);
   storeSaved([]);assert.deepEqual(readSaved(),[]);
-  console.log('Library checks passed: 18 graphs, 10 references, versioned/legacy roundtrip, persistent storage, malformed pins, dimensions and metadata.');
+  console.log('Library checks passed: 19 graphs, 11 references, versioned/legacy roundtrip, persistent storage, malformed pins, dimensions and metadata.');
 } finally {rmSync(temporary,{recursive:true,force:true});}
