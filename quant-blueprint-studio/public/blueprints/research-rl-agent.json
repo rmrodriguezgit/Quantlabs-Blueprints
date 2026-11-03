@@ -1,0 +1,113 @@
+{
+  "format": "quantlabs-blueprint-library",
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "research-rl-agent",
+      "title": "RL · Double DQN y Q-learning",
+      "area": "RL · políticas",
+      "description": "Agente dedicado con replay TR, checkpoint VA y comparadores Q-learning, largo y efectivo.",
+      "instructions": [
+        "Fuente synthetic por defecto para ejecución reproducible sin internet; selecciona yfinance para activos reales.",
+        "Acciones Short/Cash/Long, costes de cambios de posición y liquidación final.",
+        "Mismo motor auditado de Unidad 10; no se usa Risk Metrics sobre el informe. El gráfico selecciona la salida de políticas."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "Datos",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 100
+            },
+            "data": {
+              "kind": "source",
+              "label": "Datos",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 3
+              }
+            }
+          },
+          {
+            "id": "Indicadores",
+            "type": "blueprint",
+            "position": {
+              "x": 300,
+              "y": 100
+            },
+            "data": {
+              "kind": "features",
+              "label": "Indicadores",
+              "params": {
+                "lags": 3
+              }
+            }
+          },
+          {
+            "id": "Agente",
+            "type": "blueprint",
+            "position": {
+              "x": 650,
+              "y": 100
+            },
+            "data": {
+              "kind": "rl_agent",
+              "label": "Agente",
+              "params": {
+                "epochs": 12,
+                "seed": 42,
+                "cost_bps": 5
+              }
+            }
+          },
+          {
+            "id": "Politicas",
+            "type": "blueprint",
+            "position": {
+              "x": 1000,
+              "y": 100
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Politicas",
+              "params": {
+                "study_chart": 0,
+                "chart_type": "line",
+                "title": "RL · políticas greedy en TE"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "Datos-Indicadores",
+            "source": "Datos",
+            "target": "Indicadores",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Indicadores-Agente",
+            "source": "Indicadores",
+            "target": "Agente",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Agente-Politicas",
+            "source": "Agente",
+            "target": "Politicas",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+import contracts from "./data/node-contracts.json";
 import type { Connection, Edge } from "@xyflow/react";
 import {
   catalog,
@@ -11,10 +12,8 @@ export function acceptsPayload(
   pin: string,
 ): boolean {
   if (pin !== "tensor") return true;
-  if (target === "model") return source === "prepare";
-  if (target === "backtest") return source === "model";
-  if (target === "risk") return source === "model" || source === "backtest";
-  return target === "plot";
+  const sources: Record<string, string[]> = contracts.tensorSources;
+  return sources[target]?.includes(source) ?? false;
 }
 export function validConnection(
   graph: Graph,
@@ -70,9 +69,10 @@ export function validConnection(
 }
 
 export function payloadLabel(kind: Kind): string {
-  if (kind === "curve_fit" || kind === "study") return "Informe de experimento";
+  if (kind === "curve_fit" || kind === "study" || kind === "rl_agent")
+    return "Informe de experimento";
   if (kind === "prepare") return "Datos TR / VA / TE";
-  if (kind === "model") return "Modelo y predicciones";
+  if (kind === "model" || kind === "ml_model") return "Modelo y predicciones";
   if (kind === "backtest") return "Resultado de backtest";
   if (kind === "risk") return "Informe de riesgo";
   if (kind === "portfolio_data") return "Datos de cartera";

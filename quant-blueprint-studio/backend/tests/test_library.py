@@ -28,7 +28,7 @@ class LibraryTests(unittest.TestCase):
                     if node['data']['kind']=='plot':node['data']['params']['skip_rows']=0
                     if node['data']['kind']=='source' and entry['id'].startswith('notebook-'):
                         node['data']['params']['source']='synthetic'
-                    if node['data']['kind'] in ('study','model','curve_fit'):
+                    if node['data']['kind'] in ('study','rl_agent','model','curve_fit'):
                         node['data']['params']['epochs']=2
                         node['data']['params']['trials']=2
                 result=DAGRunner(graph).execute()

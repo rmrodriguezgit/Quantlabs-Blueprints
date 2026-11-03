@@ -66,6 +66,35 @@ export function DetailsInspector({
               last: N features from the last bar. flatten: lookback × N inputs.
             </p>
           )}
+          {node.data.kind === "ml_model" && (
+            <p className="inspector-hint">
+              Compare entrena los mismos candidatos sólo con TR, selecciona por
+              MSE VA y evalúa TE una vez. Se usan los datos escalados de Series
+              Preparation. La salida sirve para Plot, Backtest y Risk Metrics.
+            </p>
+          )}
+          {node.data.kind === "rl_agent" && (
+            <p className="inspector-hint">
+              Acciones Short/Cash/Long. Replay sólo TR; VA elige checkpoint; TE
+              usa política greedy sin aprender. Compara Double DQN, Q-learning,
+              largo y efectivo. El informe se conecta a Plot.
+            </p>
+          )}
+          {node.data.kind === "data_quality" && (
+            <p className="inspector-hint">
+              Forward fill sólo usa pasado y tiene límite. No se usa backfill ni
+              interpolación con observaciones futuras. Los huecos iniciales
+              restantes se eliminan.
+            </p>
+          )}
+          {node.data.kind === "quant_features" && (
+            <p className="inspector-hint">
+              Ventanas móviles causales. Sharpe es indefinido si la volatilidad
+              es cero; no se sustituye por cero. Selecciona columnas y aplica
+              Data Quality explícitamente antes de entrenar. Usa 12 períodos/año
+              para datos mensuales.
+            </p>
+          )}
           {node.data.kind === "curve_fit" && (
             <p className="inspector-hint">
               Optional purple network pin: connect Network Input → Layers →

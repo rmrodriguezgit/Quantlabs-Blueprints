@@ -1,5 +1,9 @@
 import type { Edge, Node } from "@xyflow/react";
 export type Kind =
+  | "data_quality"
+  | "quant_features"
+  | "ml_model"
+  | "rl_agent"
   | "resample"
   | "select_columns"
   | "coordinate"
@@ -89,7 +93,8 @@ export interface NetworkSummary {
     parameters: number;
   }[];
 }
-export type ChartType = "line" | "area" | "bar" | "scatter" | "scatter_line";
+export type ChartType =
+  "line" | "area" | "bar" | "scatter" | "scatter_line" | "histogram";
 export interface StudyReport {
   id: string;
   title: string;
@@ -129,6 +134,173 @@ export interface Definition {
   fields: Field[];
 }
 export const catalog: Record<Kind, Definition> = {
+  data_quality: {
+    label: "Data Quality",
+    subtitle: "Sort · duplicates · missing · causal fill",
+    category: "01 / DATA",
+    color: "#f2ad65",
+    input: "frame",
+    output: "frame",
+    fields: [
+      {
+        key: "duplicates",
+        label: "Duplicate timestamps",
+        value: "error",
+        options: ["error", "last"],
+      },
+      {
+        key: "missing",
+        label: "Missing values",
+        value: "drop",
+        options: ["error", "drop", "ffill"],
+      },
+      {
+        key: "ffill_limit",
+        label: "Maximum causal forward fill",
+        value: 3,
+        min: 1,
+        max: 30,
+      },
+    ],
+  },
+  quant_features: {
+    label: "Quant Features",
+    subtitle: "Returns · rolling risk · drawdown",
+    category: "06 / QUANT",
+    color: "#d5d77e",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "price_column", label: "Price column", value: "Close" },
+      { key: "window", label: "Rolling window", value: 20, min: 2, max: 252 },
+      {
+        key: "periods_per_year",
+        label: "Observations per year",
+        value: 252,
+        min: 1,
+        max: 366,
+      },
+      {
+        key: "risk_free_rate",
+        label: "Annual risk-free rate",
+        value: 0.02,
+        min: 0,
+        max: 1,
+        step: 0.01,
+      },
+    ],
+  },
+  ml_model: {
+    label: "Classical ML",
+    subtitle: "Seven baselines · VA selection · TE evaluation",
+    category: "03 / ML",
+    color: "#79b4ef",
+    input: "tensor",
+    output: "tensor",
+    fields: [
+      {
+        key: "algorithm",
+        label: "Algorithm",
+        value: "Compare",
+        options: [
+          "Compare",
+          "Mean baseline",
+          "Ridge",
+          "ElasticNet",
+          "Random Forest",
+          "Histogram Boosting",
+          "SVR",
+          "KNN",
+        ],
+      },
+      {
+        key: "window_mode",
+        label: "Window features",
+        value: "last",
+        options: ["last", "flatten"],
+      },
+      {
+        key: "estimators",
+        label: "Trees / boosting iterations",
+        value: 100,
+        min: 10,
+        max: 500,
+      },
+      { key: "max_depth", label: "Maximum depth", value: 8, min: 1, max: 32 },
+      {
+        key: "alpha",
+        label: "Penalty alpha / SVR C",
+        value: 1,
+        min: 0.0001,
+        max: 1000000,
+        step: 0.1,
+      },
+      { key: "neighbors", label: "KNN neighbors", value: 5, min: 1, max: 100 },
+      { key: "seed", label: "Seed", value: 42, min: 0, max: 100000 },
+    ],
+  },
+  rl_agent: {
+    label: "RL Trading Agent",
+    subtitle: "Double DQN · Q-learning · greedy holdout",
+    category: "08 / RL",
+    color: "#ec9dd6",
+    input: "frame",
+    output: "tensor",
+    fields: [
+      {
+        key: "feature_columns",
+        label: "State feature columns",
+        value:
+          "LogReturn,Volatility,RSI,EMA,SMA,VWAP,MACD,MACDSignal,BBUpper,BBMiddle,BBLower",
+      },
+      {
+        key: "lookback",
+        label: "Lookback (last state used by current agent)",
+        value: 1,
+        min: 1,
+        max: 120,
+      },
+      {
+        key: "epochs",
+        label: "Training episodes",
+        value: 12,
+        min: 1,
+        max: 300,
+      },
+      {
+        key: "lr",
+        label: "Learning rate",
+        value: 0.001,
+        min: 0.000001,
+        max: 0.1,
+        step: 0.0001,
+      },
+      {
+        key: "train_ratio",
+        label: "Training fraction",
+        value: 0.65,
+        min: 0.3,
+        max: 0.85,
+        step: 0.01,
+      },
+      {
+        key: "val_ratio",
+        label: "Validation fraction",
+        value: 0.15,
+        min: 0.05,
+        max: 0.3,
+        step: 0.01,
+      },
+      {
+        key: "cost_bps",
+        label: "Cost per position change (bps)",
+        value: 5,
+        min: 0,
+        max: 100,
+      },
+      { key: "seed", label: "Seed", value: 42, min: 0, max: 100000 },
+    ],
+  },
   resample: {
     label: "Resample",
     subtitle: "Dated aggregation · reusable",
@@ -621,10 +793,17 @@ export const catalog: Record<Kind, Definition> = {
           "BiLSTM",
           "BiGRU",
           "CNN-LSTM",
+          "Transformer",
           "Autoencoder",
           "DAE",
           "DQN",
         ],
+      },
+      {
+        key: "heads",
+        label: "Transformer attention heads",
+        value: 4,
+        options: ["1", "2", "4", "8"],
       },
       { key: "hidden", label: "Hidden units", value: 32, min: 4, max: 256 },
       { key: "layers", label: "Hidden layers", value: 1, min: 1, max: 4 },
@@ -652,7 +831,7 @@ export const catalog: Record<Kind, Definition> = {
         key: "optimizer",
         label: "Optimizer",
         value: "Adam",
-        options: ["Adam", "SGD"],
+        options: ["Adam", "AdamW", "RMSprop", "SGD"],
       },
       {
         key: "patience",
@@ -812,6 +991,18 @@ export const catalog: Record<Kind, Definition> = {
     category: "05 / VISUALIZATION",
     color: "#ec9dd6",
     fields: [
+      {
+        key: "hist_bins",
+        label: "Histogram bins",
+        value: 20,
+        min: 5,
+        max: 100,
+      },
+      {
+        key: "hist_density",
+        label: "Histogram density (instead of count)",
+        value: false,
+      },
       { key: "x_column", label: "X column (blank = chart default)", value: "" },
       {
         key: "y_scale",
@@ -889,7 +1080,14 @@ export const catalog: Record<Kind, Definition> = {
         key: "chart_type",
         label: "Chart type",
         value: "line",
-        options: ["line", "area", "bar", "scatter", "scatter_line"],
+        options: [
+          "line",
+          "area",
+          "bar",
+          "scatter",
+          "scatter_line",
+          "histogram",
+        ],
       },
       {
         key: "plot_columns",
@@ -1249,6 +1447,18 @@ export function featureOptions(
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
+  if (node.data.kind === "quant_features")
+    return [
+      ...new Set([
+        ...base,
+        "SimpleReturn",
+        "LogReturn",
+        "CumulativeLogReturn",
+        "RollingVolatility",
+        "Drawdown",
+        "RollingSharpe",
+      ]),
+    ];
   if (node.data.kind !== "features") return base;
   const p = effectiveParams(graph, id);
   const names = [
@@ -1276,7 +1486,16 @@ export function featureOptions(
 export function inputHandles(kind: Kind): Record<string, string> {
   const primary = catalog[kind].input;
   const handles: Record<string, string> = primary ? { [primary]: primary } : {};
-  if (["features", "prepare", "model", "backtest", "curve_fit"].includes(kind))
+  if (
+    [
+      "features",
+      "prepare",
+      "model",
+      "ml_model",
+      "backtest",
+      "curve_fit",
+    ].includes(kind)
+  )
     handles.config = "config";
   if (kind === "study") {
     handles.asset_b = "frame";

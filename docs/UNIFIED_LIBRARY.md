@@ -1,4 +1,4 @@
-# Biblioteca única · v0.6.0
+# Biblioteca única · v0.7.0
 
 La paleta del lienzo es el catálogo común de herramientas. Busca por nombre o área y añade nodos por clic, arrastre o mediante las alternativas de un conector. Biblioteca / ejemplos contiene recetas del mismo catálogo, con JSON editable y un apartado «Herramientas de esta receta». No hay que instalar un motor distinto por ejemplo.
 
@@ -26,7 +26,7 @@ Resample aplica la agregación elegida a cada columna: `last` no construye autom
 
 ## Compatibilidad y alcance
 
-Los 19 diseños anteriores se conservan. Monthly Curve Data reutiliza las mismas funciones de Resample y Numeric Coordinate. Preparación temporal sigue encapsulando ventanas, particiones y su escalado seguro. Curve Fitting conserva el centrado de su objetivo y su protocolo; Learning Experiment conserva algoritmos específicos de selección, generativos y RL. No se presentan esos entrenadores compuestos como operaciones atómicas ni como réplicas numéricas de Keras.
+Los diseños anteriores se conservan. Monthly Curve Data reutiliza las mismas funciones de Resample y Numeric Coordinate. Preparación temporal sigue encapsulando ventanas, particiones y su escalado seguro. Curve Fitting conserva el centrado de su objetivo y su protocolo; Learning Experiment conserva algoritmos específicos de selección, generativos y RL. No se presentan esos entrenadores compuestos como operaciones atómicas ni como réplicas numéricas de Keras.
 
 Los pines azules muestran su contenido: particiones TR/VA/TE, modelo/predicciones, backtest o informe de experimento. Las recomendaciones y validación distinguen estos contenidos aunque compartan color. Los informes se conectan a Plot; no se convierten en retornos financieros por conectar Risk Metrics. Las capas moradas ya existentes siguen siendo reutilizables y editables.
 
@@ -59,3 +59,16 @@ Los nombres de tipo siguientes corresponden a herramientas del catálogo, en ord
 | [Receta · StandardScaler visible y auditable](../quant-blueprint-studio/public/blueprints/recipe-column-scaling.json) | Herramientas · recetas modulares | source → scale_columns → plot |
 
 ![Receta de escalado ejecutada](v0.6-library.png)
+
+La ampliación por Data, visualización, ML, DL, QL y RL se documenta en [auditoría de reingeniería](LIBRARY_REENGINEERING.md). Son 26 tipos de herramienta y 27 recetas.
+
+## Nuevas recetas por área (v0.7.0)
+
+| Receta | Herramientas |
+| --- | --- |
+| [ML · siete alternativas con selección VA](../quant-blueprint-studio/public/blueprints/research-ml-compare.json) | source → features → prepare → ml_model → plot → backtest → risk |
+| [DL · Transformer de ventana histórica](../quant-blueprint-studio/public/blueprints/research-dl-transformer.json) | source → features → prepare → model → plot → backtest → risk |
+| [RL · Double DQN y Q-learning](../quant-blueprint-studio/public/blueprints/research-rl-agent.json) | source → features → rl_agent → plot |
+| [Data · calidad y relleno causal](../quant-blueprint-studio/public/blueprints/research-data-quality.json) | source → data_quality → plot |
+| [QL · retornos y riesgo móvil](../quant-blueprint-studio/public/blueprints/research-quant-features.json) | source → quant_features → select_columns → data_quality → plot → risk |
+| [Visualización · distribución de retornos](../quant-blueprint-studio/public/blueprints/research-visual-histogram.json) | source → features → plot |

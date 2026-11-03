@@ -72,6 +72,28 @@ def custom_network(features: int, steps: int, spec: NetworkSpec) -> tuple[nn.Seq
     return nn.Sequential(*modules), width
 
 
+class WindowTransformer(nn.Module):
+    def __init__(self,features:int,steps:int,hidden:int,layers:int,heads:int,dropout:float) -> None:
+        super().__init__()
+        if heads not in (1,2,4,8) or hidden % heads:
+            raise ValueError('Transformer hidden size must be divisible by heads (1/2/4/8).')
+        self.projection=nn.Linear(features,hidden)
+        position=torch.arange(steps,dtype=torch.float32)[:,None]
+        divisor=torch.exp(torch.arange(0,hidden,2,dtype=torch.float32)*(-np.log(10000.)/hidden))
+        encoding=torch.zeros(steps,hidden);encoding[:,0::2]=torch.sin(position*divisor)
+        encoding[:,1::2]=torch.cos(position*divisor[:encoding[:,1::2].shape[1]])
+        self.register_buffer('position',encoding)
+        block=nn.TransformerEncoderLayer(hidden,heads,hidden*4,dropout,batch_first=True,norm_first=True)
+        self.encoder=nn.TransformerEncoder(block,layers,enable_nested_tensor=False)
+        for layer in self.encoder.layers:
+            for weight in (layer.self_attn.in_proj_weight,layer.self_attn.out_proj.weight,layer.linear1.weight,layer.linear2.weight):
+                nn.init.xavier_uniform_(weight)
+
+    def forward(self,x:torch.Tensor) -> torch.Tensor:
+        # Every token is already historical relative to the forecast target.
+        return self.encoder(self.projection(x)+self.position[:x.shape[1]])[:,-1,:]
+
+
 class SequenceNet(nn.Module):
     def __init__(self, features: int, steps: int, params: dict[str, Any]) -> None:
         super().__init__()
@@ -104,7 +126,10 @@ class SequenceNet(nn.Module):
             self.conv = nn.Sequential(nn.Conv1d(features, hidden, kernel, padding='same'), nn.ReLU())
             features = hidden
         bidirectional = self.kind in ('BiLSTM', 'BiGRU')
-        if self.kind in ('LSTM', 'CNN-LSTM', 'BiLSTM', 'GRU', 'BiGRU'):
+        if self.kind == 'Transformer':
+            width=hidden
+            self.encoder=WindowTransformer(features,steps,hidden,layers,int(params.get('heads',4)),dropout)
+        elif self.kind in ('LSTM', 'CNN-LSTM', 'BiLSTM', 'GRU', 'BiGRU'):
             cls = nn.GRU if self.kind in ('GRU', 'BiGRU') else nn.LSTM
             self.recurrent = cls(features, hidden, num_layers=layers, batch_first=True,
                                  bidirectional=bidirectional, dropout=dropout if layers > 1 else 0)
@@ -141,7 +166,7 @@ def train(data: PreparedData, params: dict[str, Any], progress: Callable[[dict[s
     architecture = str(params.get('architecture', 'LSTM'))
     if architecture == 'Custom' and not isinstance(params.get('_network'), NetworkSpec):
         raise ValueError('Custom architecture requires a connected Network Input → Layers → Network Output chain.')
-    if architecture not in ('Custom', 'Dense', 'CNN', 'LSTM', 'GRU', 'BiLSTM', 'BiGRU', 'CNN-LSTM', 'Autoencoder', 'DAE', 'DQN'):
+    if architecture not in ('Custom', 'Dense', 'CNN', 'LSTM', 'GRU', 'BiLSTM', 'BiGRU', 'CNN-LSTM', 'Autoencoder', 'DAE', 'DQN', 'Transformer'):
         raise ValueError('Unsupported architecture.')
     if architecture == 'DQN' and not isinstance(params.get('_network'), NetworkSpec) and data.target != 'LogReturn':
         raise ValueError('DQN requires LogReturn target.')
@@ -153,9 +178,10 @@ def train(data: PreparedData, params: dict[str, Any], progress: Callable[[dict[s
         raise ValueError('Invalid training hyperparameters.')
     model = SequenceNet(data.x_train.shape[2], data.x_train.shape[1], params)
     optimizer_name = str(params.get('optimizer', 'Adam'))
-    if optimizer_name not in ('Adam', 'SGD'):
-        raise ValueError('Optimizer must be Adam or SGD.')
-    optimizer_cls = torch.optim.Adam if optimizer_name == 'Adam' else torch.optim.SGD
+    optimizers={'Adam':torch.optim.Adam,'AdamW':torch.optim.AdamW,'RMSprop':torch.optim.RMSprop,'SGD':torch.optim.SGD}
+    if optimizer_name not in optimizers:
+        raise ValueError('Optimizer must be Adam, AdamW, RMSprop or SGD.')
+    optimizer_cls = optimizers[optimizer_name]
     optimizer = optimizer_cls(model.parameters(), lr=lr, weight_decay=l2)
     x = torch.from_numpy(data.x_train)
     xv = torch.from_numpy(data.x_val)

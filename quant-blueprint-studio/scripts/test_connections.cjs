@@ -5,9 +5,16 @@ const {tmpdir}=require('node:os');
 const path=require('node:path');
 const temp=mkdtempSync(path.join(tmpdir(),'quantlabs-connect-'));
 try {
-execFileSync(process.execPath,[require.resolve('typescript/bin/tsc'),'src/renderer/connections.ts','--outDir',temp,'--module','commonjs','--target','es2022','--skipLibCheck','--esModuleInterop'],{stdio:'inherit'});
+execFileSync(process.execPath,[require.resolve('typescript/bin/tsc'),'src/renderer/connections.ts','--outDir',temp,'--module','commonjs','--target','es2022','--skipLibCheck','--esModuleInterop','--resolveJsonModule'],{stdio:'inherit'});
 const {validConnection}=require(path.join(temp,'connections.js'));
-const {createNode}=require(path.join(temp,'types/blueprint.js'));
+const {catalog,inputHandles,createNode}=require(path.join(temp,'types/blueprint.js'));
+const contracts=require(path.join(temp,'data/node-contracts.json'));
+assert.deepEqual(Object.keys(catalog).sort(),Object.keys(contracts.nodes).sort());
+for(const [kind,contract] of Object.entries(contracts.nodes)) {
+ assert.equal(catalog[kind].input ?? null,contract.input,kind);
+ assert.equal(catalog[kind].output ?? null,contract.output,kind);
+ assert.deepEqual(inputHandles(kind),{...(contract.input?{[contract.input]:contract.input}:{}),...contract.extraInputs},kind);
+}
 const source=createNode('source',0),features=createNode('features',1),merge=createNode('merge',2),plot=createNode('plot',3),prepare=createNode('prepare',4);
 const nodes=[source,features,merge,plot,prepare];
 const c=(a,b,input='frame',output='frame')=>({source:a.id,target:b.id,sourceHandle:output,targetHandle:input});
@@ -32,7 +39,7 @@ for (const kind of ['curve_fit','study','prepare']) {
  assert.equal(validConnection(g,c(src,model,'tensor','tensor')),kind==='prepare');
  assert(validConnection(g,c(src,chart,'tensor','tensor')));
 }
-for (const kind of ['model','backtest']) {
+for (const kind of ['model','ml_model','backtest']) {
  const src=createNode(kind,0),risk=createNode('risk',1);
  assert(validConnection({nodes:[src,risk],edges:[]},c(src,risk,'tensor','tensor')));
 }

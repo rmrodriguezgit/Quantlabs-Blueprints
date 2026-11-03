@@ -1572,7 +1572,28 @@ i.portfolio {
   outline-offset: 4px;
 }
 
-.palette > input {width:100%;box-sizing:border-box;margin:0 0 14px;padding:10px 12px;border:1px solid #344054;border-radius:7px;background:#101722;color:#e6edf7;font:inherit;font-size:12px;}
-.palette > input:focus {outline:1px solid #6cc9ac;}
-.recipe-tools {margin:12px 0;padding:10px;border:1px solid #344054;border-radius:8px;}
-.recipe-tools summary {cursor:pointer;color:#6cc9ac;}
+.palette > input {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid #344054;
+  border-radius: 7px;
+  background: #101722;
+  color: #e6edf7;
+  font: inherit;
+  font-size: 12px;
+}
+.palette > input:focus {
+  outline: 1px solid #6cc9ac;
+}
+.recipe-tools {
+  margin: 12px 0;
+  padding: 10px;
+  border: 1px solid #344054;
+  border-radius: 8px;
+}
+.recipe-tools summary {
+  cursor: pointer;
+  color: #6cc9ac;
+}

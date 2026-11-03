@@ -44,6 +44,10 @@ import {
 import "@xyflow/react/dist/style.css";
 import { validConnection, payloadLabel } from "../connections";
 const icons = {
+  data_quality: Database,
+  quant_features: ChartNoAxesCombined,
+  ml_model: BrainCircuit,
+  rl_agent: BrainCircuit,
   resample: Layers3,
   select_columns: SlidersHorizontal,
   coordinate: Layers3,
@@ -68,13 +72,31 @@ const icons = {
   risk: SlidersHorizontal,
 };
 function nodeSummary(data: BlueprintNode["data"]): string {
-  const p = data.params;
+  const p = {
+    ...Object.fromEntries(
+      catalog[data.kind].fields.map((field) => [field.key, field.value]),
+    ),
+    ...data.params,
+  };
   switch (data.kind) {
-    case "select_columns": return String(p.columns || "Close");
-    case "resample": return `${p.frequency} · ${p.aggregation} · ${p.columns}`;
-    case "coordinate": return `${p.output_column}: ${p.start}…${p.stop}`;
-    case "center": return `${p.prefix}${p.columns} · fit ${Number(p.fit_fraction)*100}%`;
-    case "scale_columns": return `${p.method} · ${p.columns} · fit ${Number(p.fit_fraction)*100}%`;
+    case "data_quality":
+      return `${p.duplicates} duplicates · ${p.missing} missing`;
+    case "quant_features":
+      return `${p.price_column} · ${p.window} bars · ${p.periods_per_year}/year`;
+    case "ml_model":
+      return `${p.algorithm} · ${p.window_mode} · validation selection`;
+    case "rl_agent":
+      return `Double DQN / Q-learning · ${p.epochs} episodes`;
+    case "select_columns":
+      return String(p.columns || "Close");
+    case "resample":
+      return `${p.frequency} · ${p.aggregation} · ${p.columns}`;
+    case "coordinate":
+      return `${p.output_column}: ${p.start}…${p.stop}`;
+    case "center":
+      return `${p.prefix}${p.columns} · fit ${Number(p.fit_fraction) * 100}%`;
+    case "scale_columns":
+      return `${p.method} · ${p.columns} · fit ${Number(p.fit_fraction) * 100}%`;
     case "curve_data":
       return "Daily Close → monthly last → artificial coordinate";
     case "curve_fit":

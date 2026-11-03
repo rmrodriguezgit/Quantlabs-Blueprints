@@ -4521,6 +4521,805 @@
           }
         ]
       }
+    },
+    {
+      "id": "research-ml-compare",
+      "title": "ML · siete alternativas con selección VA",
+      "area": "ML · modelos clásicos",
+      "description": "Baseline de media, Ridge, ElasticNet, Random Forest, Histogram Boosting, SVR y KNN; selección por VA y evaluación única TE.",
+      "instructions": [
+        "Fuente synthetic por defecto para ejecución reproducible sin internet; selecciona yfinance para activos reales.",
+        "Las mismas ventanas y cortes para todos. Sólo se entrena con TR; VA selecciona; TE no modifica modelos.",
+        "Los resultados de pronóstico alimentan Backtest y Risk Metrics. El informe de selección aparece automáticamente.",
+        "No se declara ganador universal: el modelo elegido depende de los datos y la métrica."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "Datos",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 100
+            },
+            "data": {
+              "kind": "source",
+              "label": "Datos",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 3
+              }
+            }
+          },
+          {
+            "id": "Indicadores",
+            "type": "blueprint",
+            "position": {
+              "x": 300,
+              "y": 100
+            },
+            "data": {
+              "kind": "features",
+              "label": "Indicadores",
+              "params": {
+                "lags": 3
+              }
+            }
+          },
+          {
+            "id": "Preparar",
+            "type": "blueprint",
+            "position": {
+              "x": 600,
+              "y": 100
+            },
+            "data": {
+              "kind": "prepare",
+              "label": "Preparar",
+              "params": {
+                "lookback": 10,
+                "period": 20,
+                "feature_columns": "LogReturn,Volatility,RSI,EMA,SMA",
+                "scaler": "standard"
+              }
+            }
+          },
+          {
+            "id": "Modelo",
+            "type": "blueprint",
+            "position": {
+              "x": 900,
+              "y": 100
+            },
+            "data": {
+              "kind": "ml_model",
+              "label": "Modelo",
+              "params": {
+                "algorithm": "Compare",
+                "estimators": 50,
+                "max_depth": 6,
+                "alpha": 1,
+                "neighbors": 5,
+                "seed": 42
+              }
+            }
+          },
+          {
+            "id": "Pronostico",
+            "type": "blueprint",
+            "position": {
+              "x": 1200,
+              "y": 100
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Pronostico",
+              "params": {
+                "plot_source": "predictions",
+                "chart_type": "line",
+                "title": "TE · actual y predicho"
+              }
+            }
+          },
+          {
+            "id": "Backtest",
+            "type": "blueprint",
+            "position": {
+              "x": 1200,
+              "y": 400
+            },
+            "data": {
+              "kind": "backtest",
+              "label": "Backtest",
+              "params": {
+                "threshold": 0.001,
+                "fee_bps": 2,
+                "slippage_bps": 1
+              }
+            }
+          },
+          {
+            "id": "Riesgo",
+            "type": "blueprint",
+            "position": {
+              "x": 1500,
+              "y": 400
+            },
+            "data": {
+              "kind": "risk",
+              "label": "Riesgo",
+              "params": {}
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "Datos-Indicadores",
+            "source": "Datos",
+            "target": "Indicadores",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Indicadores-Preparar",
+            "source": "Indicadores",
+            "target": "Preparar",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Preparar-Modelo",
+            "source": "Preparar",
+            "target": "Modelo",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          },
+          {
+            "id": "Modelo-Pronostico",
+            "source": "Modelo",
+            "target": "Pronostico",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          },
+          {
+            "id": "Modelo-Backtest",
+            "source": "Modelo",
+            "target": "Backtest",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          },
+          {
+            "id": "Backtest-Riesgo",
+            "source": "Backtest",
+            "target": "Riesgo",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "research-dl-transformer",
+      "title": "DL · Transformer de ventana histórica",
+      "area": "DL · atención",
+      "description": "Proyección, posición sinusoidal y atención sobre ventanas de pasado; una predicción del siguiente cierre.",
+      "instructions": [
+        "Fuente synthetic por defecto para ejecución reproducible sin internet; selecciona yfinance para activos reales.",
+        "Cada token pertenece a la ventana histórica anterior al objetivo; atención bidireccional dentro de ese pasado.",
+        "Hidden debe ser divisible por heads. Configuración pequeña CPU, con checkpoint VA y evaluación TE.",
+        "Compara con Dense/LSTM/GRU usando los mismos cortes; atención no garantiza superar esos modelos."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "Datos",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 100
+            },
+            "data": {
+              "kind": "source",
+              "label": "Datos",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 3
+              }
+            }
+          },
+          {
+            "id": "Indicadores",
+            "type": "blueprint",
+            "position": {
+              "x": 300,
+              "y": 100
+            },
+            "data": {
+              "kind": "features",
+              "label": "Indicadores",
+              "params": {
+                "lags": 3
+              }
+            }
+          },
+          {
+            "id": "Preparar",
+            "type": "blueprint",
+            "position": {
+              "x": 600,
+              "y": 100
+            },
+            "data": {
+              "kind": "prepare",
+              "label": "Preparar",
+              "params": {
+                "lookback": 10,
+                "period": 20,
+                "feature_columns": "LogReturn,Volatility,RSI,EMA,SMA",
+                "scaler": "standard"
+              }
+            }
+          },
+          {
+            "id": "Modelo",
+            "type": "blueprint",
+            "position": {
+              "x": 900,
+              "y": 100
+            },
+            "data": {
+              "kind": "model",
+              "label": "Modelo",
+              "params": {
+                "architecture": "Transformer",
+                "hidden": 32,
+                "heads": 4,
+                "layers": 1,
+                "dropout": 0.1,
+                "optimizer": "AdamW",
+                "epochs": 12,
+                "patience": 5,
+                "lr": 0.001,
+                "seed": 42
+              }
+            }
+          },
+          {
+            "id": "Pronostico",
+            "type": "blueprint",
+            "position": {
+              "x": 1200,
+              "y": 100
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Pronostico",
+              "params": {
+                "plot_source": "predictions",
+                "chart_type": "line",
+                "title": "TE · actual y predicho"
+              }
+            }
+          },
+          {
+            "id": "Backtest",
+            "type": "blueprint",
+            "position": {
+              "x": 1200,
+              "y": 400
+            },
+            "data": {
+              "kind": "backtest",
+              "label": "Backtest",
+              "params": {
+                "threshold": 0.001,
+                "fee_bps": 2,
+                "slippage_bps": 1
+              }
+            }
+          },
+          {
+            "id": "Riesgo",
+            "type": "blueprint",
+            "position": {
+              "x": 1500,
+              "y": 400
+            },
+            "data": {
+              "kind": "risk",
+              "label": "Riesgo",
+              "params": {}
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "Datos-Indicadores",
+            "source": "Datos",
+            "target": "Indicadores",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Indicadores-Preparar",
+            "source": "Indicadores",
+            "target": "Preparar",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Preparar-Modelo",
+            "source": "Preparar",
+            "target": "Modelo",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          },
+          {
+            "id": "Modelo-Pronostico",
+            "source": "Modelo",
+            "target": "Pronostico",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          },
+          {
+            "id": "Modelo-Backtest",
+            "source": "Modelo",
+            "target": "Backtest",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          },
+          {
+            "id": "Backtest-Riesgo",
+            "source": "Backtest",
+            "target": "Riesgo",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "research-rl-agent",
+      "title": "RL · Double DQN y Q-learning",
+      "area": "RL · políticas",
+      "description": "Agente dedicado con replay TR, checkpoint VA y comparadores Q-learning, largo y efectivo.",
+      "instructions": [
+        "Fuente synthetic por defecto para ejecución reproducible sin internet; selecciona yfinance para activos reales.",
+        "Acciones Short/Cash/Long, costes de cambios de posición y liquidación final.",
+        "Mismo motor auditado de Unidad 10; no se usa Risk Metrics sobre el informe. El gráfico selecciona la salida de políticas."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "Datos",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 100
+            },
+            "data": {
+              "kind": "source",
+              "label": "Datos",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 3
+              }
+            }
+          },
+          {
+            "id": "Indicadores",
+            "type": "blueprint",
+            "position": {
+              "x": 300,
+              "y": 100
+            },
+            "data": {
+              "kind": "features",
+              "label": "Indicadores",
+              "params": {
+                "lags": 3
+              }
+            }
+          },
+          {
+            "id": "Agente",
+            "type": "blueprint",
+            "position": {
+              "x": 650,
+              "y": 100
+            },
+            "data": {
+              "kind": "rl_agent",
+              "label": "Agente",
+              "params": {
+                "epochs": 12,
+                "seed": 42,
+                "cost_bps": 5
+              }
+            }
+          },
+          {
+            "id": "Politicas",
+            "type": "blueprint",
+            "position": {
+              "x": 1000,
+              "y": 100
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Politicas",
+              "params": {
+                "study_chart": 0,
+                "chart_type": "line",
+                "title": "RL · políticas greedy en TE"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "Datos-Indicadores",
+            "source": "Datos",
+            "target": "Indicadores",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Indicadores-Agente",
+            "source": "Indicadores",
+            "target": "Agente",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Agente-Politicas",
+            "source": "Agente",
+            "target": "Politicas",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "research-data-quality",
+      "title": "Data · calidad y relleno causal",
+      "area": "Data · calidad",
+      "description": "Orden temporal, detección de duplicados, valores no finitos y forward fill limitado.",
+      "instructions": [
+        "Fuente synthetic por defecto para ejecución reproducible sin internet; selecciona yfinance para activos reales.",
+        "En ausencia de problemas conserva los datos. Los duplicados se rechazan por defecto.",
+        "Forward fill sólo usa observaciones anteriores y no cubre huecos arbitrariamente largos; no hay backfill."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "Datos",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 100
+            },
+            "data": {
+              "kind": "source",
+              "label": "Datos",
+              "params": {
+                "source": "synthetic",
+                "years": 3
+              }
+            }
+          },
+          {
+            "id": "Calidad",
+            "type": "blueprint",
+            "position": {
+              "x": 350,
+              "y": 100
+            },
+            "data": {
+              "kind": "data_quality",
+              "label": "Calidad",
+              "params": {
+                "duplicates": "error",
+                "missing": "ffill",
+                "ffill_limit": 3
+              }
+            }
+          },
+          {
+            "id": "Precio",
+            "type": "blueprint",
+            "position": {
+              "x": 700,
+              "y": 100
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Precio",
+              "params": {
+                "plot_source": "columns",
+                "plot_columns": "Close",
+                "title": "Precio tras control de calidad"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "Datos-Calidad",
+            "source": "Datos",
+            "target": "Calidad",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Calidad-Precio",
+            "source": "Calidad",
+            "target": "Precio",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "research-quant-features",
+      "title": "QL · retornos y riesgo móvil",
+      "area": "QL · análisis cuantitativo",
+      "description": "Retornos simples/logarítmicos, volatilidad y Sharpe móviles, acumulación logarítmica y drawdown.",
+      "instructions": [
+        "Fuente synthetic por defecto para ejecución reproducible sin internet; selecciona yfinance para activos reales.",
+        "QL significa aquí análisis cuantitativo; Q-learning está en RL.",
+        "252 observaciones/año para diario, 12 para mensual. Valores de Sharpe indefinidos no se sustituyen por cero.",
+        "Data Quality elimina explícitamente el calentamiento; Risk Metrics resume ROI/CAGR/VaR/CVaR/Sharpe/Sortino y volatilidad. Alpha/beta requieren benchmark."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "Datos",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 100
+            },
+            "data": {
+              "kind": "source",
+              "label": "Datos",
+              "params": {
+                "source": "synthetic",
+                "years": 3
+              }
+            }
+          },
+          {
+            "id": "Cuantitativo",
+            "type": "blueprint",
+            "position": {
+              "x": 350,
+              "y": 100
+            },
+            "data": {
+              "kind": "quant_features",
+              "label": "Cuantitativo",
+              "params": {
+                "window": 20,
+                "periods_per_year": 252,
+                "risk_free_rate": 0.02
+              }
+            }
+          },
+          {
+            "id": "Seleccion",
+            "type": "blueprint",
+            "position": {
+              "x": 700,
+              "y": 100
+            },
+            "data": {
+              "kind": "select_columns",
+              "label": "Seleccion",
+              "params": {
+                "columns": "Close,LogReturn,RollingVolatility,Drawdown,RollingSharpe"
+              }
+            }
+          },
+          {
+            "id": "Calidad",
+            "type": "blueprint",
+            "position": {
+              "x": 1000,
+              "y": 100
+            },
+            "data": {
+              "kind": "data_quality",
+              "label": "Calidad",
+              "params": {
+                "missing": "drop"
+              }
+            }
+          },
+          {
+            "id": "RiesgoMovil",
+            "type": "blueprint",
+            "position": {
+              "x": 1300,
+              "y": 100
+            },
+            "data": {
+              "kind": "plot",
+              "label": "RiesgoMovil",
+              "params": {
+                "plot_source": "columns",
+                "plot_columns": "RollingVolatility",
+                "title": "Volatilidad anualizada móvil"
+              }
+            }
+          },
+          {
+            "id": "Riesgo",
+            "type": "blueprint",
+            "position": {
+              "x": 1300,
+              "y": 400
+            },
+            "data": {
+              "kind": "risk",
+              "label": "Riesgo",
+              "params": {
+                "return_column": "LogReturn",
+                "return_type": "log"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "Datos-Cuantitativo",
+            "source": "Datos",
+            "target": "Cuantitativo",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Cuantitativo-Seleccion",
+            "source": "Cuantitativo",
+            "target": "Seleccion",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Seleccion-Calidad",
+            "source": "Seleccion",
+            "target": "Calidad",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Calidad-RiesgoMovil",
+            "source": "Calidad",
+            "target": "RiesgoMovil",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Calidad-Riesgo",
+            "source": "Calidad",
+            "target": "Riesgo",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "research-visual-histogram",
+      "title": "Visualización · distribución de retornos",
+      "area": "Visualización · distribuciones",
+      "description": "Histograma con intervalos configurables; conteo o densidad.",
+      "instructions": [
+        "Fuente synthetic por defecto para ejecución reproducible sin internet; selecciona yfinance para activos reales.",
+        "Selecciona exactamente una serie numérica, entre 5 y 100 bins. La suma de conteos coincide con las observaciones.",
+        "El histograma describe la distribución observada; no es una predicción de riesgo futuro."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "Datos",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 100
+            },
+            "data": {
+              "kind": "source",
+              "label": "Datos",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 3
+              }
+            }
+          },
+          {
+            "id": "Indicadores",
+            "type": "blueprint",
+            "position": {
+              "x": 300,
+              "y": 100
+            },
+            "data": {
+              "kind": "features",
+              "label": "Indicadores",
+              "params": {
+                "lags": 3
+              }
+            }
+          },
+          {
+            "id": "Distribucion",
+            "type": "blueprint",
+            "position": {
+              "x": 650,
+              "y": 100
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Distribucion",
+              "params": {
+                "plot_source": "columns",
+                "plot_columns": "LogReturn",
+                "chart_type": "histogram",
+                "hist_bins": 25,
+                "hist_density": false,
+                "title": "Distribución de retornos logarítmicos"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "Datos-Indicadores",
+            "source": "Datos",
+            "target": "Indicadores",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Indicadores-Distribucion",
+            "source": "Indicadores",
+            "target": "Distribucion",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          }
+        ]
+      }
     }
   ]
 }

@@ -1,0 +1,189 @@
+{
+  "schemaVersion": 1,
+  "nodes": {
+    "curve_data": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "curve_fit": {
+      "input": "frame",
+      "output": "tensor",
+      "extraInputs": {
+        "config": "config",
+        "network": "network"
+      }
+    },
+    "study": {
+      "input": "frame",
+      "output": "tensor",
+      "extraInputs": {
+        "asset_b": "frame",
+        "asset_c": "frame"
+      }
+    },
+    "source": {
+      "input": null,
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "features": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {
+        "config": "config"
+      }
+    },
+    "prepare": {
+      "input": "frame",
+      "output": "tensor",
+      "extraInputs": {
+        "config": "config"
+      }
+    },
+    "model": {
+      "input": "tensor",
+      "output": "tensor",
+      "extraInputs": {
+        "config": "config",
+        "network": "network"
+      }
+    },
+    "backtest": {
+      "input": "tensor",
+      "output": "tensor",
+      "extraInputs": {
+        "config": "config"
+      }
+    },
+    "config": {
+      "input": null,
+      "output": "config",
+      "extraInputs": {}
+    },
+    "network_input": {
+      "input": null,
+      "output": "network",
+      "extraInputs": {}
+    },
+    "layer": {
+      "input": "network",
+      "output": "network",
+      "extraInputs": {}
+    },
+    "network_output": {
+      "input": "network",
+      "output": "network",
+      "extraInputs": {}
+    },
+    "merge": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {
+        "frame_b": "frame"
+      }
+    },
+    "plot": {
+      "input": null,
+      "output": null,
+      "extraInputs": {
+        "frame": "frame",
+        "tensor": "tensor",
+        "portfolio": "portfolio"
+      }
+    },
+    "portfolio_data": {
+      "input": null,
+      "output": "portfolio",
+      "extraInputs": {}
+    },
+    "portfolio": {
+      "input": "portfolio",
+      "output": "portfolio",
+      "extraInputs": {}
+    },
+    "risk": {
+      "input": null,
+      "output": "portfolio",
+      "extraInputs": {
+        "frame": "frame",
+        "tensor": "tensor",
+        "portfolio": "portfolio",
+        "benchmark": "frame"
+      }
+    },
+    "resample": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "select_columns": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "coordinate": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "center": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "scale_columns": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "data_quality": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "quant_features": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "ml_model": {
+      "input": "tensor",
+      "output": "tensor",
+      "extraInputs": {
+        "config": "config"
+      }
+    },
+    "rl_agent": {
+      "input": "frame",
+      "output": "tensor",
+      "extraInputs": {}
+    }
+  },
+  "tensorSources": {
+    "model": [
+      "prepare"
+    ],
+    "ml_model": [
+      "prepare"
+    ],
+    "backtest": [
+      "model",
+      "ml_model"
+    ],
+    "risk": [
+      "model",
+      "ml_model",
+      "backtest"
+    ],
+    "plot": [
+      "prepare",
+      "model",
+      "ml_model",
+      "backtest",
+      "curve_fit",
+      "study",
+      "rl_agent"
+    ]
+  }
+}

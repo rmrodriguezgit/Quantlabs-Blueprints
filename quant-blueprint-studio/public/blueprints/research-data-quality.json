@@ -1,0 +1,89 @@
+{
+  "format": "quantlabs-blueprint-library",
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "research-data-quality",
+      "title": "Data · calidad y relleno causal",
+      "area": "Data · calidad",
+      "description": "Orden temporal, detección de duplicados, valores no finitos y forward fill limitado.",
+      "instructions": [
+        "Fuente synthetic por defecto para ejecución reproducible sin internet; selecciona yfinance para activos reales.",
+        "En ausencia de problemas conserva los datos. Los duplicados se rechazan por defecto.",
+        "Forward fill sólo usa observaciones anteriores y no cubre huecos arbitrariamente largos; no hay backfill."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "Datos",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 100
+            },
+            "data": {
+              "kind": "source",
+              "label": "Datos",
+              "params": {
+                "source": "synthetic",
+                "years": 3
+              }
+            }
+          },
+          {
+            "id": "Calidad",
+            "type": "blueprint",
+            "position": {
+              "x": 350,
+              "y": 100
+            },
+            "data": {
+              "kind": "data_quality",
+              "label": "Calidad",
+              "params": {
+                "duplicates": "error",
+                "missing": "ffill",
+                "ffill_limit": 3
+              }
+            }
+          },
+          {
+            "id": "Precio",
+            "type": "blueprint",
+            "position": {
+              "x": 700,
+              "y": 100
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Precio",
+              "params": {
+                "plot_source": "columns",
+                "plot_columns": "Close",
+                "title": "Precio tras control de calidad"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "Datos-Calidad",
+            "source": "Datos",
+            "target": "Calidad",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Calidad-Precio",
+            "source": "Calidad",
+            "target": "Precio",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          }
+        ]
+      }
+    }
+  ]
+}

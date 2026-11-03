@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.7.0 — 2026-11-02
+
+- Reingeniería: registro común de contratos para motor, recomendaciones y validación, comprobado contra todo el catálogo.
+- Classical ML: Ridge, ElasticNet, Random Forest, Histogram Boosting, SVR, KNN y baseline; selección sólo VA, evaluación TE una vez y salida compatible con Plot/Backtest/Risk.
+- DL: Transformer con posiciones y ventanas históricas, AdamW y RMSprop. RL Trading Agent reutiliza Double DQN/Q-learning auditados.
+- Data Quality causal, Quant Features de riesgo móvil y histogramas configurables. Seis recetas nuevas: 26 herramientas y 27 diseños, sin nuevas dependencias.
+
+
 ## v0.6.0 — 2026-11-02
 
 - Biblioteca común: Select Columns, Resample, Numeric Coordinate, Center Columns y Scale Columns, reutilizables con los nodos existentes. Búsqueda y orden por área en paleta; herramientas de cada receta visibles.

@@ -1,0 +1,189 @@
+{
+  "format": "quantlabs-blueprint-library",
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "research-ml-compare",
+      "title": "ML · siete alternativas con selección VA",
+      "area": "ML · modelos clásicos",
+      "description": "Baseline de media, Ridge, ElasticNet, Random Forest, Histogram Boosting, SVR y KNN; selección por VA y evaluación única TE.",
+      "instructions": [
+        "Fuente synthetic por defecto para ejecución reproducible sin internet; selecciona yfinance para activos reales.",
+        "Las mismas ventanas y cortes para todos. Sólo se entrena con TR; VA selecciona; TE no modifica modelos.",
+        "Los resultados de pronóstico alimentan Backtest y Risk Metrics. El informe de selección aparece automáticamente.",
+        "No se declara ganador universal: el modelo elegido depende de los datos y la métrica."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "Datos",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 100
+            },
+            "data": {
+              "kind": "source",
+              "label": "Datos",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 3
+              }
+            }
+          },
+          {
+            "id": "Indicadores",
+            "type": "blueprint",
+            "position": {
+              "x": 300,
+              "y": 100
+            },
+            "data": {
+              "kind": "features",
+              "label": "Indicadores",
+              "params": {
+                "lags": 3
+              }
+            }
+          },
+          {
+            "id": "Preparar",
+            "type": "blueprint",
+            "position": {
+              "x": 600,
+              "y": 100
+            },
+            "data": {
+              "kind": "prepare",
+              "label": "Preparar",
+              "params": {
+                "lookback": 10,
+                "period": 20,
+                "feature_columns": "LogReturn,Volatility,RSI,EMA,SMA",
+                "scaler": "standard"
+              }
+            }
+          },
+          {
+            "id": "Modelo",
+            "type": "blueprint",
+            "position": {
+              "x": 900,
+              "y": 100
+            },
+            "data": {
+              "kind": "ml_model",
+              "label": "Modelo",
+              "params": {
+                "algorithm": "Compare",
+                "estimators": 50,
+                "max_depth": 6,
+                "alpha": 1,
+                "neighbors": 5,
+                "seed": 42
+              }
+            }
+          },
+          {
+            "id": "Pronostico",
+            "type": "blueprint",
+            "position": {
+              "x": 1200,
+              "y": 100
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Pronostico",
+              "params": {
+                "plot_source": "predictions",
+                "chart_type": "line",
+                "title": "TE · actual y predicho"
+              }
+            }
+          },
+          {
+            "id": "Backtest",
+            "type": "blueprint",
+            "position": {
+              "x": 1200,
+              "y": 400
+            },
+            "data": {
+              "kind": "backtest",
+              "label": "Backtest",
+              "params": {
+                "threshold": 0.001,
+                "fee_bps": 2,
+                "slippage_bps": 1
+              }
+            }
+          },
+          {
+            "id": "Riesgo",
+            "type": "blueprint",
+            "position": {
+              "x": 1500,
+              "y": 400
+            },
+            "data": {
+              "kind": "risk",
+              "label": "Riesgo",
+              "params": {}
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "Datos-Indicadores",
+            "source": "Datos",
+            "target": "Indicadores",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Indicadores-Preparar",
+            "source": "Indicadores",
+            "target": "Preparar",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Preparar-Modelo",
+            "source": "Preparar",
+            "target": "Modelo",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          },
+          {
+            "id": "Modelo-Pronostico",
+            "source": "Modelo",
+            "target": "Pronostico",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          },
+          {
+            "id": "Modelo-Backtest",
+            "source": "Modelo",
+            "target": "Backtest",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          },
+          {
+            "id": "Backtest-Riesgo",
+            "source": "Backtest",
+            "target": "Riesgo",
+            "sourceHandle": "tensor",
+            "targetHandle": "tensor",
+            "animated": true
+          }
+        ]
+      }
+    }
+  ]
+}

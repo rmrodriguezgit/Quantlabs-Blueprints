@@ -1,0 +1,91 @@
+{
+  "format": "quantlabs-blueprint-library",
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "research-visual-histogram",
+      "title": "Visualización · distribución de retornos",
+      "area": "Visualización · distribuciones",
+      "description": "Histograma con intervalos configurables; conteo o densidad.",
+      "instructions": [
+        "Fuente synthetic por defecto para ejecución reproducible sin internet; selecciona yfinance para activos reales.",
+        "Selecciona exactamente una serie numérica, entre 5 y 100 bins. La suma de conteos coincide con las observaciones.",
+        "El histograma describe la distribución observada; no es una predicción de riesgo futuro."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "Datos",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 100
+            },
+            "data": {
+              "kind": "source",
+              "label": "Datos",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 3
+              }
+            }
+          },
+          {
+            "id": "Indicadores",
+            "type": "blueprint",
+            "position": {
+              "x": 300,
+              "y": 100
+            },
+            "data": {
+              "kind": "features",
+              "label": "Indicadores",
+              "params": {
+                "lags": 3
+              }
+            }
+          },
+          {
+            "id": "Distribucion",
+            "type": "blueprint",
+            "position": {
+              "x": 650,
+              "y": 100
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Distribucion",
+              "params": {
+                "plot_source": "columns",
+                "plot_columns": "LogReturn",
+                "chart_type": "histogram",
+                "hist_bins": 25,
+                "hist_density": false,
+                "title": "Distribución de retornos logarítmicos"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "Datos-Indicadores",
+            "source": "Datos",
+            "target": "Indicadores",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Indicadores-Distribucion",
+            "source": "Indicadores",
+            "target": "Distribucion",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          }
+        ]
+      }
+    }
+  ]
+}

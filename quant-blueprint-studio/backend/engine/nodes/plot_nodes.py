@@ -13,8 +13,8 @@ PALETTE = {'Mint':'#6cc9ac', 'Violet':'#9c9af8', 'Orange':'#f2ad65', 'Blue':'#79
 def plot(value: Any, params: dict[str, Any], node_id: str) -> dict[str, Any]:
     mode = str(params.get('plot_source', 'auto'))
     kind = str(params.get('chart_type', 'line'))
-    if kind not in ('line', 'area', 'bar', 'scatter', 'scatter_line'):
-        raise ValueError('Plot chart type must be line, area, bar, scatter or scatter_line.')
+    if kind not in ('line', 'area', 'bar', 'scatter', 'scatter_line', 'histogram'):
+        raise ValueError('Plot chart type must be line, area, bar, scatter, scatter_line or histogram.')
     if isinstance(value, dict) and value.get('study'):
         index = int(params.get('study_chart', 0))
         charts = value['charts']
@@ -93,6 +93,16 @@ def plot(value: Any, params: dict[str, Any], node_id: str) -> dict[str, Any]:
     available = {key for key, number in rows[0].items() if key != x_key and isinstance(number, (int, float))}
     if not series or len(series) > 12 or len(series) != len(set(series)) or set(series) - available:
         raise ValueError(f'Choose 1–12 unique numeric series. Available: {", ".join(sorted(available))}.')
+    if kind=='histogram':
+        bins=int(params.get('hist_bins',20))
+        if len(series)!=1 or not 5<=bins<=100:
+            raise ValueError('Histogram requires exactly one series and 5–100 bins.')
+        values=np.asarray([row[series[0]] for row in rows],dtype=float)
+        if not np.isfinite(values).all():raise ValueError('Histogram observations must be finite; clean missing rows upstream.')
+        counts,bounds=np.histogram(values,bins=bins,density=bool(params.get('hist_density',False)))
+        x_key='bin';series=['density' if params.get('hist_density',False) else 'count']
+        rows=[{'bin':float((bounds[i]+bounds[i+1])/2),series[0]:float(count)} for i,count in enumerate(counts)]
+        kind='bar'
     y_scale=str(params.get('y_scale','linear'))
     if y_scale not in ('linear','log'):raise ValueError('Y scale must be linear or log.')
     if y_scale=='log' and any(not np.isfinite(row[column]) or row[column]<=0 for row in rows for column in series):

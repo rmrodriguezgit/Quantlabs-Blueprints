@@ -1,0 +1,160 @@
+{
+  "format": "quantlabs-blueprint-library",
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "research-quant-features",
+      "title": "QL · retornos y riesgo móvil",
+      "area": "QL · análisis cuantitativo",
+      "description": "Retornos simples/logarítmicos, volatilidad y Sharpe móviles, acumulación logarítmica y drawdown.",
+      "instructions": [
+        "Fuente synthetic por defecto para ejecución reproducible sin internet; selecciona yfinance para activos reales.",
+        "QL significa aquí análisis cuantitativo; Q-learning está en RL.",
+        "252 observaciones/año para diario, 12 para mensual. Valores de Sharpe indefinidos no se sustituyen por cero.",
+        "Data Quality elimina explícitamente el calentamiento; Risk Metrics resume ROI/CAGR/VaR/CVaR/Sharpe/Sortino y volatilidad. Alpha/beta requieren benchmark."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "Datos",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 100
+            },
+            "data": {
+              "kind": "source",
+              "label": "Datos",
+              "params": {
+                "source": "synthetic",
+                "years": 3
+              }
+            }
+          },
+          {
+            "id": "Cuantitativo",
+            "type": "blueprint",
+            "position": {
+              "x": 350,
+              "y": 100
+            },
+            "data": {
+              "kind": "quant_features",
+              "label": "Cuantitativo",
+              "params": {
+                "window": 20,
+                "periods_per_year": 252,
+                "risk_free_rate": 0.02
+              }
+            }
+          },
+          {
+            "id": "Seleccion",
+            "type": "blueprint",
+            "position": {
+              "x": 700,
+              "y": 100
+            },
+            "data": {
+              "kind": "select_columns",
+              "label": "Seleccion",
+              "params": {
+                "columns": "Close,LogReturn,RollingVolatility,Drawdown,RollingSharpe"
+              }
+            }
+          },
+          {
+            "id": "Calidad",
+            "type": "blueprint",
+            "position": {
+              "x": 1000,
+              "y": 100
+            },
+            "data": {
+              "kind": "data_quality",
+              "label": "Calidad",
+              "params": {
+                "missing": "drop"
+              }
+            }
+          },
+          {
+            "id": "RiesgoMovil",
+            "type": "blueprint",
+            "position": {
+              "x": 1300,
+              "y": 100
+            },
+            "data": {
+              "kind": "plot",
+              "label": "RiesgoMovil",
+              "params": {
+                "plot_source": "columns",
+                "plot_columns": "RollingVolatility",
+                "title": "Volatilidad anualizada móvil"
+              }
+            }
+          },
+          {
+            "id": "Riesgo",
+            "type": "blueprint",
+            "position": {
+              "x": 1300,
+              "y": 400
+            },
+            "data": {
+              "kind": "risk",
+              "label": "Riesgo",
+              "params": {
+                "return_column": "LogReturn",
+                "return_type": "log"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "Datos-Cuantitativo",
+            "source": "Datos",
+            "target": "Cuantitativo",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Cuantitativo-Seleccion",
+            "source": "Cuantitativo",
+            "target": "Seleccion",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Seleccion-Calidad",
+            "source": "Seleccion",
+            "target": "Calidad",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Calidad-RiesgoMovil",
+            "source": "Calidad",
+            "target": "RiesgoMovil",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Calidad-Riesgo",
+            "source": "Calidad",
+            "target": "Riesgo",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -4,6 +4,8 @@ from typing import Any, Callable
 import numpy as np
 import pandas as pd
 import torch
+from .nodes.ml_nodes import train_ml
+from .nodes.research_nodes import data_quality, quant_features
 from .nodes.transform_nodes import transform
 from .nodes.scaling_nodes import affine_audit
 from .nodes.curve_nodes import monthly_curve, curve_fit
@@ -16,21 +18,11 @@ from .nodes.plot_nodes import plot
 from .nodes.metrics_nodes import RiskAnalysis, analyze, frame_returns
 from .nodes.portfolio_nodes import PortfolioData, PortfolioResult, portfolio_data, build_portfolio
 
-PINS = {'curve_data': ('frame','frame'), 'curve_fit': ('frame','tensor'), 'study': ('frame', 'tensor'), 'source': (None, 'frame'), 'features': ('frame', 'frame'), 'prepare': ('frame', 'tensor'),
-        'model': ('tensor', 'tensor'), 'backtest': ('tensor', None), 'config': (None, 'config'),
-        'network_input': (None, 'network'), 'layer': ('network', 'network'),
-        'network_output': ('network', 'network'), 'merge': ('frame', 'frame'), 'plot': (None, None), 'portfolio_data': (None, 'portfolio'), 'portfolio': ('portfolio', 'portfolio'), 'risk': (None, 'portfolio')}
-PINS.update({kind: ('frame','frame') for kind in ('resample','select_columns','coordinate','center','scale_columns')})
-INPUTS = {kind: ({pin: pin} if pin else {}) for kind, (pin, _) in PINS.items()}
-for kind in ('features', 'prepare', 'model', 'backtest', 'curve_fit'):
-    INPUTS[kind]['config'] = 'config'
-INPUTS['study'].update({'asset_b':'frame','asset_c':'frame'})
-INPUTS['model']['network'] = 'network'
-INPUTS['curve_fit']['network'] = 'network'
-INPUTS['merge']['frame_b'] = 'frame'
-INPUTS['plot'] = {'frame': 'frame', 'tensor': 'tensor', 'portfolio': 'portfolio'}
-INPUTS['risk'] = {'frame': 'frame', 'tensor': 'tensor', 'portfolio': 'portfolio', 'benchmark': 'frame'}
-PINS['backtest'] = ('tensor', 'tensor')
+from pathlib import Path
+import json
+CONTRACTS = json.loads((Path(__file__).resolve().parents[2]/'src/renderer/data/node-contracts.json').read_text())
+PINS = {kind:(entry['input'],entry['output']) for kind,entry in CONTRACTS['nodes'].items()}
+INPUTS = {kind:{**({entry['input']:entry['input']} if entry['input'] else {}),**entry['extraInputs']} for kind,entry in CONTRACTS['nodes'].items()}
 
 
 def serialize(value: Any) -> Any:
@@ -70,10 +62,8 @@ class DAGRunner:
             out_pin, in_pin = edge.get('sourceHandle'), edge.get('targetHandle')
             if out_pin is None or out_pin != PINS[src][1] or INPUTS[dst].get(in_pin) != out_pin:
                 raise ValueError('Incompatible or missing pin handles.')
-            tensor_sources = {'model': {'prepare'}, 'backtest': {'model'}, 'risk': {'model', 'backtest'},
-                              'plot': {'prepare', 'model', 'backtest', 'curve_fit', 'study'}}
-            if in_pin == 'tensor' and src not in tensor_sources.get(dst, set()):
-                raise ValueError(f'Incompatible data: {src} → {dst}. Curve Fitting and Learning Experiment reports connect to Plot; Risk Metrics requires returns, a forecasting model, backtest or portfolio.')
+            if in_pin == 'tensor' and src not in CONTRACTS['tensorSources'].get(dst, []):
+                raise ValueError(f'Incompatible data: {src} → {dst}. Reports connect to Plot; Risk Metrics requires returns, a forecasting model, backtest or portfolio.')
             if any(e.get('targetHandle') == in_pin for e in self.incoming[edge['target']]):
                 raise ValueError('Only one connection per input pin is allowed.')
             self.incoming[edge['target']].append(edge)
@@ -116,6 +106,10 @@ class DAGRunner:
             try:
                 if kind == 'source':
                     output: Any = source(params)
+                elif kind == 'data_quality' and isinstance(upstream,pd.DataFrame):
+                    output=data_quality(upstream,params)
+                elif kind == 'quant_features' and isinstance(upstream,pd.DataFrame):
+                    output=quant_features(upstream,params)
                 elif kind == 'portfolio_data':
                     output = portfolio_data(params, (lambda symbol: progress({'node': key, 'status': 'running', 'detail': f'Loading {symbol}'})) if progress else None)
                 elif kind == 'portfolio' and isinstance(upstream, PortfolioData):
@@ -202,7 +196,8 @@ class DAGRunner:
                     if 'network' in inputs: params['_network']=inputs['network']
                     output = curve_fit(upstream, params, (lambda event: progress({'node':key,'status':'epoch',**event})) if progress else None)
                     report['studies'].append({'id':key,'title':node['data'].get('label','Curve fit'),**output})
-                elif kind == 'study' and isinstance(upstream, pd.DataFrame):
+                elif kind in ('study','rl_agent') and isinstance(upstream, pd.DataFrame):
+                    if kind=='rl_agent': params['topic']='double_dqn'
                     output = study(upstream, params, (lambda event: progress({'node': key, 'status': 'epoch', **event})) if progress else None, [inputs[k] for k in ('asset_b','asset_c') if k in inputs])
                     report['studies'].append({'id': key, 'title': node['data'].get('label', 'Experiment'), **output})
                 elif kind == 'features'  and isinstance(upstream, pd.DataFrame):
@@ -212,11 +207,15 @@ class DAGRunner:
                     report['decomposition'] = output.decomposition
                     report['features'] = output.feature_names
                     report['input_shape'] = list(output.x_train.shape[1:])
-                elif kind == 'model' and isinstance(upstream, PreparedData):
+                elif kind in ('model','ml_model') and isinstance(upstream, PreparedData):
                     if 'network' in inputs:
                         params['_network'] = inputs['network']
                         params['architecture'] = 'Custom'
-                    output = train(upstream, params, (lambda event: progress({'node': key, 'status': 'epoch', **event})) if progress else None)
+                    if kind=='ml_model':
+                        output,diagnostics=train_ml(upstream,params,(lambda event: progress({'node':key,'status':'running',**event})) if progress else None)
+                        report['studies'].append({'id':key,'title':node['data'].get('label','Classical ML'),**diagnostics})
+                    else:
+                        output = train(upstream, params, (lambda event: progress({'node': key, 'status': 'epoch', **event})) if progress else None)
                     report['metrics'] = output.metrics
                     report['history'] = output.history
                     report['predictions'] = [{'date': d, 'actual': float(y), 'predicted': float(p)} for d, y, p in zip(upstream.dates, upstream.y_test, output.predicted)]

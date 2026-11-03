@@ -1,4 +1,4 @@
-# Verificación del proyecto (v0.6.0)
+# Verificación del proyecto (v0.7.0)
 
 Fecha: 2 de noviembre de 2026. Entorno local macOS, Python 3.12.12, Node.js 22.22.3, npm 10.9.8.
 
@@ -177,3 +177,11 @@ Electron: ficha seleccionada desde Biblioteca y ejecutada con yfinance EURUSD=X;
 - Captura docs/v0.6-modular.png; mapa de todas las recetas y alcance en docs/UNIFIED_LIBRARY.md. Los entrenadores y experimentos avanzados mantienen sus protocolos compuestos.
 
 Vista final de la biblioteca y receta de escalado ejecutada tras el acabado visual: docs/v0.6-library.png.
+
+## Reingeniería por áreas (v0.7.0)
+
+- 67 pruebas Python aprobadas: siete algoritmos ML y selección VA invariantes a cambios de etiquetas TE; formas/gradientes/divisibilidad Transformer; relleno causal; retornos/drawdown; Sharpe indefinido; conteos de histograma; contratos compartidos y 27 recetas.
+- Compilación TypeScript/Vite/Electron y suites de grafos, conexiones, biblioteca y catálogo aprobadas. Catálogo y registro común coinciden en los 26 tipos, pines primarios y auxiliares.
+- Seis recetas research-* ejecutadas por API local con parámetros predeterminados: Data Quality 3/3, Transformer 7/7, ML 7/7, Quant Features 6/6, RL Agent 4/4 e histograma 3/3.
+- Electron: comparador ML 7/7 con selección Ridge en estos datos sintéticos, backtest y riesgo; Transformer 7/7. Vista final conserva comparador ML ejecutado en v0.7.0. Captura docs/v0.7-reengineering.png.
+- Sin dependencias nuevas. Alternativas evaluadas, fuentes oficiales y límites documentados en docs/LIBRARY_REENGINEERING.md. Se distinguen las extensiones todavía no implementadas.
