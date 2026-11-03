@@ -7,6 +7,7 @@ import {
   Scatter,
   XAxis,
   YAxis,
+  ZAxis,
   CartesianGrid,
   Tooltip,
   Legend,
@@ -89,6 +90,7 @@ export function PlotDock({
                       : Number(value).toPrecision(3)
                   }
                 />
+                <ZAxis type="number" range={[12, 12]} />
                 <Tooltip
                   contentStyle={{
                     background: "#171f2b",
@@ -107,6 +109,8 @@ export function PlotDock({
                       dataKey={key}
                       name={plot.labels?.[key] ?? key}
                       fill={plot.colors?.[key] ?? colors[i % colors.length]}
+                      stroke="none"
+                      fillOpacity={0.8}
                       isAnimationActive={false}
                     />
                   ) : plot.chart_type === "bar" ? (
@@ -139,7 +143,7 @@ export function PlotDock({
                       name={plot.labels?.[key] ?? key}
                       stroke={plot.colors?.[key] ?? colors[i % colors.length]}
                       dot={false}
-                      strokeWidth={1.5}
+                      strokeWidth={1.1}
                       isAnimationActive={false}
                     />
                   ),

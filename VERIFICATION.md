@@ -1,4 +1,4 @@
-# Verificación del proyecto (v0.5.6)
+# Verificación del proyecto (v0.5.7)
 
 Fecha: 2 de noviembre de 2026. Entorno local macOS, Python 3.12.12, Node.js 22.22.3, npm 10.9.8.
 
@@ -153,3 +153,7 @@ Consultar `quant-blueprint-studio/package-lock.json` para el árbol npm completo
 Cinco pruebas notebook_tools aprobadas: coordenada automática en DataFrame y Curve Fitting, curva suave de 300 puntos, fecha conservada en líneas y fecha explícita rechazada para scatter. Compilación TypeScript/Vite/Electron correcta.
 
 Electron con el blueprint del usuario EURUSD=X, 15 años: ejecución 5/5 completada, 180 meses, Scatter con X −2…2 y monitor «sin validación separada». Se conservaron conexiones y parámetros; captura docs/v0.5.6-scatter.png.
+
+## Grosor de gráficos (v0.5.7)
+
+Build TypeScript/Vite/Electron verificado. Scatter fija área de puntos en 12 px² mediante ZAxis, sin borde; líneas en 1.1 px. Cambio sólo de representación.

@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.5.7 — 2026-11-02
+
+- Puntos Scatter pequeños (área 12 px², radio aproximado 2 px), sin borde y opacidad 0.8 para evitar bandas gruesas por superposición.
+- Líneas de Plot reducidas a 1.1 px; no modifica datos ni entrenamiento.
+
+
 ## v0.5.6 — 2026-11-02
 
 - Scatter con X vacío detecta Coordinate en Monthly Curve Data y coordinate en informes Curve Fitting, conservando X explícita y fechas en líneas.
