@@ -653,7 +653,7 @@ export const catalog: Record<Kind, Definition> = {
   },
   features: {
     label: "Technical Features",
-    subtitle: "Select RSI · EMA · SMA · MACD · VWAP · BB",
+    subtitle: "LogReturn · Volatility + selectable indicators",
     category: "02 / TRANSFORM",
     color: "#e6b86a",
     input: "frame",
@@ -665,6 +665,13 @@ export const catalog: Record<Kind, Definition> = {
         value: 5,
         min: 0,
         max: 60,
+      },
+      {
+        key: "volatility_window",
+        label: "Volatility period (log returns)",
+        value: 20,
+        min: 2,
+        max: 252,
       },
       ...["rsi", "ema", "sma", "macd", "vwap", "bb"].map((name) => ({
         key: `use_${name}`,

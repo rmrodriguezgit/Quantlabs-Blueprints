@@ -13,6 +13,7 @@ interface Props {
   availableFeatures: string[];
   onDuplicate: () => void;
   networkConnected?: boolean;
+  frameConnected?: boolean;
 }
 export function DetailsInspector({
   node,
@@ -22,6 +23,7 @@ export function DetailsInspector({
   availableFeatures,
   onDuplicate,
   networkConnected = false,
+  frameConnected = false,
 }: Props) {
   return (
     <aside className="inspector">
@@ -45,6 +47,11 @@ export function DetailsInspector({
               : node.data.label}
           </div>
           <p className="muted">{catalog[node.data.kind].subtitle}</p>
+          {node.data.label !== catalog[node.data.kind].label && (
+            <p className="muted">
+              Herramienta: {catalog[node.data.kind].label}
+            </p>
+          )}
           {["center", "scale_columns"].includes(node.data.kind) && (
             <p className="inspector-hint">
               Añade columnas derivadas y conserva las originales. fit_fraction=1
@@ -109,10 +116,34 @@ export function DetailsInspector({
             </p>
           )}
           {node.data.kind === "features" && (
-            <p className="inspector-hint">
-              VWAP requires reported volume. For Yahoo FX symbols such as
-              EURUSD=X (zero volume), turn VWAP off.
-            </p>
+            <div className="inspector-hint">
+              <strong>Se calculan siempre</strong>
+              <p>
+                LogReturn = log(Close / Close anterior). Volatility = desviación
+                móvil de LogReturn (sin anualizar). CumulativeLogReturn = suma
+                de LogReturn tras el calentamiento.
+              </p>
+              <p>
+                Estas columnas no necesitan casilla de activación. Se
+                seleccionan como entradas en Series Preparation o Learning
+                Experiment.
+              </p>
+              {!frameConnected && (
+                <p role="alert">
+                  Falta entrada de datos: conecta Market Data → entrada naranja
+                  frame. Un nodo desconectado también se intenta ejecutar.
+                </p>
+              )}
+              <details>
+                <summary>Columnas de salida previstas</summary>
+                <p>{availableFeatures.join(", ")}</p>
+              </details>
+              <p>
+                VWAP necesita volumen reportado. Para EURUSD=X sin volumen,
+                desactiva VWAP y retíralo de las columnas seleccionadas por el
+                entrenador.
+              </p>
+            </div>
           )}
           {node.data.kind === "plot" && (
             <div className="inspector-hint">

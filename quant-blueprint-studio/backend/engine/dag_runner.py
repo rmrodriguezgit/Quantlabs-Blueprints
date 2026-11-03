@@ -90,6 +90,14 @@ class DAGRunner:
         report: dict[str, Any] = {'decomposition': [], 'predictions': [], 'backtest': [], 'metrics': {}, 'history': [], 'nodes': [], 'plots': [], 'portfolios': [], 'risk_reports': [], 'studies': [], 'scaling_audits': []}
         order = self.topological_sort()
         for key in order:
+            node=self.nodes[key];kind=node['data']['kind'];required=PINS[kind][0]
+            if required and not any(edge.get('targetHandle')==required for edge in self.incoming[key]):
+                label=node['data'].get('label') or kind
+                detail=f'{label} ({kind}): falta la entrada {required}. Conecta una salida compatible al pin {required}. Todos los nodos del lienzo se ejecutan, incluso los desconectados.'
+                if kind=='features':detail+=' Technical Features recibe Market Data por los pines naranjas frame; LogReturn, CumulativeLogReturn y Volatility se calculan automáticamente.'
+                if progress:progress({'node':key,'status':'error','detail':detail})
+                raise ValueError(detail)
+        for key in order:
             node = self.nodes[key]
             kind, params = node['data']['kind'], dict(node['data'].get('params', {}))
             upstream: Any = None

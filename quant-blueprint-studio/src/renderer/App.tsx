@@ -187,6 +187,25 @@ export default function App() {
       if (!isResult(value))
         throw new Error("Engine returned an invalid result.");
       setResult(value);
+      // The final result confirms every node completed; IPC progress can arrive later.
+      setEntries((previous) => {
+        const completed = new Set(
+          previous
+            .filter((event) => event.status === "complete")
+            .map((event) => event.node),
+        );
+        return [
+          ...previous,
+          ...executionGraph.nodes
+            .filter((node) => !completed.has(node.id))
+            .map((node) => ({
+              node: node.id,
+              label: node.data.label,
+              status: "complete" as const,
+              time: (Date.now() - started.current) / 1000,
+            })),
+        ];
+      });
       setMessage(
         value.portfolios?.length
           ? `Completed ${executionGraph.nodes.length} nodes · ${value.portfolios.length} portfolio report(s) · ${value.portfolios[0].metrics[0]?.observations ?? 0} holdout observations`
@@ -441,6 +460,9 @@ export default function App() {
             (e) => e.target === selected && e.targetHandle === "network",
           )}
           node={graph.nodes.find((n) => n.id === selected)}
+          frameConnected={graph.edges.some(
+            (edge) => edge.target === selected && edge.targetHandle === "frame",
+          )}
           availableFeatures={selected ? featureOptions(graph, selected) : []}
           onDuplicate={() => {
             const original = graph.nodes.find((n) => n.id === selected);

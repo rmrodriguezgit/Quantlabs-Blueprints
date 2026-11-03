@@ -34,8 +34,14 @@ def source(params: dict[str, Any]) -> pd.DataFrame:
 
 def features(frame: pd.DataFrame, params: dict[str, Any]) -> pd.DataFrame:
     """Append only enabled indicators. VWAP is trailing N-day typical-price VWAP."""
+    required={'Close'} | ({'High','Low','Volume'} if params.get('use_vwap',True) else set())
+    missing=required-set(frame.columns)
+    if missing:
+        raise ValueError('Technical Features needs OHLCV from Market Data. Missing columns: '+', '.join(sorted(missing))+'. Connect the orange frame pins; disable VWAP for Close-only inputs.')
     result = frame.copy()
     close = result['Close']
+    if not np.isfinite(close.to_numpy(dtype=float)).all() or not close.gt(0).all():
+        raise ValueError('Technical Features requires positive finite Close prices. Clean the input with Data Quality first.')
     result['LogReturn'] = np.log(close / close.shift(1))
     lags = int(params.get('lags', 5))
     if not 0 <= lags <= 60:
@@ -79,7 +85,7 @@ def features(frame: pd.DataFrame, params: dict[str, Any]) -> pd.DataFrame:
         middle = close.rolling(period).mean()
         spread = deviations * close.rolling(period).std(ddof=0)
         result['BBMiddle'], result['BBUpper'], result['BBLower'] = middle, middle + spread, middle - spread
-    result['Volatility'] = result['LogReturn'].rolling(20).std()
+    result['Volatility'] = result['LogReturn'].rolling(window('volatility_window',20)).std()
     cleaned = result.replace([np.inf, -np.inf], np.nan).dropna()
     # Accumulate the exact retained LogReturn series, after indicator warm-up.
     cleaned['CumulativeLogReturn'] = cleaned['LogReturn'].cumsum()

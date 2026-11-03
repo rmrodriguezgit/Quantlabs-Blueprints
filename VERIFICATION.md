@@ -1,6 +1,6 @@
-# Verificación del proyecto (v0.7.0)
+# Verificación del proyecto (v0.7.1)
 
-Fecha: 2 de noviembre de 2026. Entorno local macOS, Python 3.12.12, Node.js 22.22.3, npm 10.9.8.
+Fecha: 3 de noviembre de 2026. Entorno local macOS, Python 3.12.12, Node.js 22.22.3, npm 10.9.8.
 
 ## Conectores (v0.5.5)
 
@@ -185,3 +185,9 @@ Vista final de la biblioteca y receta de escalado ejecutada tras el acabado visu
 - Seis recetas research-* ejecutadas por API local con parámetros predeterminados: Data Quality 3/3, Transformer 7/7, ML 7/7, Quant Features 6/6, RL Agent 4/4 e histograma 3/3.
 - Electron: comparador ML 7/7 con selección Ridge en estos datos sintéticos, backtest y riesgo; Transformer 7/7. Vista final conserva comparador ML ejecutado en v0.7.0. Captura docs/v0.7-reengineering.png.
 - Sin dependencias nuevas. Alternativas evaluadas, fuentes oficiales y límites documentados en docs/LIBRARY_REENGINEERING.md. Se distinguen las extensiones todavía no implementadas.
+
+## Technical Features (v0.7.1)
+
+71 pruebas Python aprobadas. Retornos y volatilidad configurada contrastados con NumPy/pandas; falta de entrada detectada antes de ejecutar la fuente; validación de OHLCV y entrada Close-only sin VWAP. Build TypeScript/Vite/Electron correcto.
+
+Electron: el diseño del usuario contenía dos Technical Features; el original «11 causal indicators» estaba desconectado. Se conectó también a Market Data conservando ambos nodos y la rama activa. Ejecución final 6/6, 244 observaciones TE; inspector muestra tipo real, salidas automáticas y columnas previstas. Contador final reconciliado tras eventos IPC tardíos. Captura docs/v0.7.1-features.png.

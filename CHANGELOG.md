@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.7.1 — 2026-11-03
+
+- Technical Features muestra LogReturn, CumulativeLogReturn y Volatility como salidas automáticas y todas las columnas previstas; período de volatilidad configurable.
+- Inspector distingue el nombre de la receta del tipo real de herramienta y avisa si falta la entrada frame.
+- Contador final reconciliado con la ejecución completa cuando los últimos eventos IPC llegan después del resultado.
+- Prevalidación de entradas obligatorias antes de descargar o entrenar; diagnóstico explícito de nodos desconectados. Validación OHLCV y precios positivos.
+
+
 ## v0.7.0 — 2026-11-02
 
 - Reingeniería: registro común de contratos para motor, recomendaciones y validación, comprobado contra todo el catálogo.

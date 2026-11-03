@@ -1,4 +1,4 @@
-# Biblioteca de Blueprints — v0.7.0
+# Biblioteca de Blueprints — v0.7.1
 
 La aplicación incluye **27 diseños ejecutables**: seis recetas nuevas de investigación y dos recetas modulares, además de tres variantes del [notebook EUR/USD](NOTEBOOK_EURUSD.md) y los quince diseños base descritos abajo: diez basados en las diez imágenes encontradas (unidades 2–10 y ampliación cDCGAN) y cinco ejemplos adicionales. Se incorpora además la infografía Keras 1→256→1 adjuntada por el usuario, con su propio ejemplo; son 11 imágenes.
 
@@ -103,3 +103,9 @@ El protocolo in_sample mide ajuste de la muestra completa y no pronóstico. El m
 La biblioteca única añade dos recetas de transformaciones independientes. Consulta [herramientas y mapa completo](UNIFIED_LIBRARY.md).
 
 Las seis recetas de investigación de v0.7.0 cubren calidad de datos, histogramas, comparación ML, Transformer, riesgo móvil y RL. [Alcance y alternativas](LIBRARY_REENGINEERING.md).
+
+## Technical Features y nodos desconectados (v0.7.1)
+
+«11 causal indicators» es una etiqueta de receta del tipo Technical Features. El inspector muestra el tipo real. LogReturn, CumulativeLogReturn y Volatility se calculan siempre, sin checkbox; la volatilidad es la desviación móvil de rendimientos logarítmicos, sin anualizar (20 períodos por defecto). El inspector muestra las columnas de salida previstas y el período de volatilidad.
+
+Market Data debe conectarse a la entrada naranja frame. Todos los nodos del lienzo se ejecutan, incluso si no alimentan la rama principal. Añadir otro Technical Features no sustituye automáticamente al anterior: conecta también el nodo previo o retíralo del diseño. Las entradas obligatorias se comprueban antes de descargar o entrenar, con el nombre del nodo desconectado.
