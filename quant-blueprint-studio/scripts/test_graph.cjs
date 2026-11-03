@@ -6,7 +6,7 @@ const path = require('node:path');
 const temporary=mkdtempSync(path.join(tmpdir(),'quantlabs-graph-'));
 try {
  execFileSync(process.execPath,[require.resolve('typescript/bin/tsc'),'src/renderer/types/blueprint.ts','--outDir',temporary,'--module','commonjs','--target','es2022','--skipLibCheck','--esModuleInterop'],{stdio:'inherit'});
- const {networkExample,networkBindings,syncNetworkInputs,featureOptions,portfolioExample,presentPlot,inputHandles}=require(path.join(temporary,'blueprint.js'));
+ const {createNode,networkExample,networkBindings,syncNetworkInputs,featureOptions,portfolioExample,presentPlot,inputHandles}=require(path.join(temporary,'blueprint.js'));
  let graph=networkExample();
  let binding=networkBindings(graph)[0];
  assert.equal(binding.summary,'16 inputs → 64 ReLU → 32 ReLU → 1 output');
@@ -30,6 +30,10 @@ try {
  const styled=presentPlot({id:chart.id,title:'Old',origin:'SPY',chart_type:'line',source:'equity',x_key:'date',series:['max_sharpe'],rows:[]},chart,0);
  assert.equal(styled.title,'My returns');assert.equal(styled.colors.max_sharpe,'#f07777');assert.equal(styled.labels.max_sharpe,'Growth');
  chart.data.params.series_labels='';assert.equal(presentPlot(styled,chart,0).labels.max_sharpe,'max_sharpe');
+ const raw=createNode('source',0), center=createNode('center',1), selected=createNode('select_columns',2);
+ const transforms={nodes:[raw,center,selected],edges:[{id:'r-c',source:raw.id,target:center.id,sourceHandle:'frame',targetHandle:'frame'},{id:'c-s',source:center.id,target:selected.id,sourceHandle:'frame',targetHandle:'frame'}]};
+ assert(featureOptions(transforms,center.id).includes('Centered_Close'));
+ selected.data.params.columns='Centered_Close';assert.deepEqual(featureOptions(transforms,selected.id),['Centered_Close']);
  console.log('Portfolio/color checks passed.');
  console.log('Graph checks passed: architecture summary, automatic dimensions, manual mismatch, disabled indicators.');
 } finally {rmSync(temporary,{recursive:true,force:true});}

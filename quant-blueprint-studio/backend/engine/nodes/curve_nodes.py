@@ -8,6 +8,7 @@ import pandas as pd
 import torch
 from torch import nn
 from sklearn.preprocessing import PolynomialFeatures
+from .transform_nodes import resample_frame, coordinate, check_fit_boundary
 from .scaling_nodes import fit_scaler, disabled_audit, affine_audit
 from .study_nodes import chart, metrics
 from .dl_nodes import NetworkSpec, custom_network, describe_network
@@ -16,17 +17,10 @@ from .dl_nodes import NetworkSpec, custom_network, describe_network
 def monthly_curve(frame: pd.DataFrame, params: dict[str, Any]) -> pd.DataFrame:
     if not isinstance(frame.index,pd.DatetimeIndex) or 'Close' not in frame:
         raise ValueError('Connect daily Market Data with dated Close prices.')
-    daily=frame[['Close']].sort_index().dropna()
-    monthly=daily.resample('ME').last().dropna()
-    # Yahoo's current daily series can include the unfinished current month.
-    if params.get('exclude_incomplete_month',True) and len(monthly):
-        now=pd.Timestamp.now(tz=daily.index.tz)
-        if monthly.index[-1].to_period('M') >= now.to_period('M'):
-            monthly=monthly.iloc[:-1]
-    if len(monthly)<24:
-        raise ValueError(f'Only {len(monthly)} monthly closes; at least 24 required. Increase history.')
-    result=monthly.copy()
-    result['Coordinate']=np.linspace(-2,2,len(result))
+    result=resample_frame(frame,{'columns':'Close','frequency':'ME','aggregation':'last','exclude_incomplete':params.get('exclude_incomplete_month',True)})
+    if len(result)<24:
+        raise ValueError(f'Only {len(result)} monthly closes; at least 24 required. Increase history.')
+    result=coordinate(result,{'start':-2,'stop':2,'output_column':'Coordinate'})
     result.attrs['raw_rows']=len(frame)
     return result
 
@@ -73,6 +67,7 @@ def curve_fit(frame: pd.DataFrame,p: dict[str,Any],progress: Callable[[dict[str,
         if tr<.3 or va<.05 or tr+va>.95:raise ValueError('Require TR≥.3, VA≥.05 and TE≥.05.')
         a,b=int(n*tr),int(n*(tr+va))
         if min(a,b-a,n-b)<3:raise ValueError('Each temporal split needs at least 3 monthly observations.')
+    check_fit_boundary(frame, ['Close','Coordinate'], frame.index[a-1])
     x=frame.Coordinate.to_numpy(dtype=np.float64)[:,None]
     raw=frame.Close.to_numpy(dtype=np.float64)
     if not np.isfinite(x).all() or not np.isfinite(raw).all():

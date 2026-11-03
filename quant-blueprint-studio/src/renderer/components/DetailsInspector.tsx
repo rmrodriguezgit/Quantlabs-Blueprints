@@ -45,6 +45,22 @@ export function DetailsInspector({
               : node.data.label}
           </div>
           <p className="muted">{catalog[node.data.kind].subtitle}</p>
+          {["center", "scale_columns"].includes(node.data.kind) && (
+            <p className="inspector-hint">
+              Añade columnas derivadas y conserva las originales. fit_fraction=1
+              es descriptivo. En predicción temporal usa sólo filas TR; Series
+              Preparation rechaza columnas ajustadas con filas futuras. Su
+              escalador sigue activo: evita normalizar dos veces. Para datos
+              temporales usa preferentemente el escalado integrado de Series
+              Preparation.
+            </p>
+          )}
+          {node.data.kind === "coordinate" && (
+            <p className="inspector-hint">
+              Coordenada artificial según el orden de filas; no es una variable
+              económica ni un pronóstico.
+            </p>
+          )}
           {node.data.kind === "network_input" && (
             <p className="muted">
               last: N features from the last bar. flatten: lookback × N inputs.

@@ -1,4 +1,4 @@
-# Verificación del proyecto (v0.5.9)
+# Verificación del proyecto (v0.6.0)
 
 Fecha: 2 de noviembre de 2026. Entorno local macOS, Python 3.12.12, Node.js 22.22.3, npm 10.9.8.
 
@@ -167,3 +167,13 @@ Build TypeScript/Vite/Electron, suites de conexiones y biblioteca (18 diseños) 
 Biblioteca validada con 19 grafos y 11 imágenes. Prueba de integración ejecuta los diseños con datos sintéticos y presupuesto reducido; la nueva ficha comprueba 769 parámetros, tres Plot y curva suave de 300 puntos. Integridad SHA256 de imágenes y equivalencia de biblioteca pública/embebida comprobadas.
 
 Electron: ficha seleccionada desde Biblioteca y ejecutada con yfinance EURUSD=X; 9/9 nodos completados, 180 meses y tres gráficos visibles. Captura docs/v0.5.9-keras.png. La ficha quedó cargada en el lienzo.
+
+## Biblioteca única (v0.6.0)
+
+- 62 pruebas Python aprobadas, con ejecución sintética abreviada de las 21 recetas, integridad de 11 imágenes, validación HTTP de los 22 tipos y compatibilidad del remuestreo anterior.
+- Centrado por columna sin modificar originales; Standard/MinMax ajustados sólo con filas iniciales, columnas constantes y rechazo de ajuste con fechas futuras comprobados.
+- Compilación TypeScript/Vite/Electron y suites de conexiones, biblioteca, grafos y catálogo aprobadas.
+- Electron: búsqueda Scale devuelve Scale Columns; receta modular mensual ejecutada 6/6 con 174 meses sintéticos y Scatter centrado sin entrenador; receta StandardScaler 4/4, 756 filas y ajuste auditable sobre 491 filas. Se conservan los ejemplos anteriores.
+- Captura docs/v0.6-modular.png; mapa de todas las recetas y alcance en docs/UNIFIED_LIBRARY.md. Los entrenadores y experimentos avanzados mantienen sus protocolos compuestos.
+
+Vista final de la biblioteca y receta de escalado ejecutada tras el acabado visual: docs/v0.6-library.png.

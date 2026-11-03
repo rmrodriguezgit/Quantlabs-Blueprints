@@ -30,7 +30,7 @@ import {
   saveExample,
   type LibraryWorkspace,
 } from "../catalog";
-import type { Graph } from "../types/blueprint";
+import { catalog, type Graph } from "../types/blueprint";
 export function BlueprintLibrary({
   graph,
   title,
@@ -318,6 +318,22 @@ export function BlueprintLibrary({
                   <small>{entry.area}</small>
                   <h3>{entry.title}</h3>
                   <p>{entry.description}</p>
+                  <details className="recipe-tools">
+                    <summary>
+                      Herramientas de esta receta ·{" "}
+                      {new Set(entry.graph.nodes.map((n) => n.data.kind)).size}
+                    </summary>
+                    <p>
+                      {[...new Set(entry.graph.nodes.map((n) => n.data.kind))]
+                        .map((kind) => catalog[kind].label)
+                        .join(" → ")}
+                    </p>
+                    <small>
+                      Modifica y combina estas herramientas desde la biblioteca
+                      del lienzo. Los entrenadores avanzados conservan sus
+                      protocolos específicos.
+                    </small>
+                  </details>
                   <div
                     className="library-actions library-crud"
                     aria-label="Example actions"

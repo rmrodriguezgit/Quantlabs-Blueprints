@@ -42,8 +42,13 @@ import {
   type Kind,
 } from "../types/blueprint";
 import "@xyflow/react/dist/style.css";
-import { validConnection } from "../connections";
+import { validConnection, payloadLabel } from "../connections";
 const icons = {
+  resample: Layers3,
+  select_columns: SlidersHorizontal,
+  coordinate: Layers3,
+  center: SlidersHorizontal,
+  scale_columns: SlidersHorizontal,
   curve_data: Layers3,
   curve_fit: BrainCircuit,
   study: BrainCircuit,
@@ -65,6 +70,11 @@ const icons = {
 function nodeSummary(data: BlueprintNode["data"]): string {
   const p = data.params;
   switch (data.kind) {
+    case "select_columns": return String(p.columns || "Close");
+    case "resample": return `${p.frequency} · ${p.aggregation} · ${p.columns}`;
+    case "coordinate": return `${p.output_column}: ${p.start}…${p.stop}`;
+    case "center": return `${p.prefix}${p.columns} · fit ${Number(p.fit_fraction)*100}%`;
+    case "scale_columns": return `${p.method} · ${p.columns} · fit ${Number(p.fit_fraction)*100}%`;
     case "curve_data":
       return "Daily Close → monthly last → artificial coordinate";
     case "curve_fit":
@@ -158,7 +168,11 @@ function VisualNode({ id: nodeId, data, selected }: NodeProps<BlueprintNode>) {
       <div className="node-summary">{nodeSummary(data)}</div>
       <div className="node-pins">
         <span>{def.input ?? "source"}</span>
-        <span>{def.output ?? "report"}</span>
+        <span title={payloadLabel(data.kind)}>
+          {def.output === "tensor"
+            ? payloadLabel(data.kind)
+            : (def.output ?? "report")}
+        </span>
       </div>
       {Object.entries(inputHandles(data.kind))
         .filter(
@@ -234,7 +248,7 @@ function VisualNode({ id: nodeId, data, selected }: NodeProps<BlueprintNode>) {
         ))}
       {def.output && (
         <Handle
-          aria-label={`Salida ${def.output}`}
+          aria-label={`Salida ${def.output}: ${payloadLabel(data.kind)}`}
           title={`${def.output} · Doble clic para ver alternativas de conexión`}
           tabIndex={0}
           onDoubleClick={(event) => {
@@ -270,48 +284,66 @@ export function Palette({
   onAdd: (kind: Kind) => void;
   disabled: boolean;
 }) {
+  const [query, setQuery] = useState("");
   return (
     <aside className="palette">
       <div className="aside-heading">
         NODE LIBRARY <span>{Object.keys(catalog).length}</span>
       </div>
-      <p className="muted">Click or drag a node onto the canvas</p>
-      {(Object.keys(catalog) as Kind[]).map((kind) => {
-        const def = catalog[kind];
-        const Icon = icons[kind];
-        return (
-          <div
-            key={kind}
-            draggable={!disabled}
-            role="button"
-            tabIndex={disabled ? -1 : 0}
-            aria-label={`Add ${def.label}`}
-            onClick={() => {
-              if (!disabled) onAdd(kind);
-            }}
-            onKeyDown={(e) => {
-              if (!disabled && (e.key === "Enter" || e.key === " ")) {
-                e.preventDefault();
-                onAdd(kind);
-              }
-            }}
-            onDragStart={(e) => {
-              e.dataTransfer.setData("application/blueprint", kind);
-              e.dataTransfer.effectAllowed = "move";
-            }}
-            className="palette-item"
-          >
-            <span style={{ color: def.color }}>
-              <Icon size={18} />
-            </span>
-            <div>
-              <strong>{def.label}</strong>
-              <small>{def.subtitle}</small>
+      <p className="muted">
+        Biblioteca única · añade herramientas y combínalas en recetas.
+      </p>
+      <input
+        aria-label="Buscar herramientas"
+        placeholder="Buscar herramienta o área…"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+      />
+      {(Object.keys(catalog) as Kind[])
+        .filter((kind) =>
+          `${catalog[kind].label} ${catalog[kind].category} ${catalog[kind].subtitle}`
+            .toLowerCase()
+            .includes(query.toLowerCase()),
+        )
+        .sort((a, b) => catalog[a].category.localeCompare(catalog[b].category))
+        .map((kind) => {
+          const def = catalog[kind];
+          const Icon = icons[kind];
+          return (
+            <div
+              key={kind}
+              draggable={!disabled}
+              role="button"
+              tabIndex={disabled ? -1 : 0}
+              aria-label={`Add ${def.label}`}
+              onClick={() => {
+                if (!disabled) onAdd(kind);
+              }}
+              onKeyDown={(e) => {
+                if (!disabled && (e.key === "Enter" || e.key === " ")) {
+                  e.preventDefault();
+                  onAdd(kind);
+                }
+              }}
+              onDragStart={(e) => {
+                e.dataTransfer.setData("application/blueprint", kind);
+                e.dataTransfer.effectAllowed = "move";
+              }}
+              className="palette-item"
+            >
+              <span style={{ color: def.color }}>
+                <Icon size={18} />
+              </span>
+              <div>
+                <strong>{def.label}</strong>
+                <small>
+                  {def.category} · {def.subtitle}
+                </small>
+              </div>
+              <b>⋮</b>
             </div>
-            <b>⋮</b>
-          </div>
-        );
-      })}
+          );
+        })}
       <div className="pin-legend">
         <span>
           <i className="portfolio" />

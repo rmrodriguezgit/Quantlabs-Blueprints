@@ -63,6 +63,8 @@ def prepare(frame: pd.DataFrame, params: dict[str, Any]) -> PreparedData:
             'or reduce Series Preparation lookback (1 for a one-bar Dense input).')
     if len(frame) < 2 * period:
         raise ValueError(f'Decomposition period={period} needs {2 * period} usable rows; only {len(frame)} available. Reduce the decomposition period or increase data history.')
+    from .transform_nodes import check_fit_boundary
+    check_fit_boundary(frame, names, frame.index[lookback + train_end - 2])
     # Training windows end at lookback + train_end - 2. Fit nowhere else.
     scaler, audit = fit_scaler(values[:lookback + train_end - 1],names,str(params.get('scaler','standard')))
     audit.update({'fit_start':str(frame.index[0].date()), 'fit_end':str(frame.index[lookback+train_end-2].date()),

@@ -1,6 +1,15 @@
 import type { Connection, Edge } from "@xyflow/react";
-import { catalog, inputHandles, type Graph, type Kind } from "./types/blueprint";
-export function acceptsPayload(source: Kind, target: Kind, pin: string): boolean {
+import {
+  catalog,
+  inputHandles,
+  type Graph,
+  type Kind,
+} from "./types/blueprint";
+export function acceptsPayload(
+  source: Kind,
+  target: Kind,
+  pin: string,
+): boolean {
   if (pin !== "tensor") return true;
   if (target === "model") return source === "prepare";
   if (target === "backtest") return source === "model";
@@ -17,7 +26,11 @@ export function validConnection(
     !src ||
     !dst ||
     src.id === dst.id ||
-    !acceptsPayload(src.data.kind, dst.data.kind, connection.targetHandle ?? "") ||
+    !acceptsPayload(
+      src.data.kind,
+      dst.data.kind,
+      connection.targetHandle ?? "",
+    ) ||
     !connection.targetHandle ||
     !connection.sourceHandle ||
     (dst.data.kind === "study" &&
@@ -54,4 +67,15 @@ export function validConnection(
       .some((e) => reaches(e.target));
   };
   return !reaches(dst.id);
+}
+
+export function payloadLabel(kind: Kind): string {
+  if (kind === "curve_fit" || kind === "study") return "Informe de experimento";
+  if (kind === "prepare") return "Datos TR / VA / TE";
+  if (kind === "model") return "Modelo y predicciones";
+  if (kind === "backtest") return "Resultado de backtest";
+  if (kind === "risk") return "Informe de riesgo";
+  if (kind === "portfolio_data") return "Datos de cartera";
+  if (kind === "portfolio") return "Resultado de cartera";
+  return catalog[kind].output ?? "Informe";
 }

@@ -1,0 +1,121 @@
+{
+  "format": "quantlabs-blueprint-library",
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "recipe-column-scaling",
+      "title": "Receta · StandardScaler visible y auditable",
+      "area": "Herramientas · recetas modulares",
+      "description": "Ajusta sólo el primer 65% de filas y transforma todo; conserva Close junto a Scaled_Close.",
+      "instructions": [
+        "Transformación visible para inspección: StandardScaler se ajusta una vez sobre las primeras filas y transforma las demás sin reajuste.",
+        "El informe muestra fechas, número de filas, media, divisor y estadísticas de ajuste. Puedes elegir MinMaxScaler en el mismo nodo.",
+        "Para un entrenamiento temporal usa preferentemente el escalador integrado de Series Preparation. El corte de sus ventanas puede diferir del 65% de filas; se rechazan columnas ajustadas con fechas posteriores al último input TR.",
+        "Las columnas originales se conservan. No interpretes Scaled_Close como precio o rendimiento para Risk Metrics."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "Datos",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 100
+            },
+            "data": {
+              "kind": "source",
+              "label": "Datos",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 3
+              }
+            }
+          },
+          {
+            "id": "Escalar",
+            "type": "blueprint",
+            "position": {
+              "x": 330,
+              "y": 100
+            },
+            "data": {
+              "kind": "scale_columns",
+              "label": "Escalar",
+              "params": {
+                "columns": "Close",
+                "prefix": "Scaled_",
+                "method": "standard",
+                "fit_fraction": 0.65
+              }
+            }
+          },
+          {
+            "id": "Escalado",
+            "type": "blueprint",
+            "position": {
+              "x": 670,
+              "y": 100
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Escalado",
+              "params": {
+                "plot_source": "columns",
+                "chart_type": "line",
+                "plot_columns": "Scaled_Close",
+                "title": "Close estandarizado · ajuste primer 65%",
+                "color": "Mint"
+              }
+            }
+          },
+          {
+            "id": "Original",
+            "type": "blueprint",
+            "position": {
+              "x": 670,
+              "y": 400
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Original",
+              "params": {
+                "plot_source": "columns",
+                "chart_type": "line",
+                "plot_columns": "Close",
+                "title": "Close original",
+                "color": "Blue"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "Datos-Escalar",
+            "source": "Datos",
+            "target": "Escalar",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Escalar-Escalado",
+            "source": "Escalar",
+            "target": "Escalado",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Datos-Original",
+            "source": "Datos",
+            "target": "Original",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          }
+        ]
+      }
+    }
+  ]
+}

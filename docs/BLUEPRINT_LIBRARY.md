@@ -1,6 +1,6 @@
-# Biblioteca de Blueprints — v0.5.9
+# Biblioteca de Blueprints — v0.6.0
 
-La aplicación incluye **19 diseños ejecutables**: tres variantes del [notebook EUR/USD](NOTEBOOK_EURUSD.md) y los quince diseños base descritos abajo: diez basados en las diez imágenes encontradas (unidades 2–10 y ampliación cDCGAN) y cinco ejemplos adicionales. Se incorpora además la infografía Keras 1→256→1 adjuntada por el usuario, con su propio ejemplo; son 11 imágenes.
+La aplicación incluye **21 diseños ejecutables**: tres variantes del [notebook EUR/USD](NOTEBOOK_EURUSD.md) y los quince diseños base descritos abajo: diez basados en las diez imágenes encontradas (unidades 2–10 y ampliación cDCGAN) y cinco ejemplos adicionales. Se incorpora además la infografía Keras 1→256→1 adjuntada por el usuario, con su propio ejemplo; son 11 imágenes.
 
 ![Biblioteca integrada](v0.5-library.png)
 
@@ -99,3 +99,5 @@ En Biblioteca selecciona **Infografía Keras · 1 → 256 ReLU → 1**, área No
 La fuente de ejemplo es EURUSD=X de 15 años, con último cierre mensual, coordenada −2…2 y precios centrados. Usa synthetic para ejecutar sin internet. La infografía no especifica datos, épocas, batch ni tasa de aprendizaje: la ficha añade una demostración con 100 épocas, batch 32 y LR 0.001. MSE y RMSprop siguen la imagen; no usa StandardScaler ni L2 por defecto.
 
 El protocolo in_sample mide ajuste de la muestra completa y no pronóstico. El motor implementa la arquitectura con PyTorch, sin garantizar identidad numérica con Keras. Los tres Plot muestran cierre mensual, muestra centrada y ajuste suave, y MSE por época. Archivo importable: [notebook-keras-1-256-1.json](../quant-blueprint-studio/public/blueprints/notebook-keras-1-256-1.json).
+
+La biblioteca única añade dos recetas de transformaciones independientes. Consulta [herramientas y mapa completo](UNIFIED_LIBRARY.md).

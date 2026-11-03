@@ -4244,6 +4244,283 @@
           }
         ]
       }
+    },
+    {
+      "id": "recipe-monthly-sample",
+      "title": "Receta · mensual → coordenada → centrado → Scatter",
+      "area": "Herramientas · recetas modulares",
+      "description": "Reproduce resample(ME).last(), linspace(-2,2), resta de media y puntos; no requiere entrenar un modelo.",
+      "instructions": [
+        "Datos sintéticos por defecto; cambia Market Data a yfinance para EURUSD=X real.",
+        "Cada operación es un nodo reutilizable independiente. El gráfico se obtiene sin Curve Fitting.",
+        "Centrado fit_fraction=1 reproduce la resta de media de toda la muestra: es descriptivo, no evaluación temporal. Close original se conserva.",
+        "Cambia rango, frecuencia, columna, prefijo y gráfico en el inspector. Para entrenar conecta Coordenada a Curve Fitting y configura la arquitectura; no conectes una muestra descriptiva a Risk Metrics."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "Datos",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 100
+            },
+            "data": {
+              "kind": "source",
+              "label": "Datos",
+              "params": {
+                "source": "synthetic",
+                "ticker": "EURUSD=X",
+                "years": 15
+              }
+            }
+          },
+          {
+            "id": "Seleccionar",
+            "type": "blueprint",
+            "position": {
+              "x": 300,
+              "y": 100
+            },
+            "data": {
+              "kind": "select_columns",
+              "label": "Seleccionar",
+              "params": {
+                "columns": "Close"
+              }
+            }
+          },
+          {
+            "id": "Mensual",
+            "type": "blueprint",
+            "position": {
+              "x": 600,
+              "y": 100
+            },
+            "data": {
+              "kind": "resample",
+              "label": "Mensual",
+              "params": {
+                "columns": "Close",
+                "frequency": "ME",
+                "aggregation": "last",
+                "exclude_incomplete": false
+              }
+            }
+          },
+          {
+            "id": "Coordenada",
+            "type": "blueprint",
+            "position": {
+              "x": 900,
+              "y": 100
+            },
+            "data": {
+              "kind": "coordinate",
+              "label": "Coordenada",
+              "params": {
+                "start": -2,
+                "stop": 2,
+                "output_column": "Coordinate"
+              }
+            }
+          },
+          {
+            "id": "Centrar",
+            "type": "blueprint",
+            "position": {
+              "x": 1200,
+              "y": 100
+            },
+            "data": {
+              "kind": "center",
+              "label": "Centrar",
+              "params": {
+                "columns": "Close",
+                "prefix": "Centered_",
+                "fit_fraction": 1
+              }
+            }
+          },
+          {
+            "id": "Muestra",
+            "type": "blueprint",
+            "position": {
+              "x": 1500,
+              "y": 100
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Muestra",
+              "params": {
+                "plot_source": "columns",
+                "chart_type": "scatter",
+                "x_column": "Coordinate",
+                "plot_columns": "Centered_Close",
+                "title": "Sample Data Set · sin entrenamiento",
+                "color": "Coral"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "Datos-Seleccionar",
+            "source": "Datos",
+            "target": "Seleccionar",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Seleccionar-Mensual",
+            "source": "Seleccionar",
+            "target": "Mensual",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Mensual-Coordenada",
+            "source": "Mensual",
+            "target": "Coordenada",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Coordenada-Centrar",
+            "source": "Coordenada",
+            "target": "Centrar",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Centrar-Muestra",
+            "source": "Centrar",
+            "target": "Muestra",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "recipe-column-scaling",
+      "title": "Receta · StandardScaler visible y auditable",
+      "area": "Herramientas · recetas modulares",
+      "description": "Ajusta sólo el primer 65% de filas y transforma todo; conserva Close junto a Scaled_Close.",
+      "instructions": [
+        "Transformación visible para inspección: StandardScaler se ajusta una vez sobre las primeras filas y transforma las demás sin reajuste.",
+        "El informe muestra fechas, número de filas, media, divisor y estadísticas de ajuste. Puedes elegir MinMaxScaler en el mismo nodo.",
+        "Para un entrenamiento temporal usa preferentemente el escalador integrado de Series Preparation. El corte de sus ventanas puede diferir del 65% de filas; se rechazan columnas ajustadas con fechas posteriores al último input TR.",
+        "Las columnas originales se conservan. No interpretes Scaled_Close como precio o rendimiento para Risk Metrics."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "Datos",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 100
+            },
+            "data": {
+              "kind": "source",
+              "label": "Datos",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 3
+              }
+            }
+          },
+          {
+            "id": "Escalar",
+            "type": "blueprint",
+            "position": {
+              "x": 330,
+              "y": 100
+            },
+            "data": {
+              "kind": "scale_columns",
+              "label": "Escalar",
+              "params": {
+                "columns": "Close",
+                "prefix": "Scaled_",
+                "method": "standard",
+                "fit_fraction": 0.65
+              }
+            }
+          },
+          {
+            "id": "Escalado",
+            "type": "blueprint",
+            "position": {
+              "x": 670,
+              "y": 100
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Escalado",
+              "params": {
+                "plot_source": "columns",
+                "chart_type": "line",
+                "plot_columns": "Scaled_Close",
+                "title": "Close estandarizado · ajuste primer 65%",
+                "color": "Mint"
+              }
+            }
+          },
+          {
+            "id": "Original",
+            "type": "blueprint",
+            "position": {
+              "x": 670,
+              "y": 400
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Original",
+              "params": {
+                "plot_source": "columns",
+                "chart_type": "line",
+                "plot_columns": "Close",
+                "title": "Close original",
+                "color": "Blue"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "Datos-Escalar",
+            "source": "Datos",
+            "target": "Escalar",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Escalar-Escalado",
+            "source": "Escalar",
+            "target": "Escalado",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Datos-Original",
+            "source": "Datos",
+            "target": "Original",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          }
+        ]
+      }
     }
   ]
 }

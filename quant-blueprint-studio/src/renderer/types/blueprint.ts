@@ -1,5 +1,10 @@
 import type { Edge, Node } from "@xyflow/react";
 export type Kind =
+  | "resample"
+  | "select_columns"
+  | "coordinate"
+  | "center"
+  | "scale_columns"
   | "curve_data"
   | "curve_fit"
   | "study"
@@ -124,6 +129,102 @@ export interface Definition {
   fields: Field[];
 }
 export const catalog: Record<Kind, Definition> = {
+  resample: {
+    label: "Resample",
+    subtitle: "Dated aggregation · reusable",
+    category: "02 / TRANSFORM",
+    color: "#6cc9ac",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "columns", label: "Columns (CSV)", value: "Close" },
+      {
+        key: "frequency",
+        label: "Frequency",
+        value: "ME",
+        options: ["W-FRI", "ME", "QE", "YE"],
+      },
+      {
+        key: "aggregation",
+        label: "Aggregation",
+        value: "last",
+        options: ["last", "mean", "sum"],
+      },
+      {
+        key: "exclude_incomplete",
+        label: "Exclude unfinished period",
+        value: true,
+      },
+    ],
+  },
+  select_columns: {
+    label: "Select Columns",
+    subtitle: "Choose columns for a branch",
+    category: "02 / TRANSFORM",
+    color: "#6cc9ac",
+    input: "frame",
+    output: "frame",
+    fields: [{ key: "columns", label: "Columns (CSV)", value: "Close" }],
+  },
+  coordinate: {
+    label: "Numeric Coordinate",
+    subtitle: "Ordered numeric X · no economic predictor",
+    category: "02 / TRANSFORM",
+    color: "#6cc9ac",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "start", label: "Range start", value: -2 },
+      { key: "stop", label: "Range end", value: 2 },
+      { key: "output_column", label: "New column name", value: "Coordinate" },
+    ],
+  },
+  center: {
+    label: "Center Columns",
+    subtitle: "Subtract fitting mean · preserve originals",
+    category: "02 / TRANSFORM",
+    color: "#6cc9ac",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "columns", label: "Columns (CSV)", value: "Close" },
+      { key: "prefix", label: "New column prefix", value: "Centered_" },
+      {
+        key: "fit_fraction",
+        label: "Leading fitting fraction (1 = descriptive full sample)",
+        value: 0.65,
+        min: 0.01,
+        max: 1,
+        step: 0.01,
+      },
+    ],
+  },
+  scale_columns: {
+    label: "Scale Columns",
+    subtitle: "Fit leading rows · transform all · preserve originals",
+    category: "02 / TRANSFORM",
+    color: "#6cc9ac",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "columns", label: "Columns (CSV)", value: "Close" },
+      { key: "prefix", label: "New column prefix", value: "Scaled_" },
+      {
+        key: "method",
+        label: "Scaler",
+        value: "standard",
+        options: ["standard", "minmax"],
+      },
+      {
+        key: "fit_fraction",
+        label: "Leading fitting fraction (1 = descriptive full sample)",
+        value: 0.65,
+        min: 0.01,
+        max: 1,
+        step: 0.01,
+      },
+    ],
+  },
   curve_data: {
     label: "Monthly Curve Data",
     subtitle: "Monthly last Close · coordinate −2…2",
@@ -1123,6 +1224,31 @@ export function featureOptions(
   if (node.data.kind === "curve_data") return ["Close", "Coordinate"];
   if (node.data.kind === "source")
     return ["Open", "High", "Low", "Close", "Volume"];
+  if (node.data.kind === "select_columns")
+    return String(node.data.params.columns ?? "Close")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  if (node.data.kind === "coordinate")
+    return [...base, String(node.data.params.output_column ?? "Coordinate")];
+  if (["center", "scale_columns"].includes(node.data.kind))
+    return [
+      ...base,
+      ...String(node.data.params.columns ?? "Close")
+        .split(",")
+        .map(
+          (s) =>
+            String(
+              node.data.params.prefix ??
+                (node.data.kind === "center" ? "Centered_" : "Scaled_"),
+            ) + s.trim(),
+        ),
+    ];
+  if (node.data.kind === "resample")
+    return String(node.data.params.columns ?? "Close")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
   if (node.data.kind !== "features") return base;
   const p = effectiveParams(graph, id);
   const names = [

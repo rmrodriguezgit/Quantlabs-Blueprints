@@ -4,6 +4,7 @@ from typing import Any, Callable
 import numpy as np
 import pandas as pd
 import torch
+from .nodes.transform_nodes import transform
 from .nodes.scaling_nodes import affine_audit
 from .nodes.curve_nodes import monthly_curve, curve_fit
 from .nodes.study_nodes import study
@@ -19,6 +20,7 @@ PINS = {'curve_data': ('frame','frame'), 'curve_fit': ('frame','tensor'), 'study
         'model': ('tensor', 'tensor'), 'backtest': ('tensor', None), 'config': (None, 'config'),
         'network_input': (None, 'network'), 'layer': ('network', 'network'),
         'network_output': ('network', 'network'), 'merge': ('frame', 'frame'), 'plot': (None, None), 'portfolio_data': (None, 'portfolio'), 'portfolio': ('portfolio', 'portfolio'), 'risk': (None, 'portfolio')}
+PINS.update({kind: ('frame','frame') for kind in ('resample','select_columns','coordinate','center','scale_columns')})
 INPUTS = {kind: ({pin: pin} if pin else {}) for kind, (pin, _) in PINS.items()}
 for kind in ('features', 'prepare', 'model', 'backtest', 'curve_fit'):
     INPUTS[kind]['config'] = 'config'
@@ -62,6 +64,8 @@ class DAGRunner:
         for edge in self.edges:
             if edge['source'] not in self.nodes or edge['target'] not in self.nodes:
                 raise ValueError('Edge refers to a missing node.')
+            if edge['source'] == edge['target']:
+                raise ValueError('Cycle: a node cannot connect to itself.')
             src, dst = self.nodes[edge['source']]['data']['kind'], self.nodes[edge['target']]['data']['kind']
             out_pin, in_pin = edge.get('sourceHandle'), edge.get('targetHandle')
             if out_pin is None or out_pin != PINS[src][1] or INPUTS[dst].get(in_pin) != out_pin:
@@ -188,6 +192,10 @@ class DAGRunner:
                         output = NetworkSpec(upstream.input_features, upstream.mode, [*upstream.layers, params])
                 elif kind == 'merge' and isinstance(upstream, pd.DataFrame) and isinstance(inputs.get('frame_b'), pd.DataFrame):
                     output = merge_features(upstream, inputs['frame_b'])
+                elif kind in ('resample','select_columns','coordinate','center','scale_columns') and isinstance(upstream,pd.DataFrame):
+                    output = transform(upstream,params,kind)
+                    if kind in ('center','scale_columns'):
+                        report['scaling_audits'].extend({'id':key,'node_title':node['data'].get('label',kind),**audit} for audit in output.attrs.get('transform_audits',[]))
                 elif kind == 'curve_data' and isinstance(upstream, pd.DataFrame):
                     output = monthly_curve(upstream, params)
                 elif kind == 'curve_fit' and isinstance(upstream, pd.DataFrame):

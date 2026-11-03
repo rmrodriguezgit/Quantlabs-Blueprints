@@ -52,6 +52,8 @@ def samples(frame: pd.DataFrame, p: dict[str, Any]) -> Samples:
     a, b = int(n*tr), int(n*(tr+va))
     if min(a, b-a, n-b) < 8:
         raise ValueError(f'Insufficient rows: {len(frame)} usable, lookback {window}, TR/VA/TE {a}/{b-a}/{n-b}. Increase history or reduce lookback; each split needs 8.')
+    from .transform_nodes import check_fit_boundary
+    check_fit_boundary(frame,names,frame.index[window+a-2])
     return Samples(x, y, [str(d.date()) for d in frame.index[window:]], gap, y / 10000, a, b, names)
 
 

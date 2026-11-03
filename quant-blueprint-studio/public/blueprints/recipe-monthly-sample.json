@@ -1,0 +1,168 @@
+{
+  "format": "quantlabs-blueprint-library",
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "recipe-monthly-sample",
+      "title": "Receta · mensual → coordenada → centrado → Scatter",
+      "area": "Herramientas · recetas modulares",
+      "description": "Reproduce resample(ME).last(), linspace(-2,2), resta de media y puntos; no requiere entrenar un modelo.",
+      "instructions": [
+        "Datos sintéticos por defecto; cambia Market Data a yfinance para EURUSD=X real.",
+        "Cada operación es un nodo reutilizable independiente. El gráfico se obtiene sin Curve Fitting.",
+        "Centrado fit_fraction=1 reproduce la resta de media de toda la muestra: es descriptivo, no evaluación temporal. Close original se conserva.",
+        "Cambia rango, frecuencia, columna, prefijo y gráfico en el inspector. Para entrenar conecta Coordenada a Curve Fitting y configura la arquitectura; no conectes una muestra descriptiva a Risk Metrics."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "Datos",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 100
+            },
+            "data": {
+              "kind": "source",
+              "label": "Datos",
+              "params": {
+                "source": "synthetic",
+                "ticker": "EURUSD=X",
+                "years": 15
+              }
+            }
+          },
+          {
+            "id": "Seleccionar",
+            "type": "blueprint",
+            "position": {
+              "x": 300,
+              "y": 100
+            },
+            "data": {
+              "kind": "select_columns",
+              "label": "Seleccionar",
+              "params": {
+                "columns": "Close"
+              }
+            }
+          },
+          {
+            "id": "Mensual",
+            "type": "blueprint",
+            "position": {
+              "x": 600,
+              "y": 100
+            },
+            "data": {
+              "kind": "resample",
+              "label": "Mensual",
+              "params": {
+                "columns": "Close",
+                "frequency": "ME",
+                "aggregation": "last",
+                "exclude_incomplete": false
+              }
+            }
+          },
+          {
+            "id": "Coordenada",
+            "type": "blueprint",
+            "position": {
+              "x": 900,
+              "y": 100
+            },
+            "data": {
+              "kind": "coordinate",
+              "label": "Coordenada",
+              "params": {
+                "start": -2,
+                "stop": 2,
+                "output_column": "Coordinate"
+              }
+            }
+          },
+          {
+            "id": "Centrar",
+            "type": "blueprint",
+            "position": {
+              "x": 1200,
+              "y": 100
+            },
+            "data": {
+              "kind": "center",
+              "label": "Centrar",
+              "params": {
+                "columns": "Close",
+                "prefix": "Centered_",
+                "fit_fraction": 1
+              }
+            }
+          },
+          {
+            "id": "Muestra",
+            "type": "blueprint",
+            "position": {
+              "x": 1500,
+              "y": 100
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Muestra",
+              "params": {
+                "plot_source": "columns",
+                "chart_type": "scatter",
+                "x_column": "Coordinate",
+                "plot_columns": "Centered_Close",
+                "title": "Sample Data Set · sin entrenamiento",
+                "color": "Coral"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "Datos-Seleccionar",
+            "source": "Datos",
+            "target": "Seleccionar",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Seleccionar-Mensual",
+            "source": "Seleccionar",
+            "target": "Mensual",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Mensual-Coordenada",
+            "source": "Mensual",
+            "target": "Coordenada",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Coordenada-Centrar",
+            "source": "Coordenada",
+            "target": "Centrar",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Centrar-Muestra",
+            "source": "Centrar",
+            "target": "Muestra",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -2,16 +2,16 @@
 
 ![Quantlabs Blueprints](docs/banner.svg)
 
-[![Version](https://img.shields.io/github/v/tag/rmrodriguezgit/Quantlabs-Blueprints?label=version&color=6cc9ac)](https://github.com/rmrodriguezgit/Quantlabs-Blueprints/releases/tag/v0.5.9)
+[![Version](https://img.shields.io/github/v/tag/rmrodriguezgit/Quantlabs-Blueprints?label=version&color=6cc9ac)](https://github.com/rmrodriguezgit/Quantlabs-Blueprints/releases/tag/v0.6.0)
 ![Desktop](https://img.shields.io/badge/desktop-macOS%20%7C%20Windows-79b4ef)
 ![Electron](https://img.shields.io/badge/Electron-42-79b4ef)
 ![React](https://img.shields.io/badge/React-19-61dafb)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)
 ![Python](https://img.shields.io/badge/Python-3.10%E2%80%933.13-ffd343)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.x-ee4c2c)
-![Features](https://img.shields.io/badge/Blueprints-18%20templates%20%7C%2010%20infographics%20%7C%20ML%20%7C%20DL%20%7C%20RL-c49af8)
+![Features](https://img.shields.io/badge/Blueprints-21%20recipes%20%7C%2011%20infographics%20%7C%20ML%20%7C%20DL%20%7C%20RL-c49af8)
 
-**Versión actual: [v0.5.9](https://github.com/rmrodriguezgit/Quantlabs-Blueprints/releases/tag/v0.5.9)** · [Historial de cambios](CHANGELOG.md) · [Verificaciones](VERIFICATION.md)
+**Versión actual: [v0.6.0](https://github.com/rmrodriguezgit/Quantlabs-Blueprints/releases/tag/v0.6.0)** · [Historial de cambios](CHANGELOG.md) · [Verificaciones](VERIFICATION.md)
 
 Estudio de escritorio para investigación cuantitativa mediante un grafo visual de nodos: datos → indicadores → preparación temporal → aprendizaje profundo → backtest. Base funcional para macOS y Windows, con Electron, React y un motor Python local.
 
@@ -21,9 +21,11 @@ El código se encuentra en [`quant-blueprint-studio/`](quant-blueprint-studio/).
 
 ## Biblioteca de aprendizaje y ejemplos
 
+La **biblioteca única** reúne 22 herramientas reutilizables, con búsqueda y orden por área. Cada receta indica las herramientas que utiliza. [Guía y mapa de recetas](docs/UNIFIED_LIBRARY.md). Selección, remuestreo, coordenada, centrado y escalado pueden ejecutarse como nodos independientes.
+
 **New** o **File → New** (⌘N / Ctrl+N) abre un lienzo vacío y conserva el diseño anterior en Personal. Puedes guardar/exportar un borrador vacío; para ejecutarlo debes añadir nodos.
 
-**Biblioteca / ejemplos** abre 18 blueprints editables: tres para el notebook EUR/USD, diez basados en las infografías de unidades 2–10 y ampliación cDCGAN, más cinco para datos/indicadores, estadística, red modular/backtest y portafolios. Cada ficha permite **cargar, ejecutar, guardar copias, importar y exportar**. El diseño anterior se archiva en Personal al cargar otra plantilla.
+**Biblioteca / ejemplos** abre 21 blueprints editables: dos recetas modulares, una ficha Keras 1→256→1, tres para el notebook EUR/USD, diez basados en las infografías de unidades 2–10 y ampliación cDCGAN, más cinco para datos/indicadores, estadística, red modular/backtest y portafolios. Cada ficha permite **cargar, ejecutar, guardar copias, importar y exportar**. El diseño anterior se archiva en Personal al cargar otra plantilla.
 
 Incluye comparación de optimizadores y regularización, búsqueda temporal de hiperparámetros, CNN/LSTM/GRU, PCA/AE/DAE, CVAE/cGAN/cDCGAN multiactivo y Double DQN. Los experimentos temporales muestran selección por validación, métricas, tablas y gráficos fuera de muestra, con escaladores sólo TR y test separado. Los diseños del notebook distinguen explícitamente ajuste completo y extrapolación temporal.
 

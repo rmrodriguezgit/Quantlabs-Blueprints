@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.6.0 — 2026-11-02
+
+- Biblioteca común: Select Columns, Resample, Numeric Coordinate, Center Columns y Scale Columns, reutilizables con los nodos existentes. Búsqueda y orden por área en paleta; herramientas de cada receta visibles.
+- Dos recetas nuevas: mensual/coordenada/centrado/Scatter sin entrenador, y escalado auditable. Se conservan los 19 ejemplos previos: 21 recetas y 22 tipos de nodo.
+- Monthly Curve Data reutiliza remuestreo y coordenada comunes. Los pines azules identifican informes, particiones, modelos y backtests.
+- Escalado/centrado conservan originales y registran filas/fechas de ajuste; Preparation, Curve Fitting y Learning Experiment rechazan columnas ajustadas fuera del tramo de entrenamiento.
+
+
 ## v0.5.9 — 2026-11-02
 
 - Ejemplo de infografía Keras 1 → Dense 256 ReLU → salida lineal 1, con arquitectura conectable, MSE/RMSprop y 769 parámetros.
