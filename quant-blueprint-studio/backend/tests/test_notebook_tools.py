@@ -57,7 +57,13 @@ class NotebookToolsTests(unittest.TestCase):
         self.assertEqual(chart['line_rows'][0]['coordinate'],-2)
         frame=plot(self.frame,{'chart_type':'scatter','x_column':'Coordinate','plot_columns':'Close'},'p')
         self.assertEqual(frame['x_key'],'Coordinate')
-        with self.assertRaisesRegex(ValueError,'numeric X'):plot(result,{'chart_type':'scatter_line'},'p')
+        auto=plot(result,{'chart_type':'scatter_line','x_column':''},'p')
+        self.assertEqual(auto['x_key'],'coordinate')
+        self.assertEqual(len(auto['line_rows']),300)
+        auto_frame=plot(self.frame,{'chart_type':'scatter','plot_columns':'Close'},'p')
+        self.assertEqual(auto_frame['x_key'],'Coordinate')
+        self.assertEqual(plot(result,{'chart_type':'line'},'p')['x_key'],'date')
+        with self.assertRaisesRegex(ValueError,'numeric X'):plot(result,{'chart_type':'scatter_line','x_column':'date'},'p')
         with self.assertRaisesRegex(ValueError,'Scatter columns'):plot(result,{'chart_type':'scatter_line','x_column':'coordinate','scatter_columns':'missing'},'p')
 
     def test_log_loss_skip_and_nonpositive_guard(self) -> None:

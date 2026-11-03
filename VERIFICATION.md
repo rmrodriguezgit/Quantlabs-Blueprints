@@ -1,4 +1,4 @@
-# Verificación del proyecto (v0.5.5)
+# Verificación del proyecto (v0.5.6)
 
 Fecha: 2 de noviembre de 2026. Entorno local macOS, Python 3.12.12, Node.js 22.22.3, npm 10.9.8.
 
@@ -147,3 +147,9 @@ Consultar `quant-blueprint-studio/package-lock.json` para el árbol npm completo
 - Identidad OLS contrastada con beta por covarianza/varianza y alpha por diferencia de medias ajustada a beta.
 - Caso de alpha positivo con ROI, Sharpe y Sortino negativos verificado con RF anual 0% y 5%.
 - La auditoría de la configuración concreta se guarda únicamente en `quant-blueprint-studio/reports/local/` (excluido de Git). Sin cambios en las fórmulas de producción tras esta revisión.
+
+## Scatter automático (v0.5.6)
+
+Cinco pruebas notebook_tools aprobadas: coordenada automática en DataFrame y Curve Fitting, curva suave de 300 puntos, fecha conservada en líneas y fecha explícita rechazada para scatter. Compilación TypeScript/Vite/Electron correcta.
+
+Electron con el blueprint del usuario EURUSD=X, 15 años: ejecución 5/5 completada, 180 meses, Scatter con X −2…2 y monitor «sin validación separada». Se conservaron conexiones y parámetros; captura docs/v0.5.6-scatter.png.

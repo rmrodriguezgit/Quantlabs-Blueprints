@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.5.6 — 2026-11-02
+
+- Scatter con X vacío detecta Coordinate en Monthly Curve Data y coordinate en informes Curve Fitting, conservando X explícita y fechas en líneas.
+- Monitor de épocas muestra «sin validación separada» cuando no hay pérdida VA, en lugar de undefined.
+
+
 ## v0.5.5 — 2026-11-02
 
 - Doble clic o Enter en conectores: alternativas compatibles existentes y creación de nodos conectados desde salidas.

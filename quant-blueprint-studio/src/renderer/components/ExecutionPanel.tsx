@@ -1,6 +1,9 @@
 import { useEffect, useRef } from "react";
 import type { NetworkBinding } from "../types/blueprint";
 import type { ProgressEvent } from "../engine";
+function epochText(event: ProgressEvent): string {
+  return `epoch ${event.epoch}/${event.epochs}${typeof event.train === "number" ? ` · train ${event.train.toPrecision(4)}` : ""}${typeof event.validation === "number" ? ` · validation ${event.validation.toPrecision(4)}` : " · sin validación separada"}`;
+}
 export interface ExecutionEntry extends ProgressEvent {
   label: string;
   time: number;
@@ -87,7 +90,7 @@ export function ExecutionPanel({
         {running && (
           <p aria-live="polite">
             {latest
-              ? `${latest.label}${latest.status === "epoch" ? ` · epoch ${latest.epoch}/${latest.epochs} · validation loss ${latest.validation?.toPrecision(5)}` : latest.status === "running" ? ` · ${latest.detail ?? "running…"}` : " · complete"}`
+              ? `${latest.label}${latest.status === "epoch" ? ` · ${epochText(latest)}` : latest.status === "running" ? ` · ${latest.detail ?? "running…"}` : " · complete"}`
               : "Connecting to Python engine…"}
           </p>
         )}
@@ -108,7 +111,7 @@ export function ExecutionPanel({
               <b>{entry.label}</b>
               <span>
                 {entry.status === "epoch"
-                  ? `epoch ${entry.epoch}/${entry.epochs} · train ${entry.train?.toPrecision(4)} · validation ${entry.validation?.toPrecision(4)}`
+                  ? epochText(entry)
                   : entry.status === "complete"
                     ? `complete${entry.rows !== undefined ? ` · ${entry.rows} rows / ${entry.source_rows ?? entry.rows} source rows` : ""}${entry.features !== undefined ? ` · ${entry.features} features` : ""}`
                     : entry.status === "error"

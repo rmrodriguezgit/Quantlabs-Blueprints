@@ -29,6 +29,12 @@ def plot(value: Any, params: dict[str, Any], node_id: str) -> dict[str, Any]:
     defaults: list[str]
     x_key = 'date'
     requested_x=str(params.get('x_column','')).strip()
+    # Infer only the notebook coordinate; preserve explicit selections.
+    if not requested_x and kind in ('scatter','scatter_line'):
+        if isinstance(value,pd.DataFrame) and 'Coordinate' in value.columns:
+            requested_x='Coordinate'
+        elif mode=='study' and value.get('topic')=='curve_fit' and chosen['rows'] and 'coordinate' in chosen['rows'][0]:
+            requested_x='coordinate'
     if mode == 'study' and isinstance(value, dict) and value.get('study'):
         rows, defaults, x_key = chosen['rows'], chosen['series'], chosen['x_key']
     elif mode == 'asset_prices' and isinstance(value, (PortfolioData, PortfolioResult)):

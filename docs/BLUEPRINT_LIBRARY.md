@@ -87,3 +87,5 @@ Las diez imágenes se copiaron sin edición del proyecto local Forecast Lab. `pu
 Haz doble clic en un pin de entrada o salida (o enfócalo y pulsa Enter). El panel muestra los enlaces actuales con **Desconectar**, los nodos compatibles libres y, en las salidas, **Añadir y conectar un nodo**. Las opciones indican nodo y pin; no se ofrecen conexiones con ciclos, tipos incompatibles ni entradas ocupadas. Desconecta primero para sustituir una entrada.
 
 **Desconectar nodo completo** retira sus enlaces entrantes y salientes y conserva el nodo y sus parámetros. También puedes pulsar un cable y **Desconectar enlace**. Escape o clic en el fondo cierra el panel. Durante un cálculo estas acciones están bloqueadas. Los cambios se autoguardan con el diseño.
+
+Desde v0.5.6, Scatter con X column vacío usa automáticamente Coordinate de Monthly Curve Data o coordinate del gráfico principal de Curve Fitting. Las líneas conservan las fechas. Una X explícita tiene prioridad y debe ser numérica para Scatter.
