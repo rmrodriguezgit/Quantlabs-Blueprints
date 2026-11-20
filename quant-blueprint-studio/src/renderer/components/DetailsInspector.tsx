@@ -87,6 +87,31 @@ export function DetailsInspector({
               largo y efectivo. El informe se conecta a Plot.
             </p>
           )}
+          {node.data.kind === "laya_signal" && (
+            <p className="inspector-hint">
+              Cada día envía a Laya un estado JSON con indicadores conocidos al
+              cierre (RSI, MACD, retornos, volatilidad, posición Bollinger) y
+              tres preguntas tipadas. Laya devuelve probabilidades calibradas
+              sin generar texto. Edita las preguntas para ver cómo cambian las
+              respuestas. La primera ejecución descarga el modelo; después hay
+              caché.
+            </p>
+          )}
+          {node.data.kind === "laya_calibrate" && (
+            <p className="inspector-hint">
+              Ajuste de pesos: aprende w en p = σ(w·x) con x = [sesgo,
+              log(P_up/P_down), logit P(higher), riesgo]. Gradiente sólo con
+              TR, VA elige la época, TE se mide una vez. Compara Brier, logloss
+              y ECE de Laya cruda vs calibrada.
+            </p>
+          )}
+          {node.data.kind === "laya_feedback" && (
+            <p className="inspector-hint">
+              Retroalimentación diaria: predice con w, espera el retorno real de
+              t+1 y corrige w ← w − lr·(p − y)·x. Parte de los pesos de Laya
+              Calibrate si está conectado. Lista los errores de mayor pérdida.
+            </p>
+          )}
           {node.data.kind === "data_quality" && (
             <p className="inspector-hint">
               Forward fill sólo usa pasado y tiene límite. No se usa backfill ni

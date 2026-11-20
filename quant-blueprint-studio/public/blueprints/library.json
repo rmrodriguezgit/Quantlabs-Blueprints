@@ -5320,6 +5320,178 @@
           }
         ]
       }
+    },
+    {
+      "id": "laya-yfinance",
+      "title": "Laya-MLX · decisiones tipadas sobre yfinance",
+      "area": "Laya · decisiones tipadas",
+      "description": "Laya responde tres preguntas por día (choice, score, noul); un ajuste logístico calibra sus pesos y un bucle de retroalimentación los corrige con cada resultado real.",
+      "instructions": [
+        "Requiere Apple Silicon y laya-mlx en .venv. La primera ejecución descarga el modelo (~800 MB) y tarda ~1–2 min; después usa caché.",
+        "Paso 3: lee las notas y la tabla de respuestas. Edita las preguntas del nodo para ver cómo cambian las probabilidades.",
+        "Paso 4: compara pesos iniciales vs ajustados y Brier/logloss/ECE de Laya cruda vs calibrada en TE.",
+        "Paso 5: observa cómo evolucionan los pesos, los errores de mayor pérdida y si el logloss baja de la 1ª a la 2ª mitad."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "Datos",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 120
+            },
+            "data": {
+              "kind": "source",
+              "label": "1 · Market Data SPY",
+              "params": {
+                "source": "yfinance",
+                "ticker": "SPY",
+                "years": 3
+              }
+            }
+          },
+          {
+            "id": "Indicadores",
+            "type": "blueprint",
+            "position": {
+              "x": 330,
+              "y": 120
+            },
+            "data": {
+              "kind": "features",
+              "label": "2 · Technical Features",
+              "params": {}
+            }
+          },
+          {
+            "id": "Laya",
+            "type": "blueprint",
+            "position": {
+              "x": 660,
+              "y": 120
+            },
+            "data": {
+              "kind": "laya_signal",
+              "label": "3 · Laya Signal (preguntas)",
+              "params": {
+                "ticker": "SPY",
+                "max_rows": 500
+              }
+            }
+          },
+          {
+            "id": "Pesos",
+            "type": "blueprint",
+            "position": {
+              "x": 990,
+              "y": 120
+            },
+            "data": {
+              "kind": "laya_calibrate",
+              "label": "4 · Laya Calibrate (ajuste de pesos)",
+              "params": {}
+            }
+          },
+          {
+            "id": "Feedback",
+            "type": "blueprint",
+            "position": {
+              "x": 1320,
+              "y": 120
+            },
+            "data": {
+              "kind": "laya_feedback",
+              "label": "5 · Laya Feedback (retroalimentación)",
+              "params": {}
+            }
+          },
+          {
+            "id": "Prob",
+            "type": "blueprint",
+            "position": {
+              "x": 990,
+              "y": 380
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Gráfico respuestas",
+              "params": {
+                "plot_source": "columns",
+                "plot_columns": "Laya_P_up,Laya_P_down,Laya_P_higher",
+                "title": "Respuestas de Laya"
+              }
+            }
+          },
+          {
+            "id": "Capital",
+            "type": "blueprint",
+            "position": {
+              "x": 1650,
+              "y": 120
+            },
+            "data": {
+              "kind": "plot",
+              "label": "Gráfico capital",
+              "params": {
+                "plot_source": "columns",
+                "plot_columns": "Equity,BuyHold",
+                "title": "Capital estrategia vs buy & hold"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "Datos-Indicadores",
+            "source": "Datos",
+            "target": "Indicadores",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Indicadores-Laya",
+            "source": "Indicadores",
+            "target": "Laya",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Laya-Pesos",
+            "source": "Laya",
+            "target": "Pesos",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Pesos-Feedback",
+            "source": "Pesos",
+            "target": "Feedback",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Laya-Prob",
+            "source": "Laya",
+            "target": "Prob",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Feedback-Capital",
+            "source": "Feedback",
+            "target": "Capital",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          }
+        ]
+      }
     }
   ]
 }

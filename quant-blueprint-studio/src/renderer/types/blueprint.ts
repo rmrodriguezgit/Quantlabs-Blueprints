@@ -1,5 +1,8 @@
 import type { Edge, Node } from "@xyflow/react";
 export type Kind =
+  | "laya_signal"
+  | "laya_calibrate"
+  | "laya_feedback"
   | "data_quality"
   | "quant_features"
   | "ml_model"
@@ -134,6 +137,75 @@ export interface Definition {
   fields: Field[];
 }
 export const catalog: Record<Kind, Definition> = {
+  laya_signal: {
+    label: "Laya Signal",
+    subtitle: "Laya-MLX · choice · score · noul por día",
+    category: "09 / LAYA",
+    color: "#9ad1c4",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "ticker", label: "Nombre del activo en el estado", value: "SPY" },
+      {
+        key: "checkpoint",
+        label: "Checkpoint",
+        value: "laya-mlx",
+        options: ["laya-mlx", "laya-multilingual-mlx"],
+      },
+      { key: "max_rows", label: "Últimos días a evaluar", value: 500, min: 30, max: 3000 },
+      {
+        key: "trend_question",
+        label: "Pregunta choice (up/down/flat)",
+        value: "Given these technical indicators, what is the most likely direction of the next trading day?",
+      },
+      {
+        key: "risk_question",
+        label: "Pregunta score (riesgo 0–2)",
+        value: "How risky is holding this asset tomorrow?",
+      },
+      {
+        key: "higher_question",
+        label: "Proposición noul (P verdadero)",
+        value: "The asset will close higher on the next trading day.",
+      },
+    ],
+  },
+  laya_calibrate: {
+    label: "Laya Calibrate",
+    subtitle: "Ajuste de pesos · logística TR · VA · TE",
+    category: "09 / LAYA",
+    color: "#9ad1c4",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "train_ratio", label: "Fracción TR", value: 0.6, min: 0.3, max: 0.8, step: 0.05 },
+      { key: "val_ratio", label: "Fracción VA", value: 0.2, min: 0.05, max: 0.3, step: 0.05 },
+      { key: "lr", label: "Learning rate", value: 0.1, min: 0.0001, max: 5, step: 0.01 },
+      { key: "epochs", label: "Épocas", value: 300, min: 10, max: 5000 },
+      { key: "l2", label: "Regularización L2", value: 0.01, min: 0, max: 10, step: 0.01 },
+    ],
+  },
+  laya_feedback: {
+    label: "Laya Feedback",
+    subtitle: "Predecir → observar → corregir pesos",
+    category: "09 / LAYA",
+    color: "#9ad1c4",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "lr", label: "Learning rate online", value: 0.01, min: 0, max: 2, step: 0.005 },
+      { key: "min_confidence", label: "Confianza mínima para operar", value: 0.52, min: 0.5, max: 0.99, step: 0.01 },
+      {
+        key: "positions",
+        label: "Posiciones",
+        value: "long_short",
+        options: ["long_short", "long_only"],
+      },
+      { key: "cost_bps", label: "Coste por cambio (bps)", value: 5, min: 0, max: 100 },
+      { key: "rolling_window", label: "Ventana métricas móviles", value: 20, min: 5, max: 120 },
+      { key: "start_fraction", label: "Inicio si no hay Calibrate", value: 0.6, min: 0.2, max: 0.9, step: 0.05 },
+    ],
+  },
   data_quality: {
     label: "Data Quality",
     subtitle: "Sort · duplicates · missing · causal fill",

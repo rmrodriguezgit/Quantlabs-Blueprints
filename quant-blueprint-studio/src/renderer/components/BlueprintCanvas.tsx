@@ -44,6 +44,9 @@ import {
 import "@xyflow/react/dist/style.css";
 import { validConnection, payloadLabel } from "../connections";
 const icons = {
+  laya_signal: BrainCircuit,
+  laya_calibrate: SlidersHorizontal,
+  laya_feedback: ChartNoAxesCombined,
   data_quality: Database,
   quant_features: ChartNoAxesCombined,
   ml_model: BrainCircuit,
@@ -79,6 +82,12 @@ function nodeSummary(data: BlueprintNode["data"]): string {
     ...data.params,
   };
   switch (data.kind) {
+    case "laya_signal":
+      return `${p.checkpoint} · ${p.max_rows} días · 3 preguntas`;
+    case "laya_calibrate":
+      return `TR ${p.train_ratio} · VA ${p.val_ratio} · lr ${p.lr} · ${p.epochs} épocas`;
+    case "laya_feedback":
+      return `lr ${p.lr} · conf ≥ ${p.min_confidence} · ${p.positions}`;
     case "data_quality":
       return `${p.duplicates} duplicates · ${p.missing} missing`;
     case "quant_features":

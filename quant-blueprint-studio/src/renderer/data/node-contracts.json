@@ -158,6 +158,21 @@
       "input": "frame",
       "output": "tensor",
       "extraInputs": {}
+    },
+    "laya_signal": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "laya_calibrate": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "laya_feedback": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
     }
   },
   "tensorSources": {

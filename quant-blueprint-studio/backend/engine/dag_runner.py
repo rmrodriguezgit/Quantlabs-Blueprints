@@ -6,6 +6,7 @@ import pandas as pd
 import torch
 from .nodes.ml_nodes import train_ml
 from .nodes.research_nodes import data_quality, quant_features
+from .nodes.laya_nodes import laya_signal, laya_calibrate, laya_feedback
 from .nodes.transform_nodes import transform
 from .nodes.scaling_nodes import affine_audit
 from .nodes.curve_nodes import monthly_curve, curve_fit
@@ -116,6 +117,10 @@ class DAGRunner:
                     output: Any = source(params)
                 elif kind == 'data_quality' and isinstance(upstream,pd.DataFrame):
                     output=data_quality(upstream,params)
+                elif kind in ('laya_signal','laya_calibrate','laya_feedback') and isinstance(upstream,pd.DataFrame):
+                    fn={'laya_signal':laya_signal,'laya_calibrate':laya_calibrate,'laya_feedback':laya_feedback}[kind]
+                    output,study_report=fn(upstream,params,(lambda event: progress({'node':key,'status':'epoch' if 'epoch' in event else 'running',**event})) if progress else None)
+                    report['studies'].append({'id':key,'title':node['data'].get('label',kind),**study_report})
                 elif kind == 'quant_features' and isinstance(upstream,pd.DataFrame):
                     output=quant_features(upstream,params)
                 elif kind == 'portfolio_data':
