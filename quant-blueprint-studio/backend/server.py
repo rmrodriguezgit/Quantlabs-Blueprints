@@ -18,7 +18,7 @@ except ImportError:
 
 class NodeData(BaseModel):
     model_config = ConfigDict(extra='ignore')
-    kind: Literal['data_quality','quant_features','ml_model','rl_agent','resample','select_columns','coordinate','center','scale_columns','source', 'features', 'prepare', 'model', 'backtest', 'config', 'network_input', 'layer', 'network_output', 'merge', 'plot', 'portfolio_data', 'portfolio', 'risk', 'study', 'curve_data', 'curve_fit']
+    kind: Literal['data_quality','quant_features','ml_model','rl_agent','resample','select_columns','coordinate','center','scale_columns','source', 'features', 'prepare', 'model', 'backtest', 'config', 'network_input', 'layer', 'network_output', 'merge', 'plot', 'portfolio_data', 'portfolio', 'risk', 'study', 'curve_data', 'curve_fit','laya_signal','laya_calibrate','laya_feedback']
     label: str = ''
     params: dict[str, str | int | float | bool] = Field(default_factory=dict)
 
