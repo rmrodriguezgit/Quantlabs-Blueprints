@@ -16,4 +16,6 @@ contextBridge.exposeInMainWorld("quantEngine", {
   },
   execute: (graph: unknown): Promise<unknown> =>
     ipcRenderer.invoke("engine:execute", graph),
+  request: (route: string, body?: unknown): Promise<unknown> =>
+    ipcRenderer.invoke("engine:request", route, body),
 });

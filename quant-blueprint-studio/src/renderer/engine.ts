@@ -1,4 +1,6 @@
 import type { Graph } from "./types/blueprint";
+/** Browser/dev fallback only; Electron routes through the main-process bridge. */
+const ENGINE_HOST = `127.0.0.1:${(import.meta as { env?: Record<string, string | undefined> }).env?.VITE_ENGINE_PORT ?? "8000"}`;
 export interface ProgressEvent {
   node: string;
   status: "running" | "complete" | "epoch" | "error";
@@ -41,7 +43,7 @@ export async function executeGraph(
     }
   }
   return new Promise((resolve, reject) => {
-    const socket = new WebSocket("ws://127.0.0.1:8000/ws/execute");
+    const socket = new WebSocket(`ws://${ENGINE_HOST}/ws/execute`);
     let settled = false;
     const fail = (message: string) => {
       if (settled) return;
@@ -67,7 +69,7 @@ export async function executeGraph(
     };
     socket.onerror = () =>
       fail(
-        "Cannot connect to the Python engine. Restart the launcher and check port 8000.",
+        `Cannot connect to the Python engine at ${ENGINE_HOST}. Restart the launcher.`,
       );
     socket.onclose = () => {
       if (!settled)
@@ -76,4 +78,22 @@ export async function executeGraph(
         );
     };
   });
+}
+
+/** JSON request to an allow-listed engine route (Electron bridge, else direct HTTP in dev). */
+export async function engineRequest<T>(route: string, body?: unknown): Promise<T> {
+  let value: unknown;
+  if (window.quantEngine?.request) value = await window.quantEngine.request(route, body);
+  else {
+    const response = await fetch(`http://${ENGINE_HOST}${route}`, {
+      method: body === undefined ? "GET" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    value = await response.json();
+    if (!response.ok) throw new Error(JSON.stringify((value as { detail?: unknown }).detail ?? response.status));
+  }
+  if (typeof value === "object" && value && "error" in value)
+    throw new Error(String((value as { error: unknown }).error));
+  return value as T;
 }

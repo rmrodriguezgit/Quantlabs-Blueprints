@@ -10,7 +10,7 @@ import {
   type LibraryEntry,
 } from "./library";
 import { version } from "../../package.json";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ReactFlowProvider } from "@xyflow/react";
 import {
   Activity,
@@ -20,8 +20,12 @@ import {
   RotateCcw,
   CheckCircle2,
   CircleAlert,
+  Sparkles,
 } from "lucide-react";
-import { BlueprintCanvas, Palette } from "./components/BlueprintCanvas";
+import { BlueprintCanvas, IssueContext, Palette } from "./components/BlueprintCanvas";
+import { BrainPanel } from "./components/BrainPanel";
+import { ValidationPanel } from "./components/ValidationPanel";
+import { applyFix, repairGraph, validateGraph, type Issue } from "./validation";
 import { DetailsInspector } from "./components/DetailsInspector";
 import { executeGraph } from "./engine";
 import {
@@ -123,6 +127,51 @@ export default function App() {
   const [elapsed, setElapsed] = useState(0);
   const started = useRef(0);
   const bindings = networkBindings(graph);
+  const [brainOpen, setBrainOpen] = useState(false);
+  const [repairChanges, setRepairChanges] = useState<string[]>([]);
+  const undo = useRef<Graph[]>([]);
+  const issues = useMemo(() => validateGraph(graph), [graph]);
+  const nodeIssues = useMemo(() => {
+    const map: Record<string, { severity: "error" | "warning"; count: number; first: string }> = {};
+    for (const issue of issues) {
+      if (!issue.node || issue.severity === "info") continue;
+      const current = map[issue.node];
+      if (!current) map[issue.node] = { severity: issue.severity, count: 1, first: issue.message };
+      else {
+        current.count++;
+        if (issue.severity === "error" && current.severity !== "error") {
+          current.severity = "error";
+          current.first = issue.message;
+        }
+      }
+    }
+    return map;
+  }, [issues]);
+  const fixIssue = (issue: Issue) => {
+    if (!issue.fix) return;
+    undo.current = [...undo.current.slice(-19), graph];
+    const fix = issue.fix;
+    updateGraph((g) => applyFix(g, fix));
+    setRepairChanges([`${issue.fixLabel ?? "Corregido"} — ${issue.message}`]);
+  };
+  const repairAll = () => {
+    const repaired = repairGraph(graph);
+    if (!repaired.changes.length) return;
+    undo.current = [...undo.current.slice(-19), graph];
+    updateGraph(() => repaired.graph);
+    setRepairChanges(repaired.changes);
+    setError(repaired.remaining.some((i) => i.severity === "error"));
+    setMessage(
+      `Reparación: ${repaired.changes.length} cambio(s). ${repaired.remaining.filter((i) => i.severity === "error").length} error(es) requieren tu decisión.`,
+    );
+  };
+  const undoRepair = () => {
+    const previous = undo.current.pop();
+    if (!previous) return;
+    updateGraph(() => previous);
+    setRepairChanges([]);
+    setMessage("Reparación deshecha.");
+  };
   useEffect(() => {
     if (!running) return;
     const timer = window.setInterval(
@@ -152,6 +201,15 @@ export default function App() {
   const execute = async (executionGraph: Graph = graph) => {
     if (!executionGraph.nodes.length) {
       setMessage("Add nodes before executing the blueprint.");
+      return;
+    }
+    const blocking = validateGraph(executionGraph).filter((i) => i.severity === "error");
+    if (blocking.length) {
+      setError(true);
+      setMessage(
+        `${blocking.length} error(es) de validación antes de ejecutar: ${blocking[0].message} Usa Reparar o corrige el nodo marcado.`,
+      );
+      if (blocking[0].node) setSelected(blocking[0].node);
       return;
     }
     const issue = networkBindings(executionGraph).find(
@@ -333,6 +391,15 @@ export default function App() {
             Biblioteca / ejemplos
           </button>
           <button
+            className="brain-button"
+            disabled={running}
+            onClick={() => setBrainOpen(true)}
+            title="Describe el análisis y el Cerebro construye un blueprint validado"
+          >
+            <Sparkles size={15} />
+            Cerebro IA
+          </button>
+          <button
             disabled={running}
             onClick={() => {
               updateGraph(() => portfolioExample());
@@ -435,6 +502,18 @@ export default function App() {
         total={graph.nodes.length}
         onInspect={setSelected}
       />
+      {graph.nodes.length > 0 && (
+        <ValidationPanel
+          issues={issues}
+          disabled={running}
+          changes={repairChanges}
+          canUndo={undo.current.length > 0}
+          onSelect={setSelected}
+          onFix={fixIssue}
+          onRepairAll={repairAll}
+          onUndo={undoRepair}
+        />
+      )}
       <main className={running ? "workspace busy" : "workspace"}>
         <Palette
           disabled={running}
@@ -448,12 +527,14 @@ export default function App() {
           }}
         />
         <ReactFlowProvider>
-          <BlueprintCanvas
-            graph={graph}
-            setGraph={updateGraph}
-            onSelect={setSelected}
-            disabled={running}
-          />
+          <IssueContext.Provider value={nodeIssues}>
+            <BlueprintCanvas
+              graph={graph}
+              setGraph={updateGraph}
+              onSelect={setSelected}
+              disabled={running}
+            />
+          </IssueContext.Provider>
         </ReactFlowProvider>
         <DetailsInspector
           networkConnected={graph.edges.some(
@@ -565,6 +646,26 @@ export default function App() {
         }}
       />
       <StudyDock studies={result?.studies ?? []} onInspect={setSelected} />
+      {brainOpen && (
+        <BrainPanel
+          onClose={() => setBrainOpen(false)}
+          onOpen={(brainGraph, brainTitle, run) => {
+            setBrainOpen(false);
+            setRepairChanges([]);
+            loadEntry(
+              {
+                id: crypto.randomUUID(),
+                title: brainTitle,
+                area: "Personal",
+                description: "Blueprint construido por el Cerebro IA",
+                instructions: ["Revisa cada nodo y ejecuta."],
+                graph: brainGraph,
+              },
+              run,
+            );
+          }}
+        />
+      )}
       {libraryOpen && (
         <BlueprintLibrary
           graph={graph}

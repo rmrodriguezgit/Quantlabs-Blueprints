@@ -1390,6 +1390,7 @@ declare global {
       onNewBlueprint?: (callback: () => void) => () => void;
       execute: (graph: Graph) => Promise<unknown>;
       onProgress: (callback: (event: unknown) => void) => () => void;
+      request?: (route: string, body?: unknown) => Promise<unknown>;
     };
   }
 }
@@ -1499,6 +1500,13 @@ export function featureOptions(
     ),
   ];
   if (node.data.kind === "curve_data") return ["Close", "Coordinate"];
+  const laya: Partial<Record<Kind, string[]>> = {
+    laya_signal: ["Laya_P_up", "Laya_P_down", "Laya_P_flat", "Laya_P_higher", "Laya_Risk", "Laya_Confidence"],
+    laya_calibrate: ["Laya_P_raw", "Laya_P_cal"],
+    laya_feedback: ["Feedback_P", "Position", "StrategyReturn", "Equity", "BuyHold", "RollingHitRate"],
+  };
+  if (laya[node.data.kind])
+    return [...new Set([...base, ...(laya[node.data.kind] ?? [])])];
   if (node.data.kind === "source")
     return ["Open", "High", "Low", "Close", "Volume"];
   if (node.data.kind === "select_columns")

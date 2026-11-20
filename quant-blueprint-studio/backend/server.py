@@ -12,8 +12,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field
 try:
     from .engine.dag_runner import DAGRunner
+    from .brain import explain as brain_explain, llm as brain_llm, planner as brain_planner
 except ImportError:
     from engine.dag_runner import DAGRunner
+    from brain import explain as brain_explain, llm as brain_llm, planner as brain_planner
 
 
 class NodeData(BaseModel):
@@ -60,6 +62,44 @@ def run(graph: Graph) -> dict[str, Any]:
         raise HTTPException(422, str(exc)) from exc
     finally:
         execution_lock.release()
+
+
+class PlanRequest(BaseModel):
+    prompt: str = Field(min_length=1, max_length=2000)
+    engine: Literal['auto', 'ollama', 'rules'] = 'auto'
+    catalog: dict[str, dict[str, Any]]
+
+
+class ExplainRequest(BaseModel):
+    report: dict[str, Any]
+    engine: Literal['auto', 'ollama', 'rules'] = 'auto'
+
+
+@app.post('/api/validate')
+def validate(graph: Graph) -> dict[str, Any]:
+    """Engine-side structural check (pins, cycles, required inputs) without executing."""
+    return brain_planner.structural_check(graph.model_dump())
+
+
+@app.get('/api/brain/status')
+def brain_status() -> dict[str, Any]:
+    return brain_llm.status()
+
+
+@app.post('/api/brain/plan')
+def brain_plan(request: PlanRequest) -> dict[str, Any]:
+    try:
+        return brain_planner.plan(request.prompt, request.catalog, request.engine)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@app.post('/api/brain/explain')
+def brain_explain_result(request: ExplainRequest) -> dict[str, Any]:
+    try:
+        return brain_explain.explain(request.report, request.engine)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
 
 
 @app.post('/api/execute')
@@ -116,4 +156,4 @@ async def execute_ws(socket: WebSocket) -> None:
 
 if __name__ == '__main__':
     import uvicorn
-    uvicorn.run(app, host='127.0.0.1', port=8000)
+    uvicorn.run(app, host='127.0.0.1', port=int(os.environ.get('QL_ENGINE_PORT', '8000')))

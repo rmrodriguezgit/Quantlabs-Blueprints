@@ -157,6 +157,10 @@ interface Pin {
   direction: "source" | "target";
 }
 const PinContext = createContext<(pin: Pin) => void>(() => {});
+/** Worst validation severity and count per node id, provided by App. */
+export const IssueContext = createContext<
+  Record<string, { severity: "error" | "warning"; count: number; first: string }>
+>({});
 function visibleInputs(node: BlueprintNode): Record<string, string> {
   return Object.fromEntries(
     Object.entries(inputHandles(node.data.kind)).filter(
@@ -169,11 +173,12 @@ function visibleInputs(node: BlueprintNode): Record<string, string> {
 }
 function VisualNode({ id: nodeId, data, selected }: NodeProps<BlueprintNode>) {
   const openPin = useContext(PinContext);
+  const issue = useContext(IssueContext)[nodeId];
   const def = catalog[data.kind];
   const Icon = icons[data.kind];
   return (
     <div
-      className={`blueprint-node ${selected ? "selected" : ""}`}
+      className={`blueprint-node ${selected ? "selected" : ""} ${issue ? `has-${issue.severity}` : ""}`}
       style={
         {
           "--node-color":
@@ -183,6 +188,11 @@ function VisualNode({ id: nodeId, data, selected }: NodeProps<BlueprintNode>) {
         } as React.CSSProperties
       }
     >
+      {issue && (
+        <span className={`node-issue ${issue.severity}`} title={issue.first}>
+          {issue.count}
+        </span>
+      )}
       <div className="node-category">
         {def.category}
         <span>•••</span>

@@ -23,10 +23,15 @@ class LibraryTests(unittest.TestCase):
     def test_all_distributed_graphs_execute(self) -> None:
         for entry in self.entries:
             with self.subTest(entry=entry['id']):
+                if entry['id'].startswith('laya-'):
+                    try:
+                        import laya_mlx  # noqa: F401  Apple Silicon only
+                    except ImportError:
+                        continue
                 graph=deepcopy(entry['graph'])
                 for node in graph['nodes']:
                     if node['data']['kind']=='plot':node['data']['params']['skip_rows']=0
-                    if node['data']['kind']=='source' and entry['id'].startswith('notebook-'):
+                    if node['data']['kind']=='source' and entry['id'].startswith(('notebook-','laya-')):
                         node['data']['params']['source']='synthetic'
                     if node['data']['kind'] in ('study','rl_agent','model','curve_fit'):
                         node['data']['params']['epochs']=2

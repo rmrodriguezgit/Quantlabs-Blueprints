@@ -1,5 +1,6 @@
 import type { StudyReport } from "../types/blueprint";
 import { PlotDock } from "./PlotDock";
+import { ExplainBox } from "./ExplainBox";
 export function StudyDock({
   studies,
   onInspect,
@@ -139,6 +140,7 @@ export function StudyDock({
                 </tbody>
               </table>
             </div>
+            <ExplainBox report={study} />
             {study.notes.map((n, i) => (
               <p className="muted" key={i}>
                 {n}
