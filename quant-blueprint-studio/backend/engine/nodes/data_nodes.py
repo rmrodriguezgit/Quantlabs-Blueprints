@@ -18,6 +18,11 @@ def source(params: dict[str, Any]) -> pd.DataFrame:
         return pd.DataFrame({'Open': opening, 'High': np.maximum(opening, close) * 1.005,
                              'Low': np.minimum(opening, close) * 0.995, 'Close': close,
                              'Volume': rng.integers(100000, 5000000, len(index))}, index=index)
+    # DEPRECATED: duplicate yfinance path kept only for saved blueprints using `source`
+    # with source='yfinance'. New code: yfinance_data node or backend.lab.load('yfinance').
+    import warnings
+    warnings.warn("source(source='yfinance') is deprecated; use the yfinance_data node or backend.lab.load('yfinance').",
+                  DeprecationWarning, stacklevel=2)
     import yfinance as yf
     ticker = str(params.get('ticker', 'SPY')).strip().upper()
     if not ticker or len(ticker) > 20:
