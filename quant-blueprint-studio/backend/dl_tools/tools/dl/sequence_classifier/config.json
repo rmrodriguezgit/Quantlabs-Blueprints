@@ -1,0 +1,9 @@
+{
+  "name": "dl_sequence_classifier",
+  "version": "1.0.0",
+  "weights_version": "seq-1.0.0",
+  "class_names": {"2": ["down", "up"], "3": ["down", "flat", "up"]},
+  "est_ram_mb": 50,
+  "est_vram_mb": 30,
+  "expected_latency_ms": 250
+}

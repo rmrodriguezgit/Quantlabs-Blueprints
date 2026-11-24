@@ -36,16 +36,14 @@ Los nombres de tipo siguientes corresponden a herramientas del catálogo, en ord
 
 | Receta | Área | Herramientas |
 | --- | --- | --- |
-| [Unidad 2 · Feedforward 11 → 64 → 32 → 1](../quant-blueprint-studio/public/blueprints/unit-2.json) | Redes feedforward | source → features → study → plot |
-| [Unidad 3 · SGD / RMSprop / AdamW](../quant-blueprint-studio/public/blueprints/unit-3.json) | Entrenamiento | source → features → study → plot |
-| [Unidad 4 · Regularización y dirección](../quant-blueprint-studio/public/blueprints/unit-4.json) | Regularización | source → features → study → plot |
-| [Unidad 5 · Búsqueda temporal](../quant-blueprint-studio/public/blueprints/unit-5.json) | Hiperparámetros | source → features → study → plot |
-| [Unidad 6 · CNN 1D](../quant-blueprint-studio/public/blueprints/unit-6.json) | Redes convolucionales | source → features → study → plot |
-| [Unidad 7 · LSTM / GRU / bidireccional](../quant-blueprint-studio/public/blueprints/unit-7.json) | Redes recurrentes | source → features → study → plot |
-| [Unidad 8 · PCA / AE / DAE](../quant-blueprint-studio/public/blueprints/unit-8.json) | Representaciones | source → features → study → plot |
-| [Unidad 9 · CVAE / cGAN](../quant-blueprint-studio/public/blueprints/unit-9.json) | Modelos generativos | source → features → study → plot |
-| [Unidad 9 ampliación · cDCGAN 1D](../quant-blueprint-studio/public/blueprints/unit-9-cdcgan.json) | Modelos generativos | source → features → study → plot |
-| [Unidad 10 · Double DQN](../quant-blueprint-studio/public/blueprints/unit-10.json) | Aprendizaje por refuerzo | source → features → study → plot |
+| [Unidad 2 · Feedforward 11 → 64 → 32 → 1](../quant-blueprint-studio/public/blueprints/unit-2.json) | Redes feedforward | source → features → sup_target → sup_split → sup_scale → sup_mlp → sup_loss → sup_train → sup_evaluate |
+| [Unidad 3 · SGD / RMSprop / AdamW](../quant-blueprint-studio/public/blueprints/unit-3.json) | Entrenamiento | source → features → sup_target → sup_split → sup_scale → sup_init → sup_mlp → sup_optimizer → sup_optimizer → sup_optimizer → sup_loss → sup_train → sup_select → sup_evaluate |
+| [Unidad 4 · Regularización y dirección](../quant-blueprint-studio/public/blueprints/unit-4.json) | Regularización | source → features → sup_target → sup_split → sup_scale → sup_init → sup_mlp → sup_regularizer → sup_regularizer → sup_regularizer → sup_regularizer → sup_regularizer → sup_loss → sup_train → sup_select → sup_evaluate |
+| [Unidad 5 · Búsqueda temporal](../quant-blueprint-studio/public/blueprints/unit-5.json) | Hiperparámetros | source → features → sup_target → sup_split → sup_hpo → sup_scale → sup_loss → sup_train → sup_evaluate |
+| [Unidad 6 · CNN 1D](../quant-blueprint-studio/public/blueprints/unit-6.json) | Redes convolucionales | source → features → sup_target → sup_split → sup_scale → sup_windows → sup_cnn → sup_mlp → sup_loss → sup_train → sup_select → sup_evaluate |
+| [Unidad 7 · LSTM / GRU / bidireccional](../quant-blueprint-studio/public/blueprints/unit-7.json) | Redes recurrentes | source → features → sup_target → sup_split → sup_scale → sup_windows → sup_rnn → sup_rnn → sup_rnn → sup_rnn → sup_loss → sup_train → sup_select → sup_evaluate |
+| [Unidad 9 ampliación · cDCGAN 1D en herramientas](../quant-blueprint-studio/public/blueprints/unit-9-cdcgan.json) | Modelos generativos | source → features → gen_windows → gen_condition → gen_split → gen_scale → gen_dcgan_train → gen_select → gen_regime_compare → gen_evaluate |
+| [Unidad 10 · Double DQN](../quant-blueprint-studio/public/blueprints/unit-10.json) | Aprendizaje por refuerzo | source → features → sup_target → sup_split → sup_scale → rl_env → rl_qnet → rl_replay → rl_target → rl_sync → rl_train → rl_baselines → rl_evaluate |
 | [Retornos diarios y acumulados](../quant-blueprint-studio/public/blueprints/area-returns.json) | Datos e indicadores | source → features → plot |
 | [VWAP / MACD / EMA / SMA / BB](../quant-blueprint-studio/public/blueprints/area-indicators.json) | Datos e indicadores | source → features → plot |
 | [Descomposición y escalado](../quant-blueprint-studio/public/blueprints/area-stats.json) | Estadística | source → features → prepare → plot |

@@ -1,0 +1,8 @@
+{
+  "name": "dl_tabular_forecast",
+  "version": "1.0.0",
+  "weights_version": "fc-1.0.0",
+  "est_ram_mb": 60,
+  "est_vram_mb": 40,
+  "expected_latency_ms": 250
+}

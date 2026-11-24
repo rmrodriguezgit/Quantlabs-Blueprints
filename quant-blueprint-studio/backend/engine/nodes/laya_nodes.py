@@ -71,12 +71,17 @@ def _states(frame: pd.DataFrame, ticker: str) -> list[dict[str, Any]]:
 
 
 def laya_signal(frame: pd.DataFrame, p: dict[str, Any], progress: Progress = None) -> tuple[pd.DataFrame, dict[str, Any]]:
+    if frame.attrs.get('polymarket') and str(p.get('mode', 'auto')) in ('auto', 'polymarket'):
+        from .polymarket_nodes import laya_signal_polymarket
+        return laya_signal_polymarket(frame, p, progress)
     if 'Close' not in frame or not isinstance(frame.index, pd.DatetimeIndex):
         raise ValueError('Laya Signal requiere filas fechadas con Close (Market Data → Technical Features).')
     max_rows = int(p.get('max_rows', 500))
     if not 30 <= max_rows <= 3000:
         raise ValueError('Máximo de filas: 30–3000.')
-    ticker = str(p.get('ticker', 'ASSET'))
+    ticker = str(p.get('ticker', 'ASSET')).strip()
+    if ticker.lower() in ('', 'auto'):
+        ticker = 'ASSET'
     data = frame.iloc[-max_rows:].copy()
     states = _states(data, ticker)
     questions = _questions(p)
@@ -120,6 +125,7 @@ def laya_signal(frame: pd.DataFrame, p: dict[str, Any], progress: Progress = Non
             'Estado del día t = indicadores conocidos al cierre de t. La respuesta se compara con el cierre de t+1.',
             f'Preguntas: choice (up/down/flat), score (riesgo 0–2), noul (P de cerrar más alto). {len(states) - hits} inferencias nuevas, {hits} desde caché, {elapsed:.1f}s.',
             'Los pesos del transformer de Laya están congelados; el aprendizaje ocurre en Laya Calibrate y Laya Feedback.',
+            f'Nombre del activo en el estado: «{ticker}».',
             'Último estado enviado: ' + json.dumps(sample, ensure_ascii=False),
         ],
         'table': [{'respuesta': k, 'días': int(v), 'proporción': round(v / len(choice), 4)} for k, v in counts.items()],
@@ -177,6 +183,9 @@ RAW = np.array([0.0, 1.0, 0.0, 0.0])  # "trust Laya's up/down odds as is"
 
 
 def laya_calibrate(frame: pd.DataFrame, p: dict[str, Any], progress: Progress = None) -> tuple[pd.DataFrame, dict[str, Any]]:
+    if frame.attrs.get('polymarket_windows'):
+        from .polymarket_nodes import laya_calibrate_polymarket
+        return laya_calibrate_polymarket(frame, p, progress)
     tr, va = float(p.get('train_ratio', .6)), float(p.get('val_ratio', .2))
     lr, epochs, l2 = float(p.get('lr', .1)), int(p.get('epochs', 300)), float(p.get('l2', .01))
     if not (.3 <= tr <= .8 and .05 <= va <= .3 and tr + va < .95):
@@ -240,6 +249,8 @@ def laya_calibrate(frame: pd.DataFrame, p: dict[str, Any], progress: Progress = 
 
 
 def laya_feedback(frame: pd.DataFrame, p: dict[str, Any], progress: Progress = None) -> tuple[pd.DataFrame, dict[str, Any]]:
+    if frame.attrs.get('polymarket'):
+        raise ValueError('Laya Feedback simula una estrategia diaria; con Polymarket usa LAYA UP/DOWN con pesos «online».')
     lr, gate, cost = float(p.get('lr', .01)), float(p.get('min_confidence', .52)), float(p.get('cost_bps', 5)) / 1e4
     mode, window = str(p.get('positions', 'long_short')), int(p.get('rolling_window', 20))
     if not (0 <= lr <= 2 and .5 <= gate < 1 and 0 <= cost <= .01 and mode in ('long_short', 'long_only') and 5 <= window <= 120):

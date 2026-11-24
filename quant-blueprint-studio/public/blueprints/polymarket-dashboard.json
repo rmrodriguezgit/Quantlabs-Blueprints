@@ -1,0 +1,39 @@
+{
+  "format": "quantlabs-blueprint-library",
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "polymarket-dashboard",
+      "title": "Polymarket Dashboard · todo el mercado activo",
+      "area": "Polymarket · decisiones UP/DOWN",
+      "description": "Descarga los eventos activos de Polymarket y los presenta como dashboard: KPIs, volumen por categoría, mercados más negociados, mayores movimientos, más disputados, cierran en 24 h, más líquidos y spreads amplios.",
+      "instructions": [
+        "Requiere internet (Gamma API pública, sólo lectura).",
+        "Cambia la categoría o el texto en el Inspector para enfocar el dashboard; sube «Páginas» para cubrir más eventos.",
+        "Activa ● En vivo para refrescarlo cada minuto.",
+        "Datos informativos; no es asesoría financiera."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "DB",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 120
+            },
+            "data": {
+              "kind": "polymarket_dashboard",
+              "label": "Polymarket Dashboard",
+              "params": {
+                "category": "todas",
+                "pages": 2
+              }
+            }
+          }
+        ],
+        "edges": []
+      }
+    }
+  ]
+}

@@ -6,12 +6,13 @@
       "id": "unit-2",
       "title": "Unidad 2 · Feedforward 11 → 64 → 32 → 1",
       "area": "Redes feedforward",
-      "description": "MLP con objetivo intradía en puntos básicos, Kaiming, selección por validación y comparación con Ridge.",
+      "description": "Diez segmentos de la infografía, una herramienta por paso: objetivo intradía, cortes, escalado TR, MLP, pérdida, checkpoint y evaluación con Ridge y costes.",
       "instructions": [
-        "Carga la plantilla. Pulsa Execute Blueprint para ver progreso, selección, métricas y gráficos debajo del lienzo.",
-        "Predeterminada: serie sintética reproducible, sin internet. Para datos reales, selecciona yfinance en SPY / Market Data.",
-        "Selecciona Learning Experiment para cambiar características, ventanas, épocas, costes y otras opciones. Las dimensiones de entrada se derivan de las características seleccionadas.",
-        "Guarda una copia en Personal o exporta JSON. Al importar se recuperan nodos, conexiones y parámetros; al ejecutar se reentrena."
+        "Propósito: estimar el intradía de la sesión siguiente (bps) con una MLP 11 → 64 → 32 → 1.",
+        "Datos de prueba: serie sintética reproducible (6 años, sin internet). Cambia SPY a yfinance para datos reales.",
+        "Cadena: SPY · synthetic / yfinance → 11 indicadores causales → 03 · Definir el objetivo → 04 · Separar el tiempo → 05 · Escalar sólo con train → 06 · Construir la MLP → 07 · Elegir la pérdida → 08–09 · Actualizar pesos y guardar checkpoint → 10 · Evaluar y comparar. Cada herramienta recibe el pin frame del paso anterior y entrega el suyo al siguiente.",
+        "Resultado esperado: RMSE/MAE/R² en test frente a Ridge, curva de pérdidas del checkpoint y resultado neto de costes.",
+        "Pulsa Execute Blueprint. Cada herramienta publica su propio informe (tabla, métricas y gráficos) debajo del lienzo."
       ],
       "infographic": "unidad-2.png",
       "graph": {
@@ -20,8 +21,8 @@
             "id": "data",
             "type": "blueprint",
             "position": {
-              "x": 0,
-              "y": 180
+              "x": 40,
+              "y": 40
             },
             "data": {
               "kind": "source",
@@ -29,7 +30,7 @@
               "params": {
                 "source": "synthetic",
                 "ticker": "SPY",
-                "years": 5
+                "years": 6
               }
             }
           },
@@ -37,12 +38,12 @@
             "id": "features",
             "type": "blueprint",
             "position": {
-              "x": 300,
-              "y": 180
+              "x": 340,
+              "y": 40
             },
             "data": {
               "kind": "features",
-              "label": "11 causal indicators",
+              "label": "11 indicadores causales",
               "params": {
                 "lags": 0,
                 "use_rsi": true,
@@ -55,73 +56,102 @@
             }
           },
           {
-            "id": "experiment",
+            "id": "target",
             "type": "blueprint",
             "position": {
-              "x": 620,
-              "y": 180
+              "x": 640,
+              "y": 40
             },
             "data": {
-              "kind": "study",
-              "label": "Unidad 2 · Feedforward 11 → 64 → 32 → 1",
+              "kind": "sup_target",
+              "label": "03 · Definir el objetivo",
+              "params": {}
+            }
+          },
+          {
+            "id": "split",
+            "type": "blueprint",
+            "position": {
+              "x": 940,
+              "y": 40
+            },
+            "data": {
+              "kind": "sup_split",
+              "label": "04 · Separar el tiempo",
+              "params": {}
+            }
+          },
+          {
+            "id": "scale",
+            "type": "blueprint",
+            "position": {
+              "x": 1240,
+              "y": 40
+            },
+            "data": {
+              "kind": "sup_scale",
+              "label": "05 · Escalar sólo con train",
+              "params": {}
+            }
+          },
+          {
+            "id": "mlp",
+            "type": "blueprint",
+            "position": {
+              "x": 1540,
+              "y": 40
+            },
+            "data": {
+              "kind": "sup_mlp",
+              "label": "06 · Construir la MLP",
               "params": {
-                "topic": "feedforward",
-                "feature_columns": "LogReturn,Volatility,RSI,EMA,SMA,VWAP,MACD,MACDSignal,BBUpper,BBMiddle,BBLower",
                 "widths": "64,32",
-                "lookback": 1,
-                "train_ratio": 0.65,
-                "val_ratio": 0.15,
-                "epochs": 12,
-                "patience": 5,
-                "batch_size": 64,
-                "lr": 0.001,
-                "trials": 6,
-                "latent_dim": 3,
-                "horizon": 16,
-                "cost_bps": 5,
-                "threshold_bps": 0,
-                "seed": 42
+                "name": "MLP 11→64→32→1"
               }
             }
           },
           {
-            "id": "chart-0",
+            "id": "loss",
             "type": "blueprint",
             "position": {
-              "x": 950,
-              "y": 0
+              "x": 40,
+              "y": 260
             },
             "data": {
-              "kind": "plot",
-              "label": "Resultado fuera de muestra",
+              "kind": "sup_loss",
+              "label": "07 · Elegir la pérdida",
               "params": {
-                "title": "Resultado fuera de muestra",
-                "plot_source": "auto",
-                "plot_columns": "",
-                "chart_type": "line",
-                "color": "Mint",
-                "study_chart": 0
+                "loss": "MSE"
               }
             }
           },
           {
-            "id": "chart-1",
+            "id": "train",
             "type": "blueprint",
             "position": {
-              "x": 950,
-              "y": 200
+              "x": 340,
+              "y": 260
             },
             "data": {
-              "kind": "plot",
-              "label": "Validación / distribución",
+              "kind": "sup_train",
+              "label": "08–09 · Actualizar pesos y guardar checkpoint",
               "params": {
-                "title": "Validación / distribución",
-                "plot_source": "auto",
-                "plot_columns": "",
-                "chart_type": "line",
-                "color": "Violet",
-                "study_chart": 1
+                "epochs": 30,
+                "patience": 8
               }
+            }
+          },
+          {
+            "id": "evaluate",
+            "type": "blueprint",
+            "position": {
+              "x": 640,
+              "y": 260
+            },
+            "data": {
+              "kind": "sup_evaluate",
+              "label": "10 · Evaluar y comparar",
+              "params": {}
             }
           }
         ],
@@ -135,27 +165,59 @@
             "animated": true
           },
           {
-            "id": "features-experiment",
+            "id": "features-target",
             "source": "features",
-            "target": "experiment",
+            "target": "target",
             "sourceHandle": "frame",
             "targetHandle": "frame",
             "animated": true
           },
           {
-            "id": "experiment-chart-0",
-            "source": "experiment",
-            "target": "chart-0",
-            "sourceHandle": "tensor",
-            "targetHandle": "tensor",
+            "id": "target-split",
+            "source": "target",
+            "target": "split",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
             "animated": true
           },
           {
-            "id": "experiment-chart-1",
-            "source": "experiment",
-            "target": "chart-1",
-            "sourceHandle": "tensor",
-            "targetHandle": "tensor",
+            "id": "split-scale",
+            "source": "split",
+            "target": "scale",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "scale-mlp",
+            "source": "scale",
+            "target": "mlp",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "mlp-loss",
+            "source": "mlp",
+            "target": "loss",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "loss-train",
+            "source": "loss",
+            "target": "train",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "train-evaluate",
+            "source": "train",
+            "target": "evaluate",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
             "animated": true
           }
         ]

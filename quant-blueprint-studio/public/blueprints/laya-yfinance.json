@@ -56,7 +56,7 @@
               "kind": "laya_signal",
               "label": "3 · Laya Signal (preguntas)",
               "params": {
-                "ticker": "SPY",
+                "ticker": "auto",
                 "max_rows": 500
               }
             }

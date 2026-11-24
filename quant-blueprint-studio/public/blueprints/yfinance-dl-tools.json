@@ -1,0 +1,159 @@
+{
+  "format": "quantlabs-blueprint-library",
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "yfinance-dl-tools",
+      "title": "DL Tools · pronóstico, clasificación y anomalías (SPY)",
+      "area": "Machine learning",
+      "description": "Tres herramientas de Deep Learning independientes (LSTM, GRU, autoencoder) sobre los rendimientos de SPY; cada una se carga, ajusta, mide en holdout y se descarga de memoria al terminar.",
+      "instructions": [
+        "Requiere internet. Cada herramienta usa su checkpoint si existe; si no, se ajusta con las primeras ventanas de la entrada.",
+        "Dispositivo auto = MPS/CUDA si hay, si no CPU.",
+        "Compara siempre las métricas holdout con la línea base del informe."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "YF",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 120
+            },
+            "data": {
+              "kind": "yfinance_data",
+              "label": "0 · yfinance Data SPY 1d",
+              "params": {
+                "ticker": "SPY",
+                "interval": "1d",
+                "range_mode": "period",
+                "period": "10y"
+              }
+            }
+          },
+          {
+            "id": "R",
+            "type": "blueprint",
+            "position": {
+              "x": 330,
+              "y": 120
+            },
+            "data": {
+              "kind": "ml_returns",
+              "label": "1 · Rendimientos logarítmicos",
+              "params": {
+                "columns": "Close",
+                "return_type": "log"
+              }
+            }
+          },
+          {
+            "id": "C",
+            "type": "blueprint",
+            "position": {
+              "x": 660,
+              "y": 120
+            },
+            "data": {
+              "kind": "ml_clean",
+              "label": "2 · Limpieza de datos",
+              "params": {
+                "missing": "ffill",
+                "outliers": "none"
+              }
+            }
+          },
+          {
+            "id": "F",
+            "type": "blueprint",
+            "position": {
+              "x": 1000,
+              "y": 0
+            },
+            "data": {
+              "kind": "dl_tabular_forecast",
+              "label": "3 · DL · Pronóstico LSTM",
+              "params": {
+                "column": "LogRet_Close",
+                "architecture": "lstm",
+                "lookback": 20,
+                "epochs": 20
+              }
+            }
+          },
+          {
+            "id": "S",
+            "type": "blueprint",
+            "position": {
+              "x": 1000,
+              "y": 200
+            },
+            "data": {
+              "kind": "dl_sequence_classifier",
+              "label": "4 · DL · Clasificador GRU",
+              "params": {
+                "column": "LogRet_Close",
+                "epochs": 20
+              }
+            }
+          },
+          {
+            "id": "A",
+            "type": "blueprint",
+            "position": {
+              "x": 1000,
+              "y": 400
+            },
+            "data": {
+              "kind": "dl_anomaly_autoencoder",
+              "label": "5 · DL · Anomalías",
+              "params": {
+                "columns": "LogRet_Close,Volume",
+                "latent": 1,
+                "threshold": 0.995
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "eYFR",
+            "source": "YF",
+            "target": "R",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "eRC",
+            "source": "R",
+            "target": "C",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "eCF",
+            "source": "C",
+            "target": "F",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "eCS",
+            "source": "C",
+            "target": "S",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "eCA",
+            "source": "C",
+            "target": "A",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          }
+        ]
+      }
+    }
+  ]
+}

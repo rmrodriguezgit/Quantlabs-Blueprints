@@ -1,0 +1,8 @@
+{
+  "name": "dl_recurrent_compare",
+  "version": "1.0.0",
+  "weights_version": "rnn-1.0.0",
+  "est_ram_mb": 120,
+  "est_vram_mb": 60,
+  "expected_latency_ms": 8000
+}

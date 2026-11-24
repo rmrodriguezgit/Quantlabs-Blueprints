@@ -1,5 +1,66 @@
 import type { Edge, Node } from "@xyflow/react";
 export type Kind =
+  | "dl_recurrent_compare"
+  | "dl_tabular_forecast"
+  | "dl_sequence_classifier"
+  | "dl_anomaly_autoencoder"
+  | "ml_select"
+  | "ml_returns"
+  | "ml_clean"
+  | "ml_split"
+  | "ml_train"
+  | "ml_evaluate"
+  | "ml_predict"
+  | "ml_visualize"
+  | "ae_split"
+  | "sup_target"
+  | "sup_split"
+  | "sup_scale"
+  | "sup_windows"
+  | "sup_init"
+  | "sup_mlp"
+  | "sup_cnn"
+  | "sup_rnn"
+  | "sup_optimizer"
+  | "sup_regularizer"
+  | "sup_loss"
+  | "sup_hpo"
+  | "sup_train"
+  | "sup_select"
+  | "sup_evaluate"
+  | "rl_env"
+  | "rl_qnet"
+  | "rl_replay"
+  | "rl_target"
+  | "rl_sync"
+  | "rl_train"
+  | "rl_baselines"
+  | "rl_evaluate"
+  | "gen_dcgan_train"
+  | "gen_regime_compare"
+  | "gen_windows"
+  | "gen_condition"
+  | "gen_split"
+  | "gen_scale"
+  | "gen_cvae"
+  | "gen_reparam"
+  | "gen_vae_train"
+  | "gen_gan_train"
+  | "gen_select"
+  | "gen_evaluate"
+  | "ae_standardize"
+  | "ae_pca"
+  | "ae_encoder"
+  | "ae_decoder"
+  | "ae_noise"
+  | "ae_train"
+  | "ae_select"
+  | "ae_ridge"
+  | "ae_test"
+  | "yfinance_data"
+  | "polymarket_dashboard"
+  | "polymarket_source"
+  | "laya_updown"
   | "laya_signal"
   | "laya_calibrate"
   | "laya_feedback"
@@ -38,6 +99,8 @@ export type BlueprintData = {
 export type BlueprintNode = Node<BlueprintData, "blueprint">;
 export type Graph = { nodes: BlueprintNode[]; edges: Edge[] };
 export interface Result {
+  dashboards?: (PolymarketDashboardData | MarketDashboardData)[];
+  decisions?: UpDownDecision[];
   studies?: StudyReport[];
   scaling_audits?: ScalingAudit[];
   decomposition: { date: string; TR: number; VA: number; TE: number }[];
@@ -104,6 +167,7 @@ export interface StudyReport {
   topic: string;
   scope?: string;
   architecture?: NetworkSummary | null;
+  market?: PolymarketSnapshot;
   selected: string;
   features: string[];
   splits: { train: number; validation: number; test: number };
@@ -126,6 +190,10 @@ export interface Field {
   min?: number;
   max?: number;
   step?: number;
+  /** Only shown when the node runs in this mode (Laya nodes behave differently after Polymarket Market). */
+  mode?: "daily" | "polymarket";
+  /** Only shown when another parameter has this value (e.g. start/end only with range_mode = start_end). */
+  showIf?: { key: string; value: Param };
 }
 export interface Definition {
   label: string;
@@ -137,6 +205,1008 @@ export interface Definition {
   fields: Field[];
 }
 export const catalog: Record<Kind, Definition> = {
+  dl_recurrent_compare: {
+    label: "DL · LSTM vs GRU (secuencias)",
+    subtitle: "Secuencias batch×20×11 · LSTM / GRU / bidireccional · selección VA · vs Ridge en bps",
+    category: "12 / DL TOOLS",
+    color: "#ff9e64",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "features", label: "Indicadores (coma; vacío = todas las numéricas salvo OHLCV)", value: "LogReturn,Lag_1,Lag_2,Lag_3,Lag_4,Lag_5,RSI,MACD,MACDSignal,MACDHistogram,Volatility" },
+      { key: "target", label: "Objetivo de la sesión siguiente", value: "next_intraday", options: ["next_intraday", "next_close"] },
+      { key: "target_scale", label: "Escala de salida (10000 = bps)", value: 10000, min: 1, max: 100000 },
+      { key: "lookback", label: "Sesiones por secuencia", value: 20, min: 2, max: 256 },
+      { key: "use_lstm", label: "Comparar LSTM", value: true },
+      { key: "use_gru", label: "Comparar GRU", value: true },
+      { key: "use_lstm_bi", label: "Comparar LSTM bidireccional", value: true },
+      { key: "use_gru_bi", label: "Comparar GRU bidireccional", value: false },
+      { key: "hidden_size", label: "Capa de entrada: estado oculto LSTM/GRU", value: 32, min: 2, max: 1024 },
+      { key: "rnn_layers", label: "Capas recurrentes apiladas", value: 1, min: 1, max: 4 },
+      { key: "hidden_layers", label: "Capas intermedias tras el resumen (0 = como la infografía)", value: 0, min: 0, max: 8 },
+      { key: "units", label: "Neuronas por capa intermedia", value: 32, min: 1, max: 2048 },
+      { key: "activation", label: "Activación de las capas intermedias", value: "gelu", options: ["gelu", "relu", "tanh", "sigmoid", "swish", "leaky_relu", "elu", "identity"] },
+      { key: "dropout", label: "Dropout por capa", value: 0, min: 0, max: 0.9, step: 0.05 },
+      { key: "batch_norm", label: "BatchNorm en cada capa", value: false },
+      { key: "layers", label: "Capas a medida (64:relu:0.1, 16:tanh)", value: "" },
+      { key: "optimizer", label: "Optimizador", value: "adam", options: ["adam", "adamw", "sgd", "rmsprop", "adagrad"] },
+      { key: "lr", label: "Learning rate", value: 0.001, min: 0.00001, max: 1, step: 0.0005 },
+      { key: "weight_decay", label: "Weight decay (L2)", value: 0, min: 0, max: 1, step: 0.0001 },
+      { key: "momentum", label: "Momentum (SGD / RMSprop)", value: 0.9, min: 0, max: 0.99, step: 0.01, showIf: { key: "optimizer", value: "sgd" } },
+      { key: "epochs", label: "Épocas máximas", value: 60, min: 0, max: 1000 },
+      { key: "batch_size", label: "Tamaño de lote", value: 64, min: 4, max: 4096 },
+      { key: "patience", label: "Paciencia (parada temprana en VA)", value: 10, min: 1, max: 200 },
+      { key: "ridge_alpha", label: "Ridge α (línea base)", value: 1, min: 0.0001, max: 1000000 },
+      { key: "train_ratio", label: "Fracción TR", value: 0.7, min: 0.3, max: 0.9, step: 0.05 },
+      { key: "val_ratio", label: "Fracción VA", value: 0.15, min: 0.05, max: 0.4, step: 0.05 },
+      { key: "device", label: "Dispositivo", value: "auto", options: ["auto", "cpu", "mps", "cuda"] },
+      { key: "seed", label: "Semilla", value: 42, min: 0, max: 99999 },
+    ],
+  },
+  dl_tabular_forecast: {
+    label: "DL · Pronóstico de serie",
+    subtitle: "Herramienta independiente · MLP / 1D-CNN / LSTM · intervalo",
+    category: "12 / DL TOOLS",
+    color: "#ff9e64",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "column", label: "Columna a pronosticar", value: "LogRet_Close" },
+      { key: "lookback", label: "Ventana lookback", value: 20, min: 2, max: 512 },
+      { key: "architecture", label: "Capa de entrada", value: "lstm", options: ["lstm", "cnn1d", "mlp"] },
+      { key: "input_units", label: "Neuronas / filtros / celdas de entrada", value: 32, min: 1, max: 2048 },
+      { key: "input_activation", label: "Activación de entrada (MLP/CNN)", value: "gelu", options: ["gelu", "relu", "tanh", "sigmoid", "swish", "leaky_relu", "elu", "identity"] },
+      { key: "hidden_layers", label: "Capas intermedias (nº)", value: 2, min: 0, max: 8 },
+      { key: "units", label: "Neuronas por capa intermedia", value: 32, min: 1, max: 2048 },
+      { key: "activation", label: "Activación de las capas intermedias", value: "gelu", options: ["gelu", "relu", "tanh", "sigmoid", "swish", "leaky_relu", "elu", "identity"] },
+      { key: "dropout", label: "Dropout por capa", value: 0, min: 0, max: 0.9, step: 0.05 },
+      { key: "batch_norm", label: "BatchNorm en cada capa", value: false },
+      { key: "layers", label: "Capas a medida (64:relu:0.1:bn, 32:tanh; vacío = las de arriba)", value: "" },
+      { key: "optimizer", label: "Optimizador", value: "adam", options: ["adam", "adamw", "sgd", "rmsprop", "adagrad"] },
+      { key: "lr", label: "Learning rate", value: 0.003, min: 0.00001, max: 1, step: 0.0005 },
+      { key: "weight_decay", label: "Weight decay (L2)", value: 0, min: 0, max: 1, step: 0.0001 },
+      { key: "momentum", label: "Momentum (SGD / RMSprop)", value: 0.9, min: 0, max: 0.99, step: 0.01, showIf: { key: "optimizer", value: "sgd" } },
+      { key: "epochs", label: "Épocas máximas (sin checkpoint)", value: 60, min: 0, max: 1000 },
+      { key: "batch_size", label: "Tamaño de lote", value: 64, min: 4, max: 4096 },
+      { key: "patience", label: "Paciencia (parada temprana)", value: 10, min: 1, max: 200 },
+      { key: "horizon", label: "Capa de salida: pasos a predecir", value: 1, min: 1, max: 64 },
+      { key: "holdout", label: "Fracción holdout final", value: 0.2, min: 0.05, max: 0.5, step: 0.05 },
+      { key: "coverage", label: "Cobertura del intervalo", value: 0.9, min: 0.5, max: 0.99, step: 0.01 },
+      { key: "standardize", label: "Estandarizar con el tramo de ajuste", value: true },
+      { key: "device", label: "Dispositivo", value: "auto", options: ["auto", "cpu", "mps", "cuda"] },
+      { key: "seed", label: "Semilla", value: 42, min: 0, max: 99999 },
+      { key: "fit_on_input", label: "Ajustar con la entrada si no hay checkpoint", value: true },
+    ],
+  },
+  dl_sequence_classifier: {
+    label: "DL · Clasificador de secuencias",
+    subtitle: "Herramienta independiente · GRU · probabilidades · embedding",
+    category: "12 / DL TOOLS",
+    color: "#ff9e64",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "column", label: "Columna (señal / rendimiento)", value: "LogRet_Close" },
+      { key: "lookback", label: "Ventana lookback", value: 20, min: 2, max: 512 },
+      { key: "input_units", label: "Capa de entrada GRU: celdas", value: 32, min: 1, max: 2048 },
+      { key: "hidden_layers", label: "Capas intermedias (nº)", value: 1, min: 0, max: 8 },
+      { key: "units", label: "Neuronas por capa intermedia", value: 16, min: 1, max: 2048 },
+      { key: "activation", label: "Activación de las capas intermedias", value: "gelu", options: ["gelu", "relu", "tanh", "sigmoid", "swish", "leaky_relu", "elu", "identity"] },
+      { key: "dropout", label: "Dropout por capa", value: 0, min: 0, max: 0.9, step: 0.05 },
+      { key: "batch_norm", label: "BatchNorm en cada capa", value: false },
+      { key: "layers", label: "Capas a medida (64:relu:0.1:bn, 32:tanh; vacío = las de arriba)", value: "" },
+      { key: "optimizer", label: "Optimizador", value: "adam", options: ["adam", "adamw", "sgd", "rmsprop", "adagrad"] },
+      { key: "lr", label: "Learning rate", value: 0.003, min: 0.00001, max: 1, step: 0.0005 },
+      { key: "weight_decay", label: "Weight decay (L2)", value: 0, min: 0, max: 1, step: 0.0001 },
+      { key: "momentum", label: "Momentum (SGD / RMSprop)", value: 0.9, min: 0, max: 0.99, step: 0.01, showIf: { key: "optimizer", value: "sgd" } },
+      { key: "epochs", label: "Épocas máximas (sin checkpoint)", value: 60, min: 0, max: 1000 },
+      { key: "batch_size", label: "Tamaño de lote", value: 64, min: 4, max: 4096 },
+      { key: "patience", label: "Paciencia (parada temprana)", value: 10, min: 1, max: 200 },
+      { key: "classes", label: "Capa de salida: clases", value: 2, options: ["2", "3"] },
+      { key: "dead_zone", label: "Zona muerta (3 clases: |valor| ≤ plano)", value: 0.002, min: 0, max: 1, step: 0.001, showIf: { key: "classes", value: "3" } },
+      { key: "class_weighting", label: "Ponderar la pérdida por frecuencia de clase", value: true },
+      { key: "threshold", label: "Probabilidad mínima para emitir etiqueta", value: 0.5, min: 0.05, max: 0.95, step: 0.01 },
+      { key: "holdout", label: "Fracción holdout final", value: 0.2, min: 0.05, max: 0.5, step: 0.05 },
+      { key: "standardize", label: "Estandarizar con el tramo de ajuste", value: true },
+      { key: "device", label: "Dispositivo", value: "auto", options: ["auto", "cpu", "mps", "cuda"] },
+      { key: "seed", label: "Semilla", value: 42, min: 0, max: 99999 },
+      { key: "fit_on_input", label: "Ajustar con la entrada si no hay checkpoint", value: true },
+    ],
+  },
+  dl_anomaly_autoencoder: {
+    label: "DL · Anomalías (autoencoder)",
+    subtitle: "Herramienta independiente · error de reconstrucción · umbral",
+    category: "12 / DL TOOLS",
+    color: "#ff9e64",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "columns", label: "Columnas (coma; vacío = numéricas)", value: "" },
+      { key: "input_units", label: "Capa de entrada: neuronas", value: 32, min: 1, max: 2048 },
+      { key: "input_activation", label: "Activación de entrada", value: "gelu", options: ["gelu", "relu", "tanh", "sigmoid", "swish", "leaky_relu", "elu", "identity"] },
+      { key: "hidden_layers", label: "Capas intermedias del codificador (el decodificador las refleja)", value: 1, min: 0, max: 8 },
+      { key: "units", label: "Neuronas por capa intermedia", value: 16, min: 1, max: 2048 },
+      { key: "activation", label: "Activación de las capas intermedias", value: "gelu", options: ["gelu", "relu", "tanh", "sigmoid", "swish", "leaky_relu", "elu", "identity"] },
+      { key: "dropout", label: "Dropout por capa", value: 0, min: 0, max: 0.9, step: 0.05 },
+      { key: "batch_norm", label: "BatchNorm en cada capa", value: false },
+      { key: "layers", label: "Capas a medida (64:relu:0.1:bn, 32:tanh; vacío = las de arriba)", value: "" },
+      { key: "optimizer", label: "Optimizador", value: "adam", options: ["adam", "adamw", "sgd", "rmsprop", "adagrad"] },
+      { key: "lr", label: "Learning rate", value: 0.005, min: 0.00001, max: 1, step: 0.0005 },
+      { key: "weight_decay", label: "Weight decay (L2)", value: 0, min: 0, max: 1, step: 0.0001 },
+      { key: "momentum", label: "Momentum (SGD / RMSprop)", value: 0.9, min: 0, max: 0.99, step: 0.01, showIf: { key: "optimizer", value: "sgd" } },
+      { key: "epochs", label: "Épocas máximas (sin checkpoint)", value: 150, min: 0, max: 1000 },
+      { key: "batch_size", label: "Tamaño de lote", value: 64, min: 4, max: 4096 },
+      { key: "patience", label: "Paciencia (parada temprana)", value: 10, min: 1, max: 200 },
+      { key: "latent", label: "Cuello de botella (< nº de columnas)", value: 1, min: 1, max: 64 },
+      { key: "error", label: "Error de reconstrucción", value: "mse", options: ["mse", "mae"] },
+      { key: "threshold_mode", label: "Umbral", value: "quantile", options: ["quantile", "absolute"] },
+      { key: "threshold", label: "Cuantil (0–1) o valor absoluto", value: 0.99, min: 0.0001, max: 1000, step: 0.005 },
+      { key: "fit_fraction", label: "Filas iniciales para ajustar", value: 0.7, min: 0.2, max: 1, step: 0.05 },
+      { key: "device", label: "Dispositivo", value: "auto", options: ["auto", "cpu", "mps", "cuda"] },
+      { key: "seed", label: "Semilla", value: 42, min: 0, max: 99999 },
+      { key: "fit_on_input", label: "Ajustar con la entrada si no hay checkpoint", value: true },
+    ],
+  },
+  ml_select: {
+    label: "1 · Seleccionar columnas",
+    subtitle: "ML Pipeline · conservar / eliminar · renombrar",
+    category: "11 / ML PIPELINE",
+    color: "#9ece6a",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "mode", label: "Modo", value: "keep", options: ["keep", "drop"] },
+      { key: "columns", label: "Columnas (coma; vacío = todas)", value: "Close,Volume" },
+      { key: "always_keep", label: "Conservar siempre (coma, opcional)", value: "" },
+      { key: "numeric_only", label: "Sólo columnas numéricas", value: true },
+      { key: "rename", label: "Renombrar (viejo=nuevo, coma)", value: "" },
+    ],
+  },
+  ml_returns: {
+    label: "2 · Rendimientos",
+    subtitle: "ML Pipeline · simples / logarítmicos · k periodos",
+    category: "11 / ML PIPELINE",
+    color: "#9ece6a",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "columns", label: "Columnas de precio (coma)", value: "Close" },
+      { key: "return_type", label: "Tipo", value: "log", options: ["simple", "log", "both"] },
+      { key: "periods", label: "Periodos k (Pₜ / Pₜ₋ₖ)", value: 1, min: 1, max: 252 },
+      { key: "prefix_simple", label: "Prefijo simple", value: "Ret_", showIf: { key: "return_type", value: "simple" } },
+      { key: "prefix_log", label: "Prefijo logarítmico", value: "LogRet_", showIf: { key: "return_type", value: "log" } },
+      { key: "replace", label: "Sustituir la columna de precio", value: false },
+      { key: "drop_na", label: "Eliminar las primeras filas sin rendimiento", value: true },
+    ],
+  },
+  ml_clean: {
+    label: "3 · Limpieza de datos",
+    subtitle: "ML Pipeline · faltantes · atípicos · duplicados · constantes",
+    category: "11 / ML PIPELINE",
+    color: "#9ece6a",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "columns", label: "Columnas a limpiar (coma; vacío = numéricas)", value: "" },
+      { key: "missing", label: "Faltantes", value: "ffill", options: ["ffill", "drop", "bfill", "ffill_bfill", "interpolate", "zero", "mean", "median", "none"] },
+      { key: "outliers", label: "Atípicos", value: "none", options: ["none", "clip_zscore", "clip_quantile", "remove_zscore", "remove_iqr"] },
+      { key: "z_threshold", label: "Umbral z", value: 4, min: 1, max: 20, step: 0.5 },
+      { key: "q_low", label: "Cuantil inferior", value: 0.01, min: 0, max: 0.5, step: 0.005, showIf: { key: "outliers", value: "clip_quantile" } },
+      { key: "q_high", label: "Cuantil superior", value: 0.99, min: 0.5, max: 1, step: 0.005, showIf: { key: "outliers", value: "clip_quantile" } },
+      { key: "fit_fraction", label: "Fracción inicial para ajustar estadísticos (sin fuga)", value: 0.7, min: 0.1, max: 1, step: 0.05 },
+      { key: "drop_duplicates", label: "Eliminar duplicados", value: true },
+      { key: "drop_constant", label: "Eliminar columnas constantes", value: true },
+      { key: "drop_remaining_na", label: "Eliminar filas con faltantes restantes", value: true },
+      { key: "sort_index", label: "Ordenar por fecha", value: true },
+    ],
+  },
+  ml_split: {
+    label: "4 · Dividir TR / VA / TE",
+    subtitle: "ML Pipeline · objetivo · rasgos · cronológico · escalado en TR",
+    category: "11 / ML PIPELINE",
+    color: "#9ece6a",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "target", label: "Columna objetivo (vacío = primer rendimiento)", value: "" },
+      { key: "target_mode", label: "Objetivo", value: "next", options: ["next", "direction", "same"] },
+      { key: "horizon", label: "Horizonte (filas hacia delante)", value: 1, min: 1, max: 252 },
+      { key: "task", label: "Tarea", value: "auto", options: ["auto", "regression", "classification"] },
+      { key: "features", label: "Rasgos (coma; vacío = resto de numéricas)", value: "" },
+      { key: "method", label: "Método", value: "chronological", options: ["chronological", "random"] },
+      { key: "train_ratio", label: "Fracción TR (entrenamiento)", value: 0.7, min: 0.3, max: 0.9, step: 0.05 },
+      { key: "val_ratio", label: "Fracción VA (validación)", value: 0.15, min: 0.05, max: 0.4, step: 0.05 },
+      { key: "gap", label: "Hueco entre conjuntos (filas, embargo)", value: 0, min: 0, max: 500 },
+      { key: "scaling", label: "Escalado (ajustado en TR)", value: "standard", options: ["standard", "minmax", "robust", "none"] },
+      { key: "keep_future", label: "Conservar filas FUT para el pronóstico", value: true },
+      { key: "seed", label: "Semilla (aleatorio)", value: 42, min: 0, max: 99999, showIf: { key: "method", value: "random" } },
+    ],
+  },
+  ml_train: {
+    label: "5 · Entrenar modelo ML",
+    subtitle: "ML Pipeline · scikit-learn · ajuste TR · selección VA",
+    category: "11 / ML PIPELINE",
+    color: "#9ece6a",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "algorithm", label: "Algoritmo (regresión)", value: "Compare", options: ["Compare", "Linear", "Ridge", "Lasso", "ElasticNet", "Random Forest", "Gradient Boosting", "Histogram Boosting", "SVR", "KNN", "MLP"] },
+      { key: "algorithm_cls", label: "Algoritmo (clasificación)", value: "Compare", options: ["Compare", "Logistic", "Random Forest", "Gradient Boosting", "Histogram Boosting", "SVC", "KNN", "MLP"] },
+      { key: "alpha", label: "Regularización α / C", value: 1, min: 0.0001, max: 1000, step: 0.1 },
+      { key: "estimators", label: "Árboles / iteraciones", value: 200, min: 10, max: 1000 },
+      { key: "max_depth", label: "Profundidad máxima", value: 6, min: 1, max: 32 },
+      { key: "learning_rate", label: "Learning rate (boosting / MLP)", value: 0.05, min: 0.001, max: 1, step: 0.005 },
+      { key: "neighbors", label: "Vecinos (KNN)", value: 10, min: 1, max: 200 },
+      { key: "hidden_layers", label: "Capas ocultas MLP (coma)", value: "64,32" },
+      { key: "refit_train_val", label: "Reentrenar el ganador con TR+VA", value: false },
+      { key: "seed", label: "Semilla", value: 42, min: 0, max: 99999 },
+    ],
+  },
+  ml_evaluate: {
+    label: "6 · Evaluar el modelo",
+    subtitle: "ML Pipeline · métricas TR/VA/TE · línea base · confusión",
+    category: "11 / ML PIPELINE",
+    color: "#9ece6a",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "eval_te", label: "Evaluar TE (prueba)", value: true },
+      { key: "eval_va", label: "Evaluar VA (validación)", value: true },
+      { key: "eval_tr", label: "Evaluar TR (entrenamiento, para ver sobreajuste)", value: true },
+      { key: "threshold", label: "Umbral de clase 1 (clasificación)", value: 0.5, min: 0.05, max: 0.95, step: 0.01 },
+    ],
+  },
+  ml_predict: {
+    label: "7 · Realizar predicciones",
+    subtitle: "ML Pipeline · TE · pronóstico FUT · intervalo · señal",
+    category: "11 / ML PIPELINE",
+    color: "#9ece6a",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "scope", label: "Filas a predecir", value: "test_future", options: ["test_future", "test", "future", "validation", "all"] },
+      { key: "output_column", label: "Columna de salida", value: "Prediction" },
+      { key: "threshold", label: "Umbral de clase 1 (clasificación)", value: 0.5, min: 0.05, max: 0.95, step: 0.01 },
+      { key: "interval", label: "Intervalo de predicción (regresión)", value: true },
+      { key: "coverage", label: "Cobertura del intervalo", value: 0.9, min: 0.5, max: 0.99, step: 0.01, showIf: { key: "interval", value: true } },
+      { key: "signal", label: "Añadir señal ±1", value: true },
+      { key: "rows", label: "Filas en la tabla", value: 20, min: 5, max: 200 },
+    ],
+  },
+  ml_visualize: {
+    label: "8 · Visualizar resultados",
+    subtitle: "ML Pipeline · real vs predicho · residuos · importancia",
+    category: "11 / ML PIPELINE",
+    color: "#9ece6a",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "show_te", label: "Mostrar TE", value: true },
+      { key: "show_fut", label: "Mostrar FUT (pronóstico)", value: true },
+      { key: "show_va", label: "Mostrar VA", value: true },
+      { key: "show_tr", label: "Mostrar TR", value: false },
+      { key: "series", label: "Serie real vs predicho", value: true },
+      { key: "scatter", label: "Dispersión real vs predicho", value: true },
+      { key: "residuals", label: "Histograma de residuos", value: true },
+      { key: "cumulative", label: "Estrategia acumulada ilustrativa", value: true },
+      { key: "allow_short", label: "Estrategia con cortos", value: true, showIf: { key: "cumulative", value: true } },
+      { key: "importance", label: "Importancia de rasgos", value: true },
+      { key: "selection", label: "Comparación de modelos", value: true },
+      { key: "max_points", label: "Puntos máximos", value: 1500, min: 100, max: 10000 },
+    ],
+  },
+  gen_windows: {
+    label: "01 · Crear ventanas",
+    subtitle: "Generativos · w = ret[i:i+HORIZON]",
+    category: "14 / GENERATIVOS",
+    color: "#f7768e",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "return_column", label: "Columna de retornos (auto = LogReturn o log Close)", value: "auto" },
+      { key: "horizon", label: "HORIZON (sesiones por ventana)", value: 16, min: 4, max: 64 },
+      { key: "stride", label: "Paso entre ventanas", value: 1, min: 1, max: 64 },
+    ],
+  },
+  gen_condition: {
+    label: "02 · Condición causal",
+    subtitle: "Generativos · c = log(std(ret[i-20:i]))",
+    category: "14 / GENERATIVOS",
+    color: "#f7768e",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "lookback", label: "Sesiones anteriores", value: 20, min: 5, max: 252 },
+      { key: "use_log_vol", label: "Log-volatilidad", value: true },
+      { key: "use_momentum", label: "Momentum (suma de retornos)", value: false },
+      { key: "floor", label: "Piso de σ (evita log 0)", value: 1e-8, min: 1e-12, max: 1e-3, step: 1e-8 },
+    ],
+  },
+  gen_split: {
+    label: "03 · Separar ventanas",
+    subtitle: "Generativos · purga ventanas que cruzan un corte",
+    category: "14 / GENERATIVOS",
+    color: "#f7768e",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "cut_mode", label: "Cortes", value: "ratio", options: ["ratio", "dates"] },
+      { key: "train_ratio", label: "Fracción TR", value: 0.7, min: 0.3, max: 0.9, step: 0.05, showIf: { key: "cut_mode", value: "ratio" } },
+      { key: "val_ratio", label: "Fracción VA", value: 0.15, min: 0.05, max: 0.4, step: 0.05, showIf: { key: "cut_mode", value: "ratio" } },
+      { key: "val_start", label: "VAL_START (AAAA-MM-DD)", value: "2021-01-01", showIf: { key: "cut_mode", value: "dates" } },
+      { key: "test_start", label: "TEST_START (AAAA-MM-DD)", value: "2023-01-01", showIf: { key: "cut_mode", value: "dates" } },
+    ],
+  },
+  gen_scale: {
+    label: "04 · Escalar con TR",
+    subtitle: "Generativos · return_mean/std y condición sólo TR",
+    category: "14 / GENERATIVOS",
+    color: "#f7768e",
+    input: "frame",
+    output: "frame",
+    fields: [{ key: "return_scale", label: "Escala de retornos", value: "global", options: ["global", "per_step"] }],
+  },
+  gen_cvae: {
+    label: "05 · VAE condicional",
+    subtitle: "Generativos · encoder(x, c) → μ, log σ²",
+    category: "14 / GENERATIVOS",
+    color: "#f7768e",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "latent_dim", label: "ZDIM", value: 4, min: 1, max: 32 },
+      { key: "widths", label: "Anchos ocultos (coma)", value: "64,64" },
+      { key: "logvar_clamp", label: "Clamp de log σ² (±)", value: 8, min: 1, max: 20 },
+    ],
+  },
+  gen_reparam: {
+    label: "06 · Reparametrizar",
+    subtitle: "Generativos · z = μ + σ ⊙ ε",
+    category: "14 / GENERATIVOS",
+    color: "#f7768e",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "mode", label: "Muestreo en entrenamiento", value: "sample", options: ["sample", "mean"] },
+      { key: "temperature", label: "Temperatura al generar", value: 1, min: 0.1, max: 3, step: 0.1 },
+      { key: "seed", label: "Semilla de la demostración", value: 0, min: 0, max: 99999 },
+    ],
+  },
+  gen_vae_train: {
+    label: "07 · Reconstrucción + KL",
+    subtitle: "Generativos · loss = MSE + β·KL · entrena CVAE en TR",
+    category: "14 / GENERATIVOS",
+    color: "#f7768e",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "beta", label: "β (peso KL)", value: 0.01, min: 0, max: 5, step: 0.005 },
+      { key: "kl_warmup", label: "Calentamiento KL (épocas, 0 = no)", value: 0, min: 0, max: 200 },
+      { key: "epochs", label: "Épocas", value: 60, min: 1, max: 1000 },
+      { key: "batch_size", label: "Lote", value: 128, min: 8, max: 2048 },
+      { key: "lr", label: "Learning rate", value: 0.001, min: 0.00001, max: 0.1, step: 0.0001 },
+      { key: "grad_clip", label: "Clip de gradiente", value: 1, min: 0.01, max: 100, step: 0.1 },
+      { key: "snapshot_every", label: "Instantánea cada (épocas)", value: 1, min: 1, max: 50 },
+      { key: "device", label: "Dispositivo", value: "cpu", options: ["cpu", "auto", "cuda"] },
+      { key: "seed", label: "Semilla", value: 42, min: 0, max: 99999 },
+    ],
+  },
+  gen_gan_train: {
+    label: "08 · Generador y discriminador",
+    subtitle: "Generativos · cGAN alternado · BCE float32",
+    category: "14 / GENERATIVOS",
+    color: "#f7768e",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "widths", label: "Anchos G/D (coma)", value: "64,64" },
+      { key: "epochs", label: "Épocas", value: 60, min: 1, max: 1000 },
+      { key: "batch_size", label: "Lote", value: 128, min: 8, max: 2048 },
+      { key: "lr_g", label: "Learning rate G", value: 0.0002, min: 0.00001, max: 0.01, step: 0.00005 },
+      { key: "lr_d", label: "Learning rate D", value: 0.0002, min: 0.00001, max: 0.01, step: 0.00005 },
+      { key: "d_steps", label: "Pasos de D por paso de G", value: 1, min: 1, max: 5 },
+      { key: "label_smoothing", label: "Suavizado de etiqueta real", value: 0, min: 0, max: 0.3, step: 0.05 },
+      { key: "grad_clip", label: "Clip de gradiente", value: 1, min: 0.01, max: 100, step: 0.1 },
+      { key: "amp", label: "AMP float16 (sólo GPU)", value: false },
+      { key: "snapshot_every", label: "Instantánea cada (épocas)", value: 1, min: 1, max: 50 },
+      { key: "device", label: "Dispositivo", value: "cpu", options: ["cpu", "auto", "cuda"] },
+      { key: "seed", label: "Semilla", value: 42, min: 0, max: 99999 },
+    ],
+  },
+  gen_select: {
+    label: "09 · Seleccionar sin mirar test",
+    subtitle: "Generativos · ruido fijo · score en VA",
+    category: "14 / GENERATIVOS",
+    color: "#f7768e",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "noise_seed", label: "Semilla del ruido fijo", value: 43, min: 0, max: 99999 },
+      { key: "w_marginal", label: "Peso W1 marginal", value: 1, min: 0, max: 10, step: 0.1 },
+      { key: "w_cumulative", label: "Peso W1 acumulado", value: 1, min: 0, max: 10, step: 0.1 },
+      { key: "w_vol_cluster", label: "Peso ACF de |r|", value: 1, min: 0, max: 10, step: 0.1 },
+      { key: "w_tail", label: "Peso ES 5 %", value: 1, min: 0, max: 10, step: 0.1 },
+    ],
+  },
+  gen_evaluate: {
+    label: "10 · Evaluar escenarios y colas",
+    subtitle: "Generativos · distribución · dependencia · VaR en TE",
+    category: "14 / GENERATIVOS",
+    color: "#f7768e",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "scenarios_per_condition", label: "Escenarios por ventana TE", value: 20, min: 1, max: 500 },
+      { key: "var_level", label: "Nivel VaR / ES", value: 0.05, min: 0.01, max: 0.2, step: 0.01 },
+      { key: "bootstrap_baseline", label: "Comparar con bootstrap TR", value: true },
+      { key: "seed", label: "Semilla", value: 7, min: 0, max: 99999 },
+    ],
+  },
+  sup_target: {
+    label: "Definir el objetivo",
+    subtitle: "U2-03 · U4-01 · y_bps = 10000·log(Close[t+1]/Open[t+1]) o dirección",
+    category: "15 / SUPERVISADO U2–U7",
+    color: "#7dcfff",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "features", label: "Rasgos al cierre t (coma)", value: "LogReturn,Volatility,RSI,EMA,SMA,VWAP,MACD,MACDSignal,BBUpper,BBMiddle,BBLower" },
+      { key: "task", label: "Objetivo", value: "regression", options: ["regression", "direction"] },
+    ],
+  },
+  sup_split: {
+    label: "Separar el tiempo",
+    subtitle: "U2-04 · TR / VA / TE cronológico por fecha de señal y de objetivo",
+    category: "15 / SUPERVISADO U2–U7",
+    color: "#7dcfff",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "cut_mode", label: "Cortes", value: "ratio", options: ["ratio", "dates"] },
+      { key: "train_ratio", label: "Fracción TR", value: 0.65, min: 0.3, max: 0.9, step: 0.05, showIf: { key: "cut_mode", value: "ratio" } },
+      { key: "val_ratio", label: "Fracción VA", value: 0.15, min: 0.05, max: 0.4, step: 0.05, showIf: { key: "cut_mode", value: "ratio" } },
+      { key: "val_start", label: "VAL_START (AAAA-MM-DD)", value: "2024-01-01", showIf: { key: "cut_mode", value: "dates" } },
+      { key: "test_start", label: "TEST_START (AAAA-MM-DD)", value: "2025-01-01", showIf: { key: "cut_mode", value: "dates" } },
+    ],
+  },
+  sup_scale: {
+    label: "Escalar sólo con train",
+    subtitle: "U2-05 · x_scaler y y_scaler ajustados con TR",
+    category: "15 / SUPERVISADO U2–U7",
+    color: "#7dcfff",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "method", label: "Escalador de entradas", value: "standard", options: ["standard", "minmax"] },
+      { key: "scale_target", label: "Escalar y_bps (regresión)", value: true },
+    ],
+  },
+  sup_windows: {
+    label: "Construir ventanas",
+    subtitle: "U6-02 · U7-01 · (batch, LOOKBACK, rasgos)",
+    category: "15 / SUPERVISADO U2–U7",
+    color: "#7dcfff",
+    input: "frame",
+    output: "frame",
+    fields: [{ key: "lookback", label: "LOOKBACK (sesiones)", value: 20, min: 1, max: 250 }],
+  },
+  sup_init: {
+    label: "Fijar la inicialización",
+    subtitle: "U3-02 · U4-02 · mismos pesos iniciales para todas las variantes",
+    category: "15 / SUPERVISADO U2–U7",
+    color: "#bb9af7",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "scheme", label: "Esquema", value: "kaiming_normal", options: ["kaiming_normal", "kaiming_uniform", "xavier_uniform", "pytorch_default"] },
+      { key: "seed", label: "Semilla", value: 42, min: 0, max: 99999 },
+    ],
+  },
+  sup_mlp: {
+    label: "Construir la MLP",
+    subtitle: "U2-06 · U6-08 · Linear → act → … → Linear(·, 1)",
+    category: "15 / SUPERVISADO U2–U7",
+    color: "#bb9af7",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "name", label: "Nombre del modelo", value: "" },
+      { key: "widths", label: "Anchos ocultos (coma)", value: "64,32" },
+      { key: "activation", label: "Activación", value: "ReLU", options: ["ReLU", "Tanh", "GELU", "SiLU", "LeakyReLU"] },
+      { key: "dropout", label: "Dropout", value: 0, min: 0, max: 0.9, step: 0.05 },
+      { key: "batchnorm", label: "BatchNorm1d", value: false },
+      { key: "include_as_candidate", label: "Competir como candidato (si no, sólo plantilla)", value: true },
+    ],
+  },
+  sup_cnn: {
+    label: "Construir la CNN 1D",
+    subtitle: "U6-05/06/07 · Conv1d → Conv1d → pooling global → Linear",
+    category: "15 / SUPERVISADO U2–U7",
+    color: "#bb9af7",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "name", label: "Nombre del modelo", value: "CNN_1D" },
+      { key: "channels", label: "Canales (dos, coma)", value: "32,64" },
+      { key: "kernel", label: "Kernel (sesiones)", value: 3, min: 1, max: 30 },
+      { key: "activation", label: "Activación", value: "ReLU", options: ["ReLU", "Tanh", "GELU", "SiLU", "LeakyReLU"] },
+      { key: "include_as_candidate", label: "Competir como candidato", value: true },
+    ],
+  },
+  sup_rnn: {
+    label: "Construir la red recurrente",
+    subtitle: "U7-02…07 · LSTM / GRU · bidireccional · estado final → Linear",
+    category: "15 / SUPERVISADO U2–U7",
+    color: "#bb9af7",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "name", label: "Nombre del modelo", value: "" },
+      { key: "cell", label: "Celda", value: "LSTM", options: ["LSTM", "GRU"] },
+      { key: "hidden", label: "Unidades ocultas", value: 32, min: 2, max: 512 },
+      { key: "bidirectional", label: "Bidireccional (ventana histórica)", value: false },
+      { key: "include_as_candidate", label: "Competir como candidato", value: true },
+    ],
+  },
+  sup_optimizer: {
+    label: "Definir el optimizador",
+    subtitle: "U3-03 · variante de la plantilla con SGD / RMSprop / Adam / AdamW",
+    category: "15 / SUPERVISADO U2–U7",
+    color: "#e0af68",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "optimizer", label: "Optimizador", value: "AdamW", options: ["SGD", "RMSprop", "Adam", "AdamW"] },
+      { key: "lr", label: "Learning rate", value: 0.001, min: 0.00001, max: 1, step: 0.0005 },
+      { key: "momentum", label: "Momentum (sólo SGD)", value: 0, min: 0, max: 0.99, step: 0.01 },
+    ],
+  },
+  sup_regularizer: {
+    label: "Añadir regularización",
+    subtitle: "U4-03…07 · variante con Dropout / L1 / L2 / BatchNorm / Early stopping",
+    category: "15 / SUPERVISADO U2–U7",
+    color: "#e0af68",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "kind", label: "Técnica", value: "Dropout", options: ["Baseline", "Dropout", "L1", "L2", "BatchNorm", "EarlyStopping"] },
+      { key: "value", label: "p · λ · weight_decay · paciencia", value: 0.3, min: 0, max: 200, step: 0.00001 },
+    ],
+  },
+  sup_loss: {
+    label: "Elegir la pérdida",
+    subtitle: "U2-07 · MSE / Huber para magnitud · BCE con logits para dirección",
+    category: "15 / SUPERVISADO U2–U7",
+    color: "#e0af68",
+    input: "frame",
+    output: "frame",
+    fields: [{ key: "loss", label: "Pérdida", value: "auto", options: ["auto", "MSE", "Huber", "BCE"] }],
+  },
+  sup_hpo: {
+    label: "Búsqueda de hiperparámetros",
+    subtitle: "U5-02…08 · espacio · muestreo log · folds causales · escaladores por fold",
+    category: "15 / SUPERVISADO U2–U7",
+    color: "#e0af68",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "trials", label: "Pruebas", value: 6, min: 1, max: 50 },
+      { key: "width_choices", label: "Anchos posibles", value: "32,64,128" },
+      { key: "depth_choices", label: "Profundidades posibles", value: "1,2,3" },
+      { key: "log_lr_min", label: "log10(lr) mínimo", value: -4, min: -7, max: 0, step: 0.1 },
+      { key: "log_lr_max", label: "log10(lr) máximo", value: -2.5, min: -7, max: 0, step: 0.1 },
+      { key: "wd_choices", label: "weight_decay posibles", value: "0,0.0001,0.001" },
+      { key: "folds", label: "Cortes de fold (fracción de TR)", value: "0.5,0.75" },
+      { key: "epochs", label: "Épocas por fold", value: 12, min: 1, max: 300 },
+      { key: "patience", label: "Paciencia por fold", value: 5, min: 1, max: 100 },
+      { key: "batch_size", label: "Lote", value: 64, min: 2, max: 1024 },
+      { key: "seed", label: "Semilla", value: 42, min: 0, max: 99999 },
+    ],
+  },
+  sup_train: {
+    label: "Entrenar con checkpoint",
+    subtitle: "U2-08/09 · U3-04…08 · zero_grad → backward → clip → step · mejor VA",
+    category: "15 / SUPERVISADO U2–U7",
+    color: "#9ece6a",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "epochs", label: "Épocas (mismo presupuesto para todos)", value: 30, min: 1, max: 2000 },
+      { key: "batch_size", label: "Lote", value: 64, min: 2, max: 4096 },
+      { key: "lr", label: "Learning rate (si el candidato no fija uno)", value: 0.001, min: 0.00001, max: 1, step: 0.0005 },
+      { key: "patience", label: "Paciencia (0 = sin early stopping)", value: 5, min: 0, max: 500 },
+      { key: "restore_best", label: "Restaurar el mejor checkpoint de VA", value: true },
+      { key: "grad_clip", label: "Clipping de norma", value: 1, min: 0.01, max: 100, step: 0.1 },
+      { key: "amp", label: "AMP (sólo CUDA)", value: false },
+      { key: "device", label: "Dispositivo", value: "cpu", options: ["cpu", "auto", "cuda", "mps"] },
+      { key: "seed", label: "Semilla (orden de lotes)", value: 42, min: 0, max: 99999 },
+    ],
+  },
+  sup_select: {
+    label: "Seleccionar con validación",
+    subtitle: "U3-09 · U4-09 · menor pérdida de VA, sin mirar test",
+    category: "15 / SUPERVISADO U2–U7",
+    color: "#9ece6a",
+    input: "frame",
+    output: "frame",
+    fields: [],
+  },
+  sup_evaluate: {
+    label: "Evaluar en test",
+    subtitle: "U2-10 · desescalar · métricas · Ridge · resultado con costes",
+    category: "15 / SUPERVISADO U2–U7",
+    color: "#9ece6a",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "threshold", label: "Umbral de señal (bps o probabilidad)", value: 0, min: -100, max: 100, step: 0.01 },
+      { key: "allow_short", label: "Permitir cortos", value: true },
+      { key: "cost_bps", label: "Costes por lado (bps)", value: 5, min: 0, max: 100 },
+      { key: "ridge", label: "Comparar con Ridge (regresión)", value: true },
+      { key: "ridge_alpha", label: "α de Ridge", value: 1, min: 0, max: 1000, step: 0.1 },
+    ],
+  },
+  rl_env: {
+    label: "Construir el entorno",
+    subtitle: "U10-02/03 · estado = rasgos + posición · acciones {-1, 0, 1} · recompensa neta",
+    category: "16 / REFUERZO U10",
+    color: "#ff757f",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "cost_bps", label: "Costes por unidad de cambio (bps)", value: 5, min: 0, max: 100 },
+      { key: "reward_scale", label: "Escala de recompensa", value: 100, min: 1, max: 10000 },
+    ],
+  },
+  rl_qnet: {
+    label: "Crear las dos redes",
+    subtitle: "U10-04 · online y target · 12 → 64 → 32 → 3",
+    category: "16 / REFUERZO U10",
+    color: "#ff757f",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "widths", label: "Anchos ocultos", value: "64,32" },
+      { key: "lr", label: "Learning rate (Adam)", value: 0.001, min: 0.00001, max: 0.1, step: 0.0005 },
+      { key: "seed", label: "Semilla", value: 42, min: 0, max: 99999 },
+    ],
+  },
+  rl_replay: {
+    label: "Explorar y recordar",
+    subtitle: "U10-05/06 · ε-greedy · replay buffer · muestreo aleatorio",
+    category: "16 / REFUERZO U10",
+    color: "#ff757f",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "capacity", label: "Capacidad del buffer", value: 10000, min: 100, max: 1000000 },
+      { key: "warmup", label: "Experiencias antes de aprender", value: 128, min: 8, max: 100000 },
+      { key: "batch_size", label: "Lote", value: 64, min: 8, max: 4096 },
+      { key: "update_every", label: "Actualizar cada (pasos)", value: 4, min: 1, max: 100 },
+      { key: "eps_start", label: "ε inicial", value: 1, min: 0, max: 1, step: 0.05 },
+      { key: "eps_end", label: "ε final", value: 0.05, min: 0, max: 1, step: 0.01 },
+      { key: "eps_decay_steps", label: "Pasos de decaimiento de ε", value: 5000, min: 1, max: 1000000 },
+    ],
+  },
+  rl_target: {
+    label: "Objetivo Double DQN",
+    subtitle: "U10-07 · online elige, target evalúa · γ",
+    category: "16 / REFUERZO U10",
+    color: "#ff757f",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "gamma", label: "γ (descuento)", value: 0.95, min: 0, max: 0.999, step: 0.005 },
+      { key: "double", label: "Double DQN (si no, DQN clásica)", value: true },
+    ],
+  },
+  rl_sync: {
+    label: "Sincronizar y seleccionar",
+    subtitle: "U10-09 · copiar online → target · checkpoint por VA",
+    category: "16 / REFUERZO U10",
+    color: "#ff757f",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "sync_every", label: "Copiar cada (actualizaciones)", value: 100, min: 1, max: 100000 },
+      { key: "checkpoint_metric", label: "Métrica de checkpoint en VA", value: "ROI neto", options: ["ROI neto", "Sharpe"] },
+    ],
+  },
+  rl_train: {
+    label: "Actualizar online",
+    subtitle: "U10-08 · smooth L1 · clipping · bucle de entrenamiento",
+    category: "16 / REFUERZO U10",
+    color: "#ff757f",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "epochs", label: "Épocas (pasadas por TR)", value: 12, min: 1, max: 500 },
+      { key: "grad_clip", label: "Clipping de norma", value: 1, min: 0.01, max: 100, step: 0.1 },
+    ],
+  },
+  rl_baselines: {
+    label: "Referencias de política",
+    subtitle: "U10-10 · Q-learning tabular · siempre largo · efectivo",
+    category: "16 / REFUERZO U10",
+    color: "#ff757f",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "q_learning", label: "Q-learning tabular", value: true },
+      { key: "always_long", label: "Siempre largo", value: true },
+      { key: "cash", label: "Efectivo", value: true },
+      { key: "epochs", label: "Épocas de Q-learning", value: 12, min: 1, max: 500 },
+      { key: "seed", label: "Semilla", value: 42, min: 0, max: 99999 },
+    ],
+  },
+  rl_evaluate: {
+    label: "Evaluar sin aprender",
+    subtitle: "U10-10 · greedy en test · ROI, Sharpe, drawdown, rotación",
+    category: "16 / REFUERZO U10",
+    color: "#ff757f",
+    input: "frame",
+    output: "frame",
+    fields: [],
+  },
+  gen_dcgan_train: {
+    label: "08b · cDCGAN 1D",
+    subtitle: "Generativos ampliación · embedding de régimen · ConvTranspose1d · D Conv1d",
+    category: "14 / GENERATIVOS",
+    color: "#f7768e",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "latent_dim", label: "Dimensión de z", value: 8, min: 1, max: 64 },
+      { key: "embedding_dim", label: "Dimensión del embedding de régimen", value: 3, min: 1, max: 16 },
+      { key: "channels", label: "Canales convolucionales", value: 32, min: 4, max: 256 },
+      { key: "regime_cut", label: "Corte de régimen (momentum escalado)", value: 0.5, min: 0, max: 3, step: 0.1 },
+      { key: "batchnorm", label: "BatchNorm en G", value: true },
+      { key: "epochs", label: "Épocas", value: 60, min: 1, max: 1000 },
+      { key: "batch_size", label: "Lote", value: 128, min: 8, max: 2048 },
+      { key: "lr_g", label: "Learning rate G", value: 0.0002, min: 0.00001, max: 0.01, step: 0.00005 },
+      { key: "lr_d", label: "Learning rate D", value: 0.0002, min: 0.00001, max: 0.01, step: 0.00005 },
+      { key: "grad_clip", label: "Clip de gradiente", value: 1, min: 0.01, max: 100, step: 0.1 },
+      { key: "snapshot_every", label: "Instantánea cada (épocas)", value: 1, min: 1, max: 50 },
+      { key: "device", label: "Dispositivo", value: "cpu", options: ["cpu", "auto", "cuda"] },
+      { key: "seed", label: "Semilla", value: 42, min: 0, max: 99999 },
+    ],
+  },
+  gen_regime_compare: {
+    label: "09b · Comparar regímenes",
+    subtitle: "Generativos ampliación · mismo ruido · bajista / lateral / alcista",
+    category: "14 / GENERATIVOS",
+    color: "#f7768e",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "scenarios", label: "Escenarios por régimen", value: 500, min: 10, max: 5000 },
+      { key: "noise_seed", label: "Semilla del ruido", value: 43, min: 0, max: 99999 },
+    ],
+  },
+  ae_split: {
+    label: "1 · Validar y dividir",
+    subtitle: "Autoencoders · controles de entrada · y_bps · TR/VA/TE cronológico",
+    category: "13 / AUTOENCODERS",
+    color: "#ff9e64",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "features", label: "Indicadores (coma)", value: "LogReturn,Volatility,RSI,EMA,SMA,VWAP,MACD,MACDSignal,BBUpper,BBMiddle,BBLower" },
+      { key: "target", label: "Rendimiento para y_bps", value: "LogReturn" },
+      { key: "horizon", label: "Horizonte de y_bps (filas)", value: 16, min: 1, max: 252 },
+      { key: "train_ratio", label: "Fracción TR", value: 0.65, min: 0.3, max: 0.9, step: 0.05 },
+      { key: "val_ratio", label: "Fracción VA", value: 0.15, min: 0.05, max: 0.4, step: 0.05 },
+      { key: "gap", label: "Hueco mínimo entre conjuntos (filas)", value: 0, min: 0, max: 500 },
+    ],
+  },
+  ae_standardize: {
+    label: "2 · Estandarizar (TR)",
+    subtitle: "Autoencoders · 01 · StandardScaler ajustado sólo con TR",
+    category: "13 / AUTOENCODERS",
+    color: "#ff9e64",
+    input: "frame",
+    output: "frame",
+    fields: [],
+  },
+  ae_pca: {
+    label: "3 · Referencia PCA",
+    subtitle: "Autoencoders · 02 · compresión lineal",
+    category: "13 / AUTOENCODERS",
+    color: "#ff9e64",
+    input: "frame",
+    output: "frame",
+    fields: [{ key: "components", label: "Componentes", value: 3, min: 1, max: 10 }],
+  },
+  ae_encoder: {
+    label: "4 · Encoder",
+    subtitle: "Autoencoders · 03 · Lineal(d, h) → act → Lineal(h, k)",
+    category: "13 / AUTOENCODERS",
+    color: "#ff9e64",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "hidden", label: "Neuronas ocultas h", value: 32, min: 2, max: 1024 },
+      { key: "latent", label: "Código latente k", value: 3, min: 1, max: 10 },
+      { key: "activation", label: "Activación", value: "ReLU", options: ["ReLU", "Tanh", "GELU", "SiLU", "LeakyReLU"] },
+    ],
+  },
+  ae_decoder: {
+    label: "5 · Decoder",
+    subtitle: "Autoencoders · 04–05 · Lineal(k, h) → act → Lineal(h, d) · x̂",
+    category: "13 / AUTOENCODERS",
+    color: "#ff9e64",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "hidden", label: "Neuronas ocultas h", value: 32, min: 2, max: 1024 },
+      { key: "activation", label: "Activación", value: "ReLU", options: ["ReLU", "Tanh", "GELU", "SiLU", "LeakyReLU"] },
+    ],
+  },
+  ae_noise: {
+    label: "6 · Ruido (denoising)",
+    subtitle: "Autoencoders · 06 · inp = xb + σ·randn",
+    category: "13 / AUTOENCODERS",
+    color: "#ff9e64",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "sigma", label: "σ del ruido gaussiano", value: 0.1, min: 0.01, max: 2, step: 0.01 },
+      { key: "seed", label: "Semilla (muestra)", value: 42, min: 0, max: 99999 },
+    ],
+  },
+  ae_train: {
+    label: "7 · Entrenar AE / DAE",
+    subtitle: "Autoencoders · 07 · early stopping VA · controles numéricos",
+    category: "13 / AUTOENCODERS",
+    color: "#ff9e64",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "train_ae", label: "Entrenar AE", value: true },
+      { key: "train_dae", label: "Entrenar DAE (requiere Ruido)", value: true },
+      { key: "epochs", label: "Épocas máximas", value: 80, min: 1, max: 2000 },
+      { key: "batch_size", label: "Tamaño de lote", value: 64, min: 8, max: 4096 },
+      { key: "lr", label: "Learning rate", value: 0.001, min: 0.00001, max: 1, step: 0.0005 },
+      { key: "weight_decay", label: "Weight decay", value: 0, min: 0, max: 0.1, step: 0.0001 },
+      { key: "patience", label: "Paciencia (épocas sin mejora en VA)", value: 12, min: 1, max: 200 },
+      { key: "grad_clip", label: "Clipping de gradiente (norma)", value: 1, min: 0, max: 100, step: 0.1 },
+      { key: "device", label: "Dispositivo", value: "cpu", options: ["cpu", "auto", "cuda", "mps"] },
+      { key: "seed", label: "Semilla", value: 42, min: 0, max: 99999 },
+    ],
+  },
+  ae_select: {
+    label: "8 · Seleccionar por reconstrucción",
+    subtitle: "Autoencoders · 08 · menor MSE de validación",
+    category: "13 / AUTOENCODERS",
+    color: "#ff9e64",
+    input: "frame",
+    output: "frame",
+    fields: [{ key: "include_pca", label: "Incluir PCA en la comparación", value: true }],
+  },
+  ae_ridge: {
+    label: "9 · Ridge sobre factores",
+    subtitle: "Autoencoders · 09 · utilidad predictiva de z → y_bps",
+    category: "13 / AUTOENCODERS",
+    color: "#ff9e64",
+    input: "frame",
+    output: "frame",
+    fields: [{ key: "alpha", label: "Regularización α", value: 1, min: 0, max: 1000, step: 0.1 }],
+  },
+  ae_test: {
+    label: "10 · Medir en test",
+    subtitle: "Autoencoders · 10 · reconstrucción y predicción en TE",
+    category: "13 / AUTOENCODERS",
+    color: "#ff9e64",
+    input: "frame",
+    output: "frame",
+    fields: [],
+  },
+  yfinance_data: {
+    label: "yfinance Data",
+    subtitle: "Yahoo Finance · ticker · interval · period · ajustes",
+    category: "01 / DATA",
+    color: "#f2ad65",
+    output: "frame",
+    fields: [
+      { key: "ticker", label: "Ticker de Yahoo (SPY, BTC-USD, EURUSD=X, ^GSPC…)", value: "SPY" },
+      {
+        key: "interval",
+        label: "Intervalo",
+        value: "1d",
+        options: ["1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h", "1d", "5d", "1wk", "1mo", "3mo"],
+      },
+      { key: "range_mode", label: "Rango", value: "period", options: ["period", "start_end"] },
+      {
+        key: "period",
+        label: "Periodo",
+        value: "1y",
+        options: ["1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "10y", "ytd", "max"],
+        showIf: { key: "range_mode", value: "period" },
+      },
+      { key: "start", label: "Inicio (AAAA-MM-DD)", value: "2024-01-01", showIf: { key: "range_mode", value: "start_end" } },
+      { key: "end", label: "Fin exclusivo (AAAA-MM-DD, vacío = hoy)", value: "", showIf: { key: "range_mode", value: "start_end" } },
+      { key: "auto_adjust", label: "auto_adjust (ajustar OHLC por dividendos y splits)", value: true },
+      { key: "back_adjust", label: "back_adjust (sólo sin auto_adjust)", value: false, showIf: { key: "auto_adjust", value: false } },
+      { key: "actions", label: "actions (columnas Dividends / StockSplits)", value: false },
+      { key: "prepost", label: "prepost (pre y post mercado, sólo intradía)", value: false },
+      { key: "repair", label: "repair (corregir errores de precio de Yahoo)", value: false },
+      { key: "keepna", label: "keepna (conservar filas sin precio)", value: false },
+      { key: "rounding", label: "rounding (redondear a la precisión de Yahoo)", value: false },
+      { key: "drop_incomplete", label: "Descartar la última barra si aún no ha cerrado", value: true },
+      { key: "timezone", label: "Zona horaria del intradía", value: "America/New_York", options: ["America/New_York", "UTC", "Europe/London", "America/Mexico_City", "Asia/Tokyo"] },
+      { key: "timeout", label: "Timeout (s)", value: 20, min: 3, max: 120 },
+      { key: "cache_seconds", label: "Caché (s; intradía máx. 60)", value: 300, min: 0, max: 86400 },
+    ],
+  },
+  polymarket_dashboard: {
+    label: "Polymarket Dashboard",
+    subtitle: "Mercado conectado o todo Polymarket · KPIs · libro · flujo",
+    category: "10 / POLYMARKET",
+    color: "#7aa2f7",
+    output: "frame",
+    fields: [
+      {
+        key: "category",
+        label: "Categoría",
+        value: "todas",
+        options: ["todas", "politics", "crypto", "sports", "finance", "economy", "tech", "ai", "geopolitics", "elections", "culture", "weather"],
+      },
+      { key: "sort", label: "Ordenar eventos por", value: "volumen_24h", options: ["volumen_24h", "liquidez", "nuevos"] },
+      { key: "query", label: "Filtrar por texto en el título (opcional)", value: "" },
+      { key: "pages", label: "Páginas de 50 eventos", value: 2, min: 1, max: 10 },
+      { key: "top_n", label: "Filas por ranking", value: 15, min: 5, max: 50 },
+      { key: "min_volume_24h", label: "Volumen 24 h mínimo ($)", value: 0, min: 0, max: 10000000 },
+      { key: "trades", label: "Operaciones recientes (mercado conectado)", value: 200, min: 20, max: 1000 },
+      { key: "refresh_seconds", label: "Refresco en vivo (s)", value: 60, min: 15, max: 3600 },
+      { key: "cache_seconds", label: "Caché (s)", value: 30, min: 0, max: 3600 },
+      { key: "timeout", label: "Timeout por petición (s)", value: 10, min: 1, max: 30 },
+    ],
+  },
+  polymarket_source: {
+    label: "Polymarket Market",
+    subtitle: "Gamma + CLOB · P(UP) implícita · libro",
+    category: "10 / POLYMARKET",
+    color: "#7aa2f7",
+    output: "frame",
+    fields: [
+      { key: "market", label: "Mercado (slug, URL, condition_id, token_id o texto)", value: "btc-updown-15m" },
+      { key: "window", label: "Ventana temporal", value: "auto", options: ["auto", "5m", "15m", "30m", "1h"] },
+      { key: "fallback_window", label: "Ventana si no se detecta", value: "1h", options: ["5m", "15m", "30m", "1h"] },
+      { key: "up_outcome", label: "Outcome UP (índice)", value: "auto", options: ["auto", "0", "1"] },
+      { key: "history_interval", label: "Historial CLOB", value: "1d", options: ["1h", "6h", "1d", "1w", "max"] },
+      { key: "fidelity", label: "Fidelidad (min por punto)", value: 1, min: 1, max: 1440 },
+      { key: "cache_seconds", label: "Caché (s)", value: 5, min: 0, max: 3600 },
+      { key: "timeout", label: "Timeout por petición (s)", value: 8, min: 1, max: 30 },
+      { key: "refresh_seconds", label: "Refresco en vivo (s)", value: 15, min: 5, max: 600 },
+    ],
+  },
+  laya_updown: {
+    label: "LAYA UP/DOWN",
+    subtitle: "Pesos × señales → decisión UP / DOWN por ventana",
+    category: "10 / POLYMARKET",
+    color: "#7aa2f7",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "window", label: "Horizonte", value: "inherit", options: ["inherit", "5m", "15m", "30m", "1h"] },
+      { key: "use_laya", label: "Consultar Laya-MLX", value: true },
+      { key: "checkpoint", label: "Checkpoint", value: "laya-mlx", options: ["laya-mlx", "laya-multilingual-mlx"] },
+      { key: "weight_source", label: "Origen de pesos", value: "manual", options: ["manual", "calibrated", "online"] },
+      { key: "minute_buckets", label: "Pesos por minuto de la ventana", value: true },
+      { key: "online_lr", label: "Learning rate online", value: 0.05, min: 0.001, max: 1, step: 0.005 },
+      { key: "online_l2", label: "L2 online", value: 0.001, min: 0, max: 0.1, step: 0.001 },
+      { key: "commit_at", label: "Decisión que se aprende", value: "first", options: ["first", "last"] },
+      { key: "learning_key", label: "Serie de aprendizaje (vacío = auto)", value: "" },
+      { key: "w_market", label: "Peso mercado (logit P_up)", value: 1, min: -5, max: 5, step: 0.05 },
+      { key: "w_momentum", label: "Peso momentum", value: 0.5, min: -5, max: 5, step: 0.05 },
+      { key: "w_laya", label: "Peso Laya (log P_up/P_down)", value: 1, min: -5, max: 5, step: 0.05 },
+      { key: "w_imbalance", label: "Peso desequilibrio libro", value: 0.3, min: -5, max: 5, step: 0.05 },
+      { key: "w_target", label: "Peso distancia al precio a vencer (z)", value: 1, min: -5, max: 5, step: 0.05 },
+      { key: "bias", label: "Sesgo", value: 0, min: -5, max: 5, step: 0.05 },
+      { key: "lookback_bars", label: "Lookback (barras)", value: 30, min: 3, max: 2000 },
+      { key: "min_confidence", label: "Confianza mínima accionable", value: 0.55, min: 0.5, max: 0.99, step: 0.01 },
+    ],
+  },
   laya_signal: {
     label: "Laya Signal",
     subtitle: "Laya-MLX · choice · score · noul por día",
@@ -145,28 +1215,36 @@ export const catalog: Record<Kind, Definition> = {
     input: "frame",
     output: "frame",
     fields: [
-      { key: "ticker", label: "Nombre del activo en el estado", value: "SPY" },
+      { key: "ticker", label: "Nombre del activo en el estado (auto = ticker de Market Data)", value: "auto", mode: "daily" },
       {
         key: "checkpoint",
         label: "Checkpoint",
         value: "laya-mlx",
         options: ["laya-mlx", "laya-multilingual-mlx"],
       },
-      { key: "max_rows", label: "Últimos días a evaluar", value: 500, min: 30, max: 3000 },
+      { key: "max_rows", label: "Últimos días a evaluar", value: 500, min: 30, max: 3000, mode: "daily" },
+      { key: "mode", label: "Modo (auto = Polymarket si la fuente lo es)", value: "auto", options: ["auto", "daily", "polymarket"] },
+      { key: "train_windows", label: "Ventanas resueltas para calibrar", value: 120, min: 20, max: 500, mode: "polymarket" },
+      { key: "bucket_s", label: "Tramos dentro de la ventana (s; 0 = un solo momento)", value: "auto", options: ["auto", "0", "60", "120", "300"], mode: "polymarket" },
+      { key: "decision_offset_s", label: "Segundos tras el inicio (si tramos = 0)", value: 60, min: 0, max: 3599, mode: "polymarket" },
+      { key: "pm_lookback", label: "Lookback (puntos de 1 min)", value: 5, min: 3, max: 60, mode: "polymarket" },
       {
         key: "trend_question",
         label: "Pregunta choice (up/down/flat)",
         value: "Given these technical indicators, what is the most likely direction of the next trading day?",
+        mode: "daily",
       },
       {
         key: "risk_question",
         label: "Pregunta score (riesgo 0–2)",
         value: "How risky is holding this asset tomorrow?",
+        mode: "daily",
       },
       {
         key: "higher_question",
         label: "Proposición noul (P verdadero)",
         value: "The asset will close higher on the next trading day.",
+        mode: "daily",
       },
     ],
   },
@@ -183,6 +1261,7 @@ export const catalog: Record<Kind, Definition> = {
       { key: "lr", label: "Learning rate", value: 0.1, min: 0.0001, max: 5, step: 0.01 },
       { key: "epochs", label: "Épocas", value: 300, min: 10, max: 5000 },
       { key: "l2", label: "Regularización L2", value: 0.01, min: 0, max: 10, step: 0.01 },
+      { key: "imbalance_weight", label: "Peso fijo del desequilibrio del libro", value: 0, min: -5, max: 5, step: 0.05, mode: "polymarket" },
     ],
   },
   laya_feedback: {
@@ -586,9 +1665,9 @@ export const catalog: Record<Kind, Definition> = {
     ],
   },
   study: {
-    label: "Learning Experiment",
-    subtitle: "Validation selection · isolated holdout",
-    category: "06 / EDUCATION",
+    label: "Learning Experiment (legado)",
+    subtitle: "Monolito heredado: usa las herramientas 15 / SUPERVISADO, 13, 14 y 16",
+    category: "99 / LEGADO",
     color: "#ec9dd6",
     input: "frame",
     output: "tensor",
@@ -1499,7 +2578,61 @@ export function featureOptions(
       ),
     ),
   ];
+  const split = (v: Param | undefined) => String(v ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  if (node.data.kind === "ml_select") {
+    const cols = split(node.data.params.columns ?? "Close,Volume");
+    const kept = node.data.params.mode === "drop" ? base.filter((c) => !cols.includes(c)) : cols.length ? cols : base;
+    return [...new Set([...kept, ...split(node.data.params.always_keep)])];
+  }
+  if (node.data.kind === "ml_returns") {
+    const type = String(node.data.params.return_type ?? "log");
+    const k = Number(node.data.params.periods ?? 1);
+    const made = split(node.data.params.columns ?? "Close").flatMap((c) => [
+      ...(type !== "log" ? [`${node.data.params.prefix_simple ?? "Ret_"}${c}${k > 1 ? `_${k}` : ""}`] : []),
+      ...(type !== "simple" ? [`${node.data.params.prefix_log ?? "LogRet_"}${c}${k > 1 ? `_${k}` : ""}`] : []),
+    ]);
+    const dropped = node.data.params.replace === true ? split(node.data.params.columns ?? "Close") : [];
+    return [...new Set([...base.filter((c) => !dropped.includes(c)), ...made])];
+  }
+  if (node.data.kind === "ml_clean") return base;
+  if (node.data.kind === "dl_tabular_forecast") return [...new Set([...base, "DL_Forecast_1"])];
+  if (node.data.kind === "dl_recurrent_compare") return [...new Set([...base, "RNN_Pred"])];
+  if (node.data.kind === "dl_sequence_classifier") return [...new Set([...base, "DL_Class"])];
+  if (node.data.kind === "dl_anomaly_autoencoder") return [...new Set([...base, "AnomalyScore", "IsAnomaly"])];
+  if (node.data.kind === "ml_split") {
+    const feats = split(node.data.params.features);
+    return [...(feats.length ? feats : base), "Target", "Split"];
+  }
+  if (["ml_train", "ml_evaluate"].includes(node.data.kind)) return [...new Set([...base, "Prediction", "Proba"])];
+  if (node.data.kind === "ml_predict")
+    return ["Split", "Actual", String(node.data.params.output_column ?? "Prediction"), "Proba", "Lower", "Upper", "Signal"];
+  if (node.data.kind === "ml_visualize") return base;
+  if (node.data.kind === "gen_windows") return [...base, "Gen_WindowStart"];
+  if (node.data.kind === "gen_condition") return [...new Set([...base, "Gen_CondVol"])];
+  if (node.data.kind === "gen_split") return [...new Set([...base, "Split"])];
+  if (node.data.kind === "gen_evaluate") return [...new Set([...base, "Gen_VaR_cum", "Real_cum"])];
+  if (node.data.kind.startsWith("gen_")) return base;
+  if (node.data.kind === "ae_split") return [...split(node.data.params.features ?? ""), "y_bps", "Split"];
+  if (node.data.kind === "ae_pca") return [...base, ...Array.from({ length: Number(node.data.params.components ?? 3) }, (_, i) => `PC${i + 1}`)];
+  if (node.data.kind === "ae_ridge") return [...new Set([...base, "Z1", "Z2", "Z3", "Pred_bps"])];
+  if (node.data.kind.startsWith("ae_")) return base;
+  if (node.data.kind === "sup_target") return [...new Set([...base, "y_bps", ...(node.data.params.task === "direction" ? ["Direction"] : [])])];
+  if (node.data.kind === "sup_split") return [...new Set([...base, "Split"])];
+  if (node.data.kind === "sup_evaluate") return [...new Set([...base, "Prediction"])];
+  if (node.data.kind.startsWith("sup_") || node.data.kind.startsWith("rl_")) return base;
   if (node.data.kind === "curve_data") return ["Close", "Coordinate"];
+  if (node.data.kind === "yfinance_data")
+    return [
+      "Open", "High", "Low", "Close", "Volume",
+      ...(node.data.params.auto_adjust === false ? ["AdjClose"] : []),
+      ...(node.data.params.actions === true ? ["Dividends", "StockSplits"] : []),
+    ];
+  if (node.data.kind === "polymarket_dashboard")
+    return ["mercado", "prob_líder", "cambio_24h", "volumen_24h", "liquidez", "spread", "horas_al_cierre"];
+  if (node.data.kind === "polymarket_source")
+    return ["P_up", "P_down", "Close", "SecondsToClose", "Book_spread", "Book_imbalance"];
+  if (node.data.kind === "laya_updown")
+    return [...new Set([...base, "UpDown_P_up", "UpDown_Decision"])];
   const laya: Partial<Record<Kind, string[]>> = {
     laya_signal: ["Laya_P_up", "Laya_P_down", "Laya_P_flat", "Laya_P_higher", "Laya_Risk", "Laya_Confidence"],
     laya_calibrate: ["Laya_P_raw", "Laya_P_cal"],
@@ -1589,7 +2722,10 @@ export function inputHandles(kind: Kind): Record<string, string> {
     handles.asset_c = "frame";
   }
   if (kind === "model" || kind === "curve_fit") handles.network = "network";
+  if (kind === "dl_tabular_forecast" || kind === "dl_sequence_classifier" || kind === "dl_anomaly_autoencoder" || kind === "dl_recurrent_compare")
+    handles.network = "network"; // optional: Network Input → Layers → Network Output replaces the hidden layers
   if (kind === "merge") handles.frame_b = "frame";
+  if (kind === "polymarket_dashboard") handles.frame = "frame";   // optional: one market from Polymarket Market
   if (kind === "plot") {
     handles.frame = "frame";
     handles.tensor = "tensor";
@@ -2008,4 +3144,126 @@ export function presentPlot(
         ? Object.fromEntries(plot.series.map((key, i) => [key, labels[i]]))
         : Object.fromEntries(plot.series.map((key) => [key, key])),
   };
+}
+
+export interface UpDownDecision {
+  id: string;
+  decision: "UP" | "DOWN";
+  probability_up: number;
+  confidence: number;
+  actionable: boolean;
+  horizon: string;
+  market: string | null;
+  question?: string | null;
+  as_of: string;
+  p_market?: number;
+  threshold?: number;
+  weights: Record<string, number>;
+  weight_source: string;
+  signals: Record<string, number>;
+  contributions?: Record<string, number>;
+  laya: { used: boolean; via?: string; P_up?: number; P_down?: number };
+  learning?: OnlineLearning | null;
+  bucket?: number | null;
+  bucket_s?: number;
+  buckets_total?: number;
+  elapsed_s?: number;
+  window_start?: string | null;
+  bucket_stats?: Record<string, string | number>[] | null;
+}
+export interface OnlineLearning {
+  key: string;
+  updates: number;
+  pending: string[];
+  weights: Record<string, number>;
+  initial_weights: Record<string, number>;
+  hit_rate: number | null;
+  market_hit_rate: number | null;
+  logloss: number | null;
+  window: number;
+  lr: number;
+  learned_now: { slug: string; bucket?: number | null; p_up: number; outcome: string; hit: number }[];
+  bucket?: number | null;
+  bucket_updates?: number;
+  by_bucket?: { bucket: number; n: number; hit_rate: number | null; market_hit_rate: number | null; logloss: number | null; weights: Record<string, number> }[];
+  history: { slug: string; decided_at: string; p_up: number; decision: string; outcome: string; hit: number; logloss: number; weights: Record<string, number> }[];
+}
+export interface PolymarketSnapshot {
+  slug: string;
+  question: string;
+  condition_id: string;
+  up_outcome: string;
+  down_outcome: string;
+  price_up: number | null;
+  price_down: number | null;
+  window: string;
+  start: string | null;
+  end: string | null;
+  closed: boolean;
+  active: boolean;
+  accepting_orders: boolean;
+  volume: number;
+  liquidity: number;
+  volume24h: number;
+  seconds_to_close: number | null;
+  fetched_at: string;
+  underlying?: Underlying | null;
+  book: { best_bid: number | null; best_ask: number | null; spread: number | null; bid_depth: number; ask_depth: number; imbalance: number };
+}
+export interface Underlying {
+  asset: string;
+  source: string;
+  price_to_beat: number | null;
+  spot: number | null;
+  spot_ts: number | null;
+  diff: number | null;
+  diff_pct: number | null;
+  leading: "UP" | "DOWN" | null;
+  signal?: { z: number; diff_pct: number; sigma_pct_min: number; minutes_left: number; source: string } | null;
+  close: number | null;
+  completed: boolean;
+  history: { t: number; p: number }[];
+}
+export interface DashboardRow {
+  [key: string]: string | number | boolean | null;
+}
+export interface MarketDashboardData {
+  id: string;
+  mode: "market";
+  fetched_at: string;
+  seconds: number;
+  market: {
+    slug: string; question: string; event_title: string | null; event_slug: string | null; outcomes: string[]; outcome_prices: number[];
+    up_outcome: string; down_outcome: string; window: string | null; start: string | null; end: string | null; closed: boolean;
+    accepting_orders: boolean; resolution_source: string | null; description: string; condition_id: string; url: string; underlying?: Underlying | null;
+  };
+  kpis: Record<string, number | null>;
+  history: { hora: string; P: number }[];
+  depth: { precio: number; compra?: number; venta?: number }[];
+  book: Record<string, { bids: { precio: number; acciones: number; usd: number }[]; asks: { precio: number; acciones: number; usd: number }[] }>;
+  trades: DashboardRow[];
+  trade_flow: DashboardRow[];
+  vwap: Record<string, number>;
+  holders: DashboardRow[];
+  siblings: DashboardRow[];
+  decision: UpDownDecision | null;
+  notes: string[];
+}
+export interface PolymarketDashboardData {
+  id: string;
+  mode?: "overview";
+  kpis: Record<string, number | string | null>;
+  filters: Record<string, string | number>;
+  fetched_at: string;
+  seconds: number;
+  categories: DashboardRow[];
+  top_events: DashboardRow[];
+  top_markets: DashboardRow[];
+  movers: DashboardRow[];
+  ending_soon: DashboardRow[];
+  contested: DashboardRow[];
+  most_liquid: DashboardRow[];
+  wide_spreads: DashboardRow[];
+  probability_histogram: DashboardRow[];
+  updown: DashboardRow[];
 }

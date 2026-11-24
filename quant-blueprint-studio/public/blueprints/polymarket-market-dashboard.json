@@ -1,0 +1,63 @@
+{
+  "format": "quantlabs-blueprint-library",
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "polymarket-market-dashboard",
+      "title": "Polymarket · dashboard de un mercado (BTC 5m)",
+      "area": "Polymarket · decisiones UP/DOWN",
+      "description": "Polymarket Market elige cualquier mercado y Polymarket Dashboard muestra todo sobre él: outcomes, cuenta atrás, BTC vs precio a vencer, libro, flujo de operaciones, últimas operaciones, mercados del evento y concentración de tenedores.",
+      "instructions": [
+        "Requiere internet (Gamma, CLOB y Data API v2 públicas, sólo lectura).",
+        "Cambia el mercado en el Inspector de Polymarket Market (buscador o slug/URL): el dashboard se adapta, incluidos mercados con muchos outcomes como elecciones.",
+        "Activa ● En vivo para refrescarlo en ciclo.",
+        "Datos informativos; no es asesoría financiera."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "PM",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 120
+            },
+            "data": {
+              "kind": "polymarket_source",
+              "label": "1 · Polymarket 5m",
+              "params": {
+                "market": "btc-updown-5m",
+                "window": "auto",
+                "refresh_seconds": 15
+              }
+            }
+          },
+          {
+            "id": "DB",
+            "type": "blueprint",
+            "position": {
+              "x": 360,
+              "y": 120
+            },
+            "data": {
+              "kind": "polymarket_dashboard",
+              "label": "2 · Polymarket Dashboard",
+              "params": {
+                "trades": 200
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "PM",
+            "target": "DB",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          }
+        ]
+      }
+    }
+  ]
+}

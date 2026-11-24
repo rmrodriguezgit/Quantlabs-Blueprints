@@ -73,3 +73,22 @@ def chat_json(system: str, user: str, schema: dict[str, Any] | None = None, time
     if not isinstance(value, dict):
         raise LLMError('El modelo no devolvió un objeto JSON.')
     return value, info['model']
+
+
+def ping() -> dict[str, Any]:
+    """Real check: server answers, a model exists and it generates a few tokens (semaphore in the UI)."""
+    info = status(force=True)
+    base = {'url': URL, 'model': info['model'], 'seconds': None, 'reply': None, 'error': info['reason']}
+    if not info['models'] and info['reason'] and 'no responde' in info['reason']:
+        return {**base, 'state': 'offline'}
+    if not info['available']:
+        return {**base, 'state': 'no_model'}
+    started = time.monotonic()
+    try:
+        reply = _http('/api/generate', {'model': info['model'], 'prompt': 'Responde solo: ok', 'stream': False, 'think': False,
+                                        'options': {'num_predict': 4, 'temperature': 0}}, timeout=60)
+    except LLMError as exc:
+        return {**base, 'state': 'offline', 'error': str(exc)}
+    seconds = round(time.monotonic() - started, 2)
+    text = re.sub(r'<think>.*?</think>', '', str(reply.get('response', '')), flags=re.S).strip()[:40]
+    return {**base, 'state': 'ok' if seconds < 15 else 'slow', 'seconds': seconds, 'reply': text, 'error': None}

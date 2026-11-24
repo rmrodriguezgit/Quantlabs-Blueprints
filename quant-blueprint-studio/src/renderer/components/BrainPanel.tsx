@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Sparkles, X, Play, FolderOpen, CircleAlert, CheckCircle2, Cpu, ListChecks } from "lucide-react";
-import { brainStatus, planBlueprint, type BrainEngine, type BrainPlan, type BrainStatus } from "../brain";
+import { Workflow, X, Play, FolderOpen, CircleAlert, CheckCircle2, ListChecks, ThumbsUp, ThumbsDown, Sparkles } from "lucide-react";
+import { brainMemory, planBlueprint, ratePlan, setRequestStatus, type BrainEngine, type BrainMemory, type BrainPlan } from "../brain";
+import { LlmStatus } from "./LlmStatus";
 import { validateGraph } from "../validation";
 import type { Graph } from "../types/blueprint";
 
@@ -24,26 +25,39 @@ function restore(): { prompt: string; engine: BrainEngine; plan: BrainPlan | nul
 }
 
 export function BrainPanel({
+  initialPrompt,
   onClose,
   onOpen,
 }: {
+  initialPrompt?: string;
   onClose: () => void;
   onOpen: (graph: Graph, title: string, run: boolean) => void;
 }) {
   const saved = restore();
-  const [prompt, setPrompt] = useState(saved.prompt);
+  const [prompt, setPrompt] = useState(initialPrompt ?? saved.prompt);
+  const [tab, setTab] = useState<"build" | "missing" | "memory">("build");
+  const [memory, setMemory] = useState<BrainMemory | null>(null);
+  const [rating, setRating] = useState<Record<string, number>>({});
+  const loadMemory = () => brainMemory().then(setMemory, () => setMemory(null));
   const [engine, setEngine] = useState<BrainEngine>(saved.engine);
   const [plan, setPlan] = useState<BrainPlan | null>(saved.plan);
-  const [status, setStatus] = useState<BrainStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [started, setStarted] = useState(0);
   const [now, setNow] = useState(0);
   const [error, setError] = useState("");
   useEffect(() => {
-    brainStatus().then(setStatus, (e: unknown) =>
-      setStatus({ available: false, model: null, models: [], reason: e instanceof Error ? e.message : String(e) }),
-    );
-  }, []);
+    if (tab !== "build") void loadMemory();
+  }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
+  const rate = async (value: -1 | 1) => {
+    if (!plan?.plan_id) return;
+    const next = rating[plan.plan_id] === value ? 0 : value;
+    try {
+      await ratePlan(plan.plan_id, next);
+      setRating((r) => ({ ...r, [plan.plan_id as string]: next }));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
   useEffect(() => {
     try {
       localStorage.setItem(KEY, JSON.stringify({ prompt, engine, plan }));
@@ -74,12 +88,12 @@ export function BrainPanel({
   const errors = issues.filter((i) => i.severity === "error");
   return (
     <div className="library-backdrop" onMouseDown={(e) => e.target === e.currentTarget && !busy && onClose()}>
-      <section className="brain-panel" role="dialog" aria-label="Cerebro IA">
+      <section className="brain-panel" role="dialog" aria-label="Cerebro Constructor">
         <header>
           <div>
             <small>SEGUNDO CEREBRO · LOCAL</small>
             <h2>
-              <Sparkles size={20} /> Cerebro IA
+              <Workflow size={20} /> Cerebro Constructor
             </h2>
             <p>
               Describe el análisis. El Cerebro recupera herramientas y plantillas, planifica con Qwen local (o reglas),
@@ -90,14 +104,77 @@ export function BrainPanel({
             <X size={16} />
           </button>
         </header>
-        <div className="brain-status">
-          <Cpu size={13} />
-          {status === null
-            ? "Comprobando Ollama…"
-            : status.available
-              ? `Qwen local disponible · ${status.model}`
-              : `Sin modelo local (${status.reason ?? "Ollama no responde"}). Se usará el planificador por reglas.`}
+        <div className="brain-tabs" role="tablist">
+          {(
+            [
+              ["build", "Construir"],
+              ["missing", `Herramientas faltantes${memory ? ` · ${memory.requests.filter((r) => r.status === "pending").length}` : ""}`],
+              ["memory", "Memoria"],
+            ] as const
+          ).map(([id, text]) => (
+            <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? "active" : ""} onClick={() => setTab(id)}>
+              {text}
+            </button>
+          ))}
+          <LlmStatus />
         </div>
+        {tab === "missing" && (
+          <div className="brain-memory">
+            <p className="muted">
+              Lo que pediste y el catálogo no cubre. El Cerebro nunca lo simula con otro nodo: queda aquí como ficha para implementarla.
+            </p>
+            {!memory?.requests.length && <p className="muted">Sin fichas pendientes.</p>}
+            {memory?.requests.map((r) => (
+              <article key={r.id} className={`brain-request ${r.status}`}>
+                <header>
+                  <strong>{r.name}</strong>
+                  <span>
+                    pedida {r.count} vez{r.count > 1 ? "es" : ""}
+                  </span>
+                  <select
+                    value={r.status}
+                    onChange={async (e) => {
+                      await setRequestStatus(r.id, e.target.value as typeof r.status);
+                      void loadMemory();
+                    }}
+                  >
+                    <option value="pending">Pendiente</option>
+                    <option value="planned">Planificada</option>
+                    <option value="discarded">Descartada</option>
+                  </select>
+                </header>
+                <p>{r.purpose}</p>
+                <small>Último enunciado: {r.prompts[r.prompts.length - 1]}</small>
+              </article>
+            ))}
+          </div>
+        )}
+        {tab === "memory" && (
+          <div className="brain-memory">
+            <p className="muted">
+              Blueprints construidos. Los valorados 👍 ({memory?.liked ?? 0}) se reutilizan cuando un enunciado parecido llega. Guardado solo en este equipo
+              {memory ? `: ${memory.path}` : ""}.
+            </p>
+            <ol className="brain-history">
+              {memory?.history.map((h) => (
+                <li key={h.id}>
+                  <span className="brain-rating">{h.rating === 1 ? "👍" : h.rating === -1 ? "👎" : "·"}</span>
+                  <div>
+                    <strong>{h.title}</strong>
+                    <small>
+                      {new Date(h.at * 1000).toLocaleString()} · {h.engine === "ollama" ? h.model : "reglas"} · {h.steps.length} pasos
+                    </small>
+                    <p>«{h.prompt}»</p>
+                  </div>
+                  <button disabled={busy} onClick={() => setPrompt(h.prompt)} title="Copiar el enunciado al constructor">
+                    Reusar
+                  </button>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+        {tab === "build" && (
         <div className="brain-input">
           <textarea
             value={prompt}
@@ -127,16 +204,19 @@ export function BrainPanel({
             ))}
           </div>
         </div>
-        {error && (
+        )}
+        {tab === "build" && error && (
           <p className="brain-error">
             <CircleAlert size={14} /> {error}
           </p>
         )}
-        {plan && !busy && (
+        {tab === "build" && plan && !busy && (
           <div className="brain-result">
             <div className="brain-result-head">
               <div>
-                <h3>{plan.title}</h3>
+                <h3>
+                  <Sparkles size={15} /> {plan.title}
+                </h3>
                 <p>{plan.objective}</p>
                 <p className="muted">
                   Motor: <strong>{plan.engine === "ollama" ? `Qwen · ${plan.model}` : "reglas deterministas"}</strong>
@@ -207,6 +287,21 @@ export function BrainPanel({
               </ul>
             </details>
             <div className="brain-open">
+              {plan.plan_id && (
+                <div className="brain-rate" aria-label="Valorar este blueprint">
+                  <span>¿Te sirvió?</span>
+                  <button
+                    className={rating[plan.plan_id] === 1 ? "active" : ""}
+                    onClick={() => void rate(1)}
+                    title="Útil: se reutiliza en enunciados parecidos"
+                  >
+                    <ThumbsUp size={14} />
+                  </button>
+                  <button className={rating[plan.plan_id] === -1 ? "active" : ""} onClick={() => void rate(-1)} title="No útil">
+                    <ThumbsDown size={14} />
+                  </button>
+                </div>
+              )}
               <button onClick={() => onOpen(plan.graph, plan.title, false)}>
                 <FolderOpen size={14} /> Abrir en lienzo
               </button>

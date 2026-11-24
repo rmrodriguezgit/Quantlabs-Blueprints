@@ -33,6 +33,25 @@ Incluye comparación de optimizadores y regularización, búsqueda temporal de h
 
 ![Biblioteca de Blueprints](docs/v0.5-library.png)
 
+## Corregir con Cerebro
+
+El panel de **Validación** tiene el botón **Corregir con Cerebro**, activo cuando hay errores de validación o la última ejecución falló (el error de ejecución se muestra en el panel). Cerebro:
+
+1. aplica las reparaciones deterministas existentes;
+2. para lo que queda (incluidos los errores del motor) usa reglas específicas —límites intradía de Yahoo, ticker inexistente (busca el símbolo con `yf.Search`), mercado de Polymarket inexistente (busca uno abierto), muestras demasiado pequeñas para TR/VA/TE, pesos «calibrated» sin Laya Calibrate, laya-mlx ausente, motor ocupado, red lenta— y ajusta cualquier parámetro fuera de su rango u opciones;
+3. si ninguna regla aplica y hay LLM local, le pide cambios; cada cambio se valida contra el catálogo y el grafo (nodos, parámetros, opciones, rangos y pines) antes de aplicarse;
+4. vuelve a ejecutar para confirmar y repite hasta 3 rondas si aparece otro error.
+
+Cada cambio queda listado con su motivo y se puede **Deshacer**. Lo que no se puede arreglar editando el grafo (sin internet, paquete no instalado) se explica en vez de forzarse. Código: `backend/brain/fixer.py`, endpoint `POST /api/brain/fix`.
+
+## yfinance Data
+
+Nodo de datos con todas las opciones de `yfinance.download`: ticker, intervalo (1m–3mo), periodo o fechas, auto_adjust, back_adjust, acciones corporativas, pre/post mercado, repair y zona horaria, con los límites intradía de Yahoo validados antes de descargar. [Guía](docs/YFINANCE_DATA.md).
+
+## Polymarket × LAYA (UP/DOWN)
+
+**Polymarket Market** lee cualquier mercado de Polymarket (Gamma + CLOB) con buscador y validación en el Inspector y ventana `5m`/`15m`/`30m`/`1h`; **LAYA UP/DOWN** combina P(UP) implícita, momentum, libro y Laya-MLX con pesos editables o calibrados y emite `UP`/`DOWN` con confianza y traza. [Guía](docs/POLYMARKET_LAYA_UPDOWN.md).
+
 ## Reingeniería por áreas
 
 **Data Quality** añade limpieza causal; **Quant Features** calcula retornos, riesgo móvil y drawdown. **Classical ML** compara seis regresores y un baseline con selección VA. Deep Learning incorpora **Transformer** y AdamW/RMSprop. **RL Trading Agent** expone Double DQN y Q-learning, y Plot añade histogramas. Seis recetas nuevas permiten probar cada área. [Auditoría, alternativas y alcance](docs/LIBRARY_REENGINEERING.md).

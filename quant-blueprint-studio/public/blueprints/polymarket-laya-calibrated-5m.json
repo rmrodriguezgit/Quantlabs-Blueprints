@@ -1,0 +1,114 @@
+{
+  "format": "quantlabs-blueprint-library",
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "polymarket-laya-calibrated-5m",
+      "title": "Polymarket · Laya Signal → Calibrate → UP/DOWN 5m (por minuto)",
+      "area": "Polymarket · decisiones UP/DOWN",
+      "description": "Laya responde por cada ventana de 5m resuelta en cada minuto (0:30, 1:30 … 4:30); Laya Calibrate ajusta un juego de pesos por minuto con los resultados reales y LAYA UP/DOWN usa el del minuto en curso, aprendiendo en línea por minuto.",
+      "instructions": [
+        "Requiere internet y laya-mlx. La primera ejecución descarga ~120 ventanas resueltas (1–2 min); después quedan en disco.",
+        "Paso 2 (Laya Signal): acierto de mercado, Laya y distancia al precio a vencer en cada minuto de la ventana.",
+        "Paso 3 (Laya Calibrate): un juego de pesos por minuto; «ventaja vs mercado» > 0 indica en qué minutos el modelo es más preciso que el precio.",
+        "Paso 4 (LAYA UP/DOWN): usa los pesos del minuto actual y los corrige por minuto con cada ventana resuelta. Activa ● En vivo.",
+        "Señal de investigación; no es asesoría financiera."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "PM",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 120
+            },
+            "data": {
+              "kind": "polymarket_source",
+              "label": "1 · Polymarket 5m",
+              "params": {
+                "market": "btc-updown-5m",
+                "window": "auto"
+              }
+            }
+          },
+          {
+            "id": "LS",
+            "type": "blueprint",
+            "position": {
+              "x": 340,
+              "y": 120
+            },
+            "data": {
+              "kind": "laya_signal",
+              "label": "2 · Laya Signal (ventanas resueltas)",
+              "params": {
+                "mode": "polymarket",
+                "train_windows": 120,
+                "bucket_s": "auto",
+                "pm_lookback": 5
+              }
+            }
+          },
+          {
+            "id": "LC",
+            "type": "blueprint",
+            "position": {
+              "x": 680,
+              "y": 120
+            },
+            "data": {
+              "kind": "laya_calibrate",
+              "label": "3 · Laya Calibrate (resultados reales)",
+              "params": {
+                "lr": 0.3,
+                "epochs": 2000
+              }
+            }
+          },
+          {
+            "id": "UD",
+            "type": "blueprint",
+            "position": {
+              "x": 1020,
+              "y": 120
+            },
+            "data": {
+              "kind": "laya_updown",
+              "label": "4 · LAYA UP/DOWN",
+              "params": {
+                "window": "inherit",
+                "weight_source": "online",
+                "learning_key": "btc-updown-5m-por-minuto",
+                "lookback_bars": 5
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "PM",
+            "target": "LS",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "e2",
+            "source": "LS",
+            "target": "LC",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "e3",
+            "source": "LC",
+            "target": "UD",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          }
+        ]
+      }
+    }
+  ]
+}

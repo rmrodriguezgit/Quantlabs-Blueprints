@@ -43,6 +43,12 @@ const TERMINAL: Kind[] = [
   "ml_model",
   "model",
   "laya_feedback",
+  "laya_updown",
+  "polymarket_dashboard",
+  "ml_visualize",
+  "ae_test",
+  "sup_evaluate",
+  "rl_evaluate",
 ];
 const COLUMN_PARAMS = ["plot_columns", "feature_columns", "columns"];
 
@@ -154,10 +160,10 @@ export function validateGraph(graph: Graph): Issue[] {
     add({ severity: "error", message: "El motor admite como máximo 50 nodos por blueprint." });
   const ids = new Set(graph.nodes.map((n) => n.id));
   const nodes = new Map(graph.nodes.map((n) => [n.id, n]));
-  if (!graph.nodes.some((n) => ["source", "portfolio_data"].includes(n.data.kind)))
+  if (!graph.nodes.some((n) => ["source", "yfinance_data", "portfolio_data", "polymarket_source", "polymarket_dashboard"].includes(n.data.kind)))
     add({
       severity: "error",
-      message: "No hay fuente de datos. Añade Market Data o Portfolio Data al inicio del flujo.",
+      message: "No hay fuente de datos. Añade Market Data, yfinance Data, Portfolio Data o Polymarket Market al inicio del flujo.",
     });
 
   // Connections
@@ -293,6 +299,112 @@ export function validateGraph(graph: Graph): Issue[] {
           message: `${name}: los pares de divisas de Yahoo (=X) no reportan volumen; VWAP fallaría.`,
           fix: { type: "set_param", node: node.id, key: "use_vwap", value: false },
           fixLabel: "Desactivar VWAP",
+        });
+    }
+    if (node.data.kind === "laya_updown" && paramValue(node, "weight_source") === "calibrated" && !up.includes("laya_calibrate"))
+      add({ severity: "error", node: node.id, message: `${name}: pesos «calibrated» requieren Laya Calibrate aguas arriba.`, fix: { type: "set_param", node: node.id, key: "weight_source", value: "manual" }, fixLabel: "Usar pesos manuales" });
+    if (node.data.kind === "polymarket_dashboard" && graph.edges.some((e) => e.target === node.id) && !up.includes("polymarket_source"))
+      add({ severity: "error", node: node.id, message: `${name}: su entrada debe venir de Polymarket Market (o déjala sin conectar para ver todo Polymarket).` });
+    {
+      const ML_ORDER: Kind[] = ["ml_select", "ml_returns", "ml_clean", "ml_split", "ml_train", "ml_evaluate", "ml_predict", "ml_visualize"];
+      const step = ML_ORDER.indexOf(node.data.kind);
+      const needs: Partial<Record<Kind, Kind>> = { ml_train: "ml_split", ml_evaluate: "ml_train", ml_predict: "ml_train", ml_visualize: "ml_train" };
+      const need = needs[node.data.kind];
+      if (step >= 0 && need && graph.edges.some((e) => e.target === node.id) && !up.includes(need))
+        add({ severity: "error", node: node.id, message: `${name}: necesita «${catalog[need].label}» aguas arriba (orden del ML Pipeline).` });
+      if (node.data.kind === "ml_split" && !up.includes("ml_clean"))
+        add({ severity: "warning", node: node.id, message: `${name}: sin «${catalog.ml_clean.label}» antes, cualquier faltante o infinito detendrá la división.` });
+      if (node.data.kind === "ml_split" && paramValue(node, "method") === "random")
+        add({ severity: "warning", node: node.id, message: `${name}: la división aleatoria mezcla pasado y futuro; en series temporales sobreestima el rendimiento.` });
+      if (node.data.kind === "ml_split" && Number(paramValue(node, "train_ratio")) + Number(paramValue(node, "val_ratio")) >= 0.95)
+        add({ severity: "error", node: node.id, message: `${name}: TR + VA debe ser < 0.95 para dejar datos de prueba (TE).` });
+    }
+    {
+      const needs: Partial<Record<Kind, Kind>> = {
+        gen_condition: "gen_windows", gen_split: "gen_condition", gen_scale: "gen_split", gen_cvae: "gen_scale", gen_reparam: "gen_cvae",
+        gen_vae_train: "gen_reparam", gen_gan_train: "gen_scale", gen_select: "gen_scale", gen_evaluate: "gen_select",
+      };
+      const need = needs[node.data.kind];
+      if (need && graph.edges.some((e) => e.target === node.id) && !up.includes(need))
+        add({ severity: "error", node: node.id, message: `${name}: necesita «${catalog[need].label}» aguas arriba (orden de Generativos 01 → 10).` });
+      if (node.data.kind === "gen_select" && !up.includes("gen_vae_train") && !up.includes("gen_gan_train") && !up.includes("gen_dcgan_train"))
+        add({ severity: "error", node: node.id, message: `${name}: conecta «${catalog.gen_vae_train.label}» y/o «${catalog.gen_gan_train.label}» antes: no hay modelos que seleccionar.` });
+      if (node.data.kind === "gen_split" && paramValue(node, "cut_mode") === "ratio" && Number(paramValue(node, "train_ratio")) + Number(paramValue(node, "val_ratio")) >= 0.95)
+        add({ severity: "error", node: node.id, message: `${name}: TR + VA debe ser < 0.95 para dejar ventanas de prueba.` });
+    }
+    {
+      const needs: Partial<Record<Kind, Kind>> = {
+        sup_split: "sup_target", sup_scale: "sup_split", sup_windows: "sup_scale", sup_init: "sup_split", sup_mlp: "sup_scale",
+        sup_cnn: "sup_windows", sup_rnn: "sup_windows", sup_optimizer: "sup_mlp", sup_regularizer: "sup_mlp", sup_loss: "sup_target",
+        sup_hpo: "sup_split", sup_train: "sup_scale", sup_select: "sup_train", sup_evaluate: "sup_train",
+        rl_env: "sup_scale", rl_qnet: "rl_env", rl_replay: "rl_qnet", rl_target: "rl_qnet", rl_sync: "rl_qnet",
+        rl_train: "rl_sync", rl_baselines: "rl_env", rl_evaluate: "rl_train",
+        gen_dcgan_train: "gen_scale", gen_regime_compare: "gen_select",
+      };
+      const need = needs[node.data.kind];
+      if (need && graph.edges.some((e) => e.target === node.id) && !up.includes(need))
+        add({ severity: "error", node: node.id, message: `${name}: necesita «${catalog[need].label}» aguas arriba.` });
+      if (node.data.kind === "rl_train")
+        for (const k of ["rl_replay", "rl_target"] as Kind[])
+          if (!up.includes(k)) add({ severity: "error", node: node.id, message: `${name}: necesita «${catalog[k].label}» aguas arriba.` });
+      if (node.data.kind === "sup_train" && !(["sup_mlp", "sup_cnn", "sup_rnn", "sup_hpo"] as Kind[]).some((k) => up.includes(k)))
+        add({ severity: "error", node: node.id, message: `${name}: conecta una arquitectura (MLP / CNN / RNN) o la búsqueda HPO antes de entrenar.` });
+      if (node.data.kind === "sup_split" && paramValue(node, "cut_mode") === "ratio" && Number(paramValue(node, "train_ratio")) + Number(paramValue(node, "val_ratio")) >= 0.95)
+        add({ severity: "error", node: node.id, message: `${name}: TR + VA debe ser < 0.95 para dejar datos de prueba.` });
+      if (node.data.kind === "study" || node.data.kind === "rl_agent")
+        add({ severity: "warning", node: node.id, message: `${name}: nodo monolítico heredado. Usa los Blueprints «· herramientas» de cada unidad.` });
+    }
+    {
+      const needs: Partial<Record<Kind, Kind>> = {
+        ae_standardize: "ae_split", ae_pca: "ae_standardize", ae_encoder: "ae_standardize", ae_decoder: "ae_encoder",
+        ae_noise: "ae_standardize", ae_train: "ae_decoder", ae_select: "ae_standardize", ae_ridge: "ae_select", ae_test: "ae_ridge",
+      };
+      const need = needs[node.data.kind];
+      if (need && graph.edges.some((e) => e.target === node.id) && !up.includes(need))
+        add({ severity: "error", node: node.id, message: `${name}: necesita «${catalog[need].label}» aguas arriba (orden de Autoencoders).` });
+      if (node.data.kind === "ae_train" && paramValue(node, "train_dae") === true && !up.includes("ae_noise"))
+        add({ severity: "error", node: node.id, message: `${name}: el DAE necesita «${catalog.ae_noise.label}» aguas arriba.`, fix: { type: "set_param", node: node.id, key: "train_dae", value: false }, fixLabel: "Entrenar sólo AE" });
+      if (node.data.kind === "ae_split" && Number(paramValue(node, "train_ratio")) + Number(paramValue(node, "val_ratio")) >= 0.95)
+        add({ severity: "error", node: node.id, message: `${name}: TR + VA debe ser < 0.95 para dejar datos de prueba (TE).` });
+    }
+    if (node.data.kind === "yfinance_data") {
+      const iv = String(paramValue(node, "interval"));
+      const mode = String(paramValue(node, "range_mode"));
+      const period = String(paramValue(node, "period"));
+      const limit: Record<string, number> = { "1m": 7, "2m": 60, "5m": 60, "15m": 60, "30m": 60, "60m": 730, "90m": 60, "1h": 730 };
+      const days: Record<string, number> = { "1d": 1, "5d": 5, "1mo": 31, "3mo": 92, "6mo": 183, "1y": 366, "2y": 731, "5y": 1827, "10y": 3653, ytd: 366, max: 99999 };
+      if (limit[iv] && mode === "period" && days[period] > limit[iv] + 1)
+        add({
+          severity: "error",
+          node: node.id,
+          message: `${name}: Yahoo sólo da ${limit[iv]} días de datos ${iv} y pediste ${period}.`,
+          fix: { type: "set_param", node: node.id, key: "period", value: iv === "1m" ? "5d" : limit[iv] === 60 ? "1mo" : "1y" },
+          fixLabel: `Usar ${iv === "1m" ? "5d" : limit[iv] === 60 ? "1mo" : "1y"}`,
+        });
+      if (paramValue(node, "back_adjust") === true && paramValue(node, "auto_adjust") !== false)
+        add({ severity: "error", node: node.id, message: `${name}: back_adjust sólo aplica con auto_adjust desactivado.`, fix: { type: "set_param", node: node.id, key: "back_adjust", value: false }, fixLabel: "Quitar back_adjust" });
+      if (paramValue(node, "prepost") === true && !limit[iv])
+        add({ severity: "warning", node: node.id, message: `${name}: pre/post mercado sólo existe en intervalos intradía; se ignorará con ${iv}.`, fix: { type: "set_param", node: node.id, key: "prepost", value: false }, fixLabel: "Quitar prepost" });
+      if (!String(paramValue(node, "ticker") ?? "").trim())
+        add({ severity: "error", node: node.id, message: `${name}: indica un ticker de Yahoo.` });
+    }
+    if (node.data.kind === "polymarket_source" && !String(paramValue(node, "market") ?? "").trim())
+      add({ severity: "error", node: node.id, message: `${name}: indica un mercado de Polymarket.` });
+    if (node.data.kind === "laya_feedback" && up.includes("polymarket_source"))
+      add({ severity: "error", node: node.id, message: `${name}: simula una estrategia diaria sobre un activo; con Polymarket usa LAYA UP/DOWN con pesos «online».` });
+    if (node.data.kind === "laya_signal" && paramValue(node, "mode") === "polymarket" && !up.includes("polymarket_source"))
+      add({ severity: "error", node: node.id, message: `${name}: el modo polymarket necesita Polymarket Market aguas arriba.`, fix: { type: "set_param", node: node.id, key: "mode", value: "auto" }, fixLabel: "Modo auto" });
+    if (node.data.kind === "laya_signal") {
+      const src = [...ancestors(graph, node.id)].map((id) => nodes.get(id)).find((n) => n?.data.kind === "source" || n?.data.kind === "yfinance_data");
+      const own = String(paramValue(node, "ticker") ?? "auto").trim().toUpperCase();
+      const real = src && (src.data.kind === "yfinance_data" || src.data.params.source === "yfinance") ? String(src.data.params.ticker ?? "SPY").trim().toUpperCase() : null;
+      if (real && own !== "AUTO" && own !== "" && own !== real)
+        add({
+          severity: "warning",
+          node: node.id,
+          message: `${name}: el estado enviado a Laya dice «${own}» pero Market Data descarga ${real}.`,
+          fix: { type: "set_param", node: node.id, key: "ticker", value: "auto" },
+          fixLabel: "Usar el ticker de Market Data",
         });
     }
     if (node.data.kind === "laya_signal") {

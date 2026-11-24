@@ -6,12 +6,13 @@
       "id": "unit-4",
       "title": "Unidad 4 · Regularización y dirección",
       "area": "Regularización",
-      "description": "Comparación de BCE de datos para baseline, Dropout, L1, L2 y BatchNorm; salida sigmoid y umbral fijo .5.",
+      "description": "Etiqueta de dirección, referencia común y una herramienta por técnica: Dropout, L1, L2, BatchNorm y early stopping.",
       "instructions": [
-        "Carga la plantilla. Pulsa Execute Blueprint para ver progreso, selección, métricas y gráficos debajo del lienzo.",
-        "Predeterminada: serie sintética reproducible, sin internet. Para datos reales, selecciona yfinance en SPY / Market Data.",
-        "Selecciona Learning Experiment para cambiar características, ventanas, épocas, costes y otras opciones. Las dimensiones de entrada se derivan de las características seleccionadas.",
-        "Guarda una copia en Personal o exporta JSON. Al importar se recuperan nodos, conexiones y parámetros; al ejecutar se reentrena."
+        "Propósito: estimar la probabilidad de alza de la sesión siguiente y ver qué regularización generaliza mejor.",
+        "Datos de prueba: serie sintética reproducible (6 años, sin internet). Cambia SPY a yfinance para datos reales.",
+        "Cadena: SPY · synthetic / yfinance → 11 indicadores causales → 01 · Definir las etiquetas → Separar el tiempo → Escalar sólo con train → 02 · Crear una referencia común → 02 · Baseline (misma MLP) → 03 · Aplicar Dropout → 04 · Añadir L1 → 05 · Añadir L2 → 06 · Evaluar BatchNorm → 07 · Aplicar Early Stopping → BCE con logits → 08 · Comparar pérdidas equivalentes → 09 · Seleccionar la variante → 10 · Evaluar probabilidades y costes. Cada herramienta recibe el pin frame del paso anterior y entrega el suyo al siguiente.",
+        "Resultado esperado: BCE de validación por variante, variante seleccionada y probabilidades en test con umbral 0.5.",
+        "Pulsa Execute Blueprint. Cada herramienta publica su propio informe (tabla, métricas y gráficos) debajo del lienzo."
       ],
       "infographic": "unidad-4.png",
       "graph": {
@@ -20,8 +21,8 @@
             "id": "data",
             "type": "blueprint",
             "position": {
-              "x": 0,
-              "y": 180
+              "x": 40,
+              "y": 40
             },
             "data": {
               "kind": "source",
@@ -29,7 +30,7 @@
               "params": {
                 "source": "synthetic",
                 "ticker": "SPY",
-                "years": 5
+                "years": 6
               }
             }
           },
@@ -37,12 +38,12 @@
             "id": "features",
             "type": "blueprint",
             "position": {
-              "x": 300,
-              "y": 180
+              "x": 340,
+              "y": 40
             },
             "data": {
               "kind": "features",
-              "label": "11 causal indicators",
+              "label": "11 indicadores causales",
               "params": {
                 "lags": 0,
                 "use_rsi": true,
@@ -55,72 +56,214 @@
             }
           },
           {
-            "id": "experiment",
+            "id": "target",
             "type": "blueprint",
             "position": {
-              "x": 620,
-              "y": 180
+              "x": 640,
+              "y": 40
             },
             "data": {
-              "kind": "study",
-              "label": "Unidad 4 · Regularización y dirección",
+              "kind": "sup_target",
+              "label": "01 · Definir las etiquetas",
               "params": {
-                "topic": "regularization",
-                "feature_columns": "LogReturn,Volatility,RSI,EMA,SMA,VWAP,MACD,MACDSignal,BBUpper,BBMiddle,BBLower",
+                "task": "direction"
+              }
+            }
+          },
+          {
+            "id": "split",
+            "type": "blueprint",
+            "position": {
+              "x": 940,
+              "y": 40
+            },
+            "data": {
+              "kind": "sup_split",
+              "label": "Separar el tiempo",
+              "params": {}
+            }
+          },
+          {
+            "id": "scale",
+            "type": "blueprint",
+            "position": {
+              "x": 1240,
+              "y": 40
+            },
+            "data": {
+              "kind": "sup_scale",
+              "label": "Escalar sólo con train",
+              "params": {}
+            }
+          },
+          {
+            "id": "init",
+            "type": "blueprint",
+            "position": {
+              "x": 1540,
+              "y": 40
+            },
+            "data": {
+              "kind": "sup_init",
+              "label": "02 · Crear una referencia común",
+              "params": {
+                "scheme": "kaiming_normal"
+              }
+            }
+          },
+          {
+            "id": "mlp",
+            "type": "blueprint",
+            "position": {
+              "x": 40,
+              "y": 260
+            },
+            "data": {
+              "kind": "sup_mlp",
+              "label": "02 · Baseline (misma MLP)",
+              "params": {
                 "widths": "64,32",
-                "lookback": 1,
-                "train_ratio": 0.65,
-                "val_ratio": 0.15,
-                "epochs": 12,
-                "patience": 5,
-                "batch_size": 64,
-                "lr": 0.001,
-                "trials": 6,
-                "latent_dim": 3,
-                "horizon": 16,
-                "cost_bps": 5,
-                "threshold_bps": 0,
-                "seed": 42
+                "name": "Baseline"
               }
             }
           },
           {
-            "id": "chart-0",
+            "id": "dropout",
             "type": "blueprint",
             "position": {
-              "x": 950,
-              "y": 0
+              "x": 340,
+              "y": 260
             },
             "data": {
-              "kind": "plot",
-              "label": "Resultado fuera de muestra",
+              "kind": "sup_regularizer",
+              "label": "03 · Aplicar Dropout",
               "params": {
-                "title": "Resultado fuera de muestra",
-                "plot_source": "auto",
-                "plot_columns": "",
-                "chart_type": "line",
-                "color": "Mint",
-                "study_chart": 0
+                "kind": "Dropout",
+                "value": 0.3
               }
             }
           },
           {
-            "id": "chart-1",
+            "id": "l1",
             "type": "blueprint",
             "position": {
-              "x": 950,
-              "y": 200
+              "x": 640,
+              "y": 260
             },
             "data": {
-              "kind": "plot",
-              "label": "Validación / distribución",
+              "kind": "sup_regularizer",
+              "label": "04 · Añadir L1",
               "params": {
-                "title": "Validación / distribución",
-                "plot_source": "auto",
-                "plot_columns": "",
-                "chart_type": "line",
-                "color": "Violet",
-                "study_chart": 1
+                "kind": "L1",
+                "value": 1e-05
+              }
+            }
+          },
+          {
+            "id": "l2",
+            "type": "blueprint",
+            "position": {
+              "x": 940,
+              "y": 260
+            },
+            "data": {
+              "kind": "sup_regularizer",
+              "label": "05 · Añadir L2",
+              "params": {
+                "kind": "L2",
+                "value": 0.001
+              }
+            }
+          },
+          {
+            "id": "bn",
+            "type": "blueprint",
+            "position": {
+              "x": 1240,
+              "y": 260
+            },
+            "data": {
+              "kind": "sup_regularizer",
+              "label": "06 · Evaluar BatchNorm",
+              "params": {
+                "kind": "BatchNorm",
+                "value": 0
+              }
+            }
+          },
+          {
+            "id": "early",
+            "type": "blueprint",
+            "position": {
+              "x": 1540,
+              "y": 260
+            },
+            "data": {
+              "kind": "sup_regularizer",
+              "label": "07 · Aplicar Early Stopping",
+              "params": {
+                "kind": "EarlyStopping",
+                "value": 5
+              }
+            }
+          },
+          {
+            "id": "loss",
+            "type": "blueprint",
+            "position": {
+              "x": 40,
+              "y": 480
+            },
+            "data": {
+              "kind": "sup_loss",
+              "label": "BCE con logits",
+              "params": {
+                "loss": "BCE"
+              }
+            }
+          },
+          {
+            "id": "train",
+            "type": "blueprint",
+            "position": {
+              "x": 340,
+              "y": 480
+            },
+            "data": {
+              "kind": "sup_train",
+              "label": "08 · Comparar pérdidas equivalentes",
+              "params": {
+                "epochs": 30,
+                "patience": 0,
+                "restore_best": false
+              }
+            }
+          },
+          {
+            "id": "select",
+            "type": "blueprint",
+            "position": {
+              "x": 640,
+              "y": 480
+            },
+            "data": {
+              "kind": "sup_select",
+              "label": "09 · Seleccionar la variante",
+              "params": {}
+            }
+          },
+          {
+            "id": "evaluate",
+            "type": "blueprint",
+            "position": {
+              "x": 940,
+              "y": 480
+            },
+            "data": {
+              "kind": "sup_evaluate",
+              "label": "10 · Evaluar probabilidades y costes",
+              "params": {
+                "threshold": 0.5
               }
             }
           }
@@ -135,27 +278,115 @@
             "animated": true
           },
           {
-            "id": "features-experiment",
+            "id": "features-target",
             "source": "features",
-            "target": "experiment",
+            "target": "target",
             "sourceHandle": "frame",
             "targetHandle": "frame",
             "animated": true
           },
           {
-            "id": "experiment-chart-0",
-            "source": "experiment",
-            "target": "chart-0",
-            "sourceHandle": "tensor",
-            "targetHandle": "tensor",
+            "id": "target-split",
+            "source": "target",
+            "target": "split",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
             "animated": true
           },
           {
-            "id": "experiment-chart-1",
-            "source": "experiment",
-            "target": "chart-1",
-            "sourceHandle": "tensor",
-            "targetHandle": "tensor",
+            "id": "split-scale",
+            "source": "split",
+            "target": "scale",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "scale-init",
+            "source": "scale",
+            "target": "init",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "init-mlp",
+            "source": "init",
+            "target": "mlp",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "mlp-dropout",
+            "source": "mlp",
+            "target": "dropout",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "dropout-l1",
+            "source": "dropout",
+            "target": "l1",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "l1-l2",
+            "source": "l1",
+            "target": "l2",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "l2-bn",
+            "source": "l2",
+            "target": "bn",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "bn-early",
+            "source": "bn",
+            "target": "early",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "early-loss",
+            "source": "early",
+            "target": "loss",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "loss-train",
+            "source": "loss",
+            "target": "train",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "train-select",
+            "source": "train",
+            "target": "select",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "select-evaluate",
+            "source": "select",
+            "target": "evaluate",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
             "animated": true
           }
         ]

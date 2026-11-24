@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from . import llm
+from . import llm, store
 from .knowledge import fold, index, library, tool_card
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -223,7 +223,12 @@ def rules_plan(prompt: str, catalog: dict[str, Any], retrieved: list[dict[str, A
     else:
         best = next((r for r in retrieved if r['type'] == 'blueprint'), None)
         entry = next((e for e in library() if best and e['id'] == best['id']), None) or next(e for e in library() if e['id'] == 'area-returns')
-    graph = copy.deepcopy(entry['graph'])
+    return graph_plan(entry['graph'], entry['title'], f"Adaptado de la plantilla «{entry['title']}»: {entry['description']}", catalog)
+
+
+def graph_plan(source: dict[str, Any], title: str, objective: str, catalog: dict[str, Any]) -> dict[str, Any]:
+    """An existing graph (template or remembered blueprint) as an ordered plan the compiler re-checks."""
+    graph = copy.deepcopy(source)
     order = {n['id']: i for i, n in enumerate(graph['nodes'])}
     steps = []
     for node in sorted(graph['nodes'], key=lambda n: (n['position']['x'], n['position']['y'], order[n['id']])):
@@ -231,7 +236,20 @@ def rules_plan(prompt: str, catalog: dict[str, Any], retrieved: list[dict[str, A
         inputs = {e['targetHandle']: e['source'] for e in graph['edges'] if e['target'] == node['id']}
         steps.append({'id': node['id'], 'tool': kind, 'label': node['data'].get('label'), 'parameters': node['data'].get('params', {}),
                       'inputs': inputs, 'why': catalog.get(kind, {}).get('subtitle', '')})
-    return {'title': entry['title'], 'objective': f"Adaptado de la plantilla «{entry['title']}»: {entry['description']}", 'steps': steps, 'missing': []}
+    return {'title': title, 'objective': objective, 'steps': steps, 'missing': []}
+
+
+def remembered(prompt: str) -> dict[str, Any] | None:
+    """A 👍-rated blueprint whose prompt covers most of this prompt's words."""
+    from .knowledge import tokens
+    wanted = set(tokens(prompt))
+    best, score = None, 0.0
+    for item in store.liked():
+        words = set(tokens(f"{item['prompt']} {item.get('title') or ''}"))
+        coverage = len(wanted & words) / max(1, len(wanted))
+        if coverage > score:
+            best, score = item, coverage
+    return best if score >= .6 else None
 
 
 def plan(prompt: str, catalog: dict[str, Any], engine: str = 'auto') -> dict[str, Any]:
@@ -248,7 +266,8 @@ def plan(prompt: str, catalog: dict[str, Any], engine: str = 'auto') -> dict[str
     used, model, reason, raw = 'rules', None, None, None
     if engine in ('auto', 'ollama'):
         cards = {t['id'] for t in tools} | {'source', 'features', 'plot', 'prepare'}
-        examples = [rules_plan('', catalog, [r], hint) for r in retrieved if r['type'] == 'blueprint'][:2]
+        memo = remembered(prompt)
+        examples = ([graph_plan(memo['graph'], memo['title'] or 'Valorado', '', catalog)] if memo else []) + [rules_plan('', catalog, [r], hint) for r in retrieved if r['type'] == 'blueprint'][:2]
         user = ('Herramientas disponibles:\n' + '\n'.join(tool_card(k, catalog[k]) for k in sorted(cards) if k in catalog)
                 + '\n\nEjemplos de planes válidos:\n' + '\n'.join(json.dumps({'title': e['title'], 'steps': [{k: s[k] for k in ('id', 'tool', 'inputs')} for s in e['steps']]}, ensure_ascii=False) for e in examples)
                 + (f'\n\nDatos detectados en el enunciado: {json.dumps(hint, ensure_ascii=False)}' if hint else '')
@@ -265,8 +284,17 @@ def plan(prompt: str, catalog: dict[str, Any], engine: str = 'auto') -> dict[str
         if engine == 'auto' and (not result['check']['ok'] or len(result['steps']) < 2):
             reason = 'El plan de Qwen no pasó la validación: ' + '; '.join(result['check']['errors'] or ['menos de dos pasos'])
             used, raw = 'rules', None
+    memo = None
     if raw is None:
-        result = compile_plan(rules_plan(prompt, catalog, retrieved, hint), catalog, hint)
+        memo = remembered(prompt)
+        base = (graph_plan(memo['graph'], memo['title'] or 'Blueprint valorado', f"Reutiliza un blueprint que valoraste 👍 para «{memo['prompt'][:120]}».", catalog)
+                if memo else rules_plan(prompt, catalog, retrieved, hint))
+        result = compile_plan(base, catalog, hint)
     result.update({'engine': used, 'model': model, 'fallback_reason': reason, 'detected': hint,
-                   'retrieved': [{'type': r['type'], 'id': r['id'], 'title': r['title'], 'score': r['score']} for r in retrieved[:6]]})
+                   'retrieved': ([{'type': 'memory', 'id': memo['id'], 'title': memo['title'], 'score': 1.0}] if memo else [])
+                   + [{'type': r['type'], 'id': r['id'], 'title': r['title'], 'score': r['score']} for r in retrieved[:6]]})
+    try:
+        result['plan_id'] = store.remember(result, prompt)
+    except OSError:
+        result['plan_id'] = None   # memory is optional; the plan is still valid
     return result

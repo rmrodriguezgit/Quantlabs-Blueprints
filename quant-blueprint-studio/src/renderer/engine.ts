@@ -93,7 +93,8 @@ export async function engineRequest<T>(route: string, body?: unknown): Promise<T
     value = await response.json();
     if (!response.ok) throw new Error(JSON.stringify((value as { detail?: unknown }).detail ?? response.status));
   }
-  if (typeof value === "object" && value && "error" in value)
+  // The bridge reports failures as exactly { error }; payloads may carry their own error field.
+  if (typeof value === "object" && value && Object.keys(value).length === 1 && "error" in value)
     throw new Error(String((value as { error: unknown }).error));
   return value as T;
 }

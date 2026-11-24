@@ -51,7 +51,7 @@ class BM25:
         q = tokens(query)
         scored = []
         for doc, t in zip(self.docs, self.toks):
-            if kind and doc['type'] != kind:
+            if kind and doc.get('type', doc.get('kind')) != kind:
                 continue
             tf: dict[str, int] = {}
             for w in t:

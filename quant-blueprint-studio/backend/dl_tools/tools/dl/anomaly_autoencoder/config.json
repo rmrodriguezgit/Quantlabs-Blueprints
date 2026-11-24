@@ -1,0 +1,8 @@
+{
+  "name": "dl_anomaly_autoencoder",
+  "version": "1.0.0",
+  "weights_version": "ae-1.0.0",
+  "est_ram_mb": 40,
+  "est_vram_mb": 20,
+  "expected_latency_ms": 200
+}

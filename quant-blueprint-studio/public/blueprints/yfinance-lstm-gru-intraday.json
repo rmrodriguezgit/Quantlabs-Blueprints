@@ -1,0 +1,105 @@
+{
+  "format": "quantlabs-blueprint-library",
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "yfinance-lstm-gru-intraday",
+      "title": "Cómo programar: LSTM y GRU · siguiente intradía (SPY)",
+      "area": "Machine learning",
+      "description": "Réplica de la infografía «Diez segmentos del código»: secuencias de 20 sesiones × 11 indicadores, LSTM, GRU y LSTM bidireccional, selección por MSE de validación y comparación con Ridge en puntos básicos.",
+      "instructions": [
+        "Requiere internet. Cambia ticker y periodo en yfinance Data.",
+        "El informe de «DL · LSTM vs GRU» enumera los segmentos 01–10 con su resultado.",
+        "Ajusta capas, optimizador y candidatos en el Inspector; el objetivo es el retorno intradía (Close/Open − 1) de la sesión siguiente en bps."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "YF",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 120
+            },
+            "data": {
+              "kind": "yfinance_data",
+              "label": "0 · yfinance Data SPY 1d",
+              "params": {
+                "ticker": "SPY",
+                "interval": "1d",
+                "range_mode": "period",
+                "period": "10y"
+              }
+            }
+          },
+          {
+            "id": "TF",
+            "type": "blueprint",
+            "position": {
+              "x": 330,
+              "y": 120
+            },
+            "data": {
+              "kind": "features",
+              "label": "01 · 11 indicadores por sesión",
+              "params": {}
+            }
+          },
+          {
+            "id": "CL",
+            "type": "blueprint",
+            "position": {
+              "x": 660,
+              "y": 120
+            },
+            "data": {
+              "kind": "ml_clean",
+              "label": "Limpieza (sin faltantes)",
+              "params": {
+                "missing": "drop",
+                "outliers": "none",
+                "drop_constant": false
+              }
+            }
+          },
+          {
+            "id": "RN",
+            "type": "blueprint",
+            "position": {
+              "x": 990,
+              "y": 120
+            },
+            "data": {
+              "kind": "dl_recurrent_compare",
+              "label": "02–10 · LSTM vs GRU vs LSTM (bi) vs Ridge",
+              "params": {}
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "eYFTF",
+            "source": "YF",
+            "target": "TF",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "eTFCL",
+            "source": "TF",
+            "target": "CL",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "eCLRN",
+            "source": "CL",
+            "target": "RN",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          }
+        ]
+      }
+    }
+  ]
+}

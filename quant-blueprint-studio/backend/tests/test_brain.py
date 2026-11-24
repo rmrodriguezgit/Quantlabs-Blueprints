@@ -87,3 +87,52 @@ class BrainTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class TutorAndMemoryTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.cat = catalog()
+
+    def test_tutor_routes_question_types_and_selected_node(self) -> None:
+        from backend.brain import tutor
+        cases = {'¿Qué es el ratio de Sharpe?': 'concept:sharpe', '¿Para qué sirve Technical Features?': 'tool:features',
+                 '¿Cómo evito la fuga de información?': 'concept:fuga', 'ejemplo de red neuronal': 'example:area-network'}
+        for question, expected in cases.items():
+            with self.subTest(question=question):
+                self.assertEqual(tutor.ask(question, self.cat, 'rules')['sources'][0]['id'], expected)
+        this = tutor.ask('¿Qué hace este nodo?', self.cat, 'rules', 'laya_calibrate')
+        self.assertEqual(this['sources'][0]['id'], 'tool:laya_calibrate')
+        leak = tutor.ask('¿Cómo evito la fuga de información?', self.cat, 'rules')
+        self.assertIn('data_quality', [a.get('kind') for a in leak['actions']])
+        with self.assertRaises(ValueError):
+            tutor.ask('x', self.cat, 'rules')
+
+    def test_tutor_drops_invented_citations(self) -> None:
+        from unittest import mock
+        from backend.brain import tutor
+        fake = ({'answer': 'Ver [concept:sharpe] y [tool:inventado].', 'sources': ['concept:sharpe', 'tool:inventado'], 'follow_up': []}, 'qwen-test')
+        with mock.patch('backend.brain.llm.chat_json', return_value=fake):
+            out = tutor.ask('¿Qué es el ratio de Sharpe?', self.cat, 'auto')
+        self.assertEqual(out['engine'], 'ollama')
+        self.assertEqual([s['id'] for s in out['sources']], ['concept:sharpe'])
+
+    def test_memory_rating_reuse_and_missing_tools(self) -> None:
+        import os
+        import tempfile
+        from unittest import mock
+        from backend.brain import store
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(os.environ, {'QL_BRAIN_DIR': tmp}):
+            first = planner.plan('Agente de refuerzo sobre Bitcoin', self.cat, 'rules')
+            self.assertTrue(first['plan_id'])
+            store.rate(first['plan_id'], 1)
+            again = planner.plan('agente de refuerzo bitcoin 3 años', self.cat, 'rules')
+            self.assertEqual(again['retrieved'][0]['type'], 'memory')
+            store.remember({'title': 't', 'steps': [], 'missing': [{'name': 'GARCH', 'purpose': 'volatilidad condicional'}]}, 'garch por favor')
+            store.remember({'title': 't', 'steps': [], 'missing': [{'name': 'garch', 'purpose': 'x'}]}, 'otra vez garch')
+            requests = store.memory()['requests']
+            self.assertEqual((requests[0]['name'], requests[0]['count']), ('GARCH', 2))
+            store.set_request_status(requests[0]['id'], 'planned')
+            self.assertEqual(store.memory()['requests'][0]['status'], 'planned')
+            with self.assertRaises(ValueError):
+                store.rate('nope', 1)

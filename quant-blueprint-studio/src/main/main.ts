@@ -2,6 +2,7 @@ import {
   app,
   BrowserWindow,
   ipcMain,
+  shell,
   Menu,
   type MenuItemConstructorOptions,
 } from "electron";
@@ -11,9 +12,18 @@ const ENGINE_HOST = `127.0.0.1:${process.env.QL_ENGINE_PORT ?? "8000"}`;
 // Renderer may only reach these engine routes through the bridge.
 const ENGINE_ROUTES = new Set([
   "/api/validate",
+  "/api/polymarket/search",
+  "/api/polymarket/resolve",
+  "/api/polymarket/learning/reset",
   "/api/brain/plan",
   "/api/brain/explain",
+  "/api/brain/fix",
   "/api/brain/status",
+  "/api/brain/ask",
+  "/api/brain/ping",
+  "/api/brain/memory",
+  "/api/brain/feedback",
+  "/api/brain/request-status",
 ]);
 function createWindow(newBlueprint = false): void {
   const window = new BrowserWindow({
@@ -33,7 +43,11 @@ function createWindow(newBlueprint = false): void {
   const webContentsId = window.webContents.id;
   if (newBlueprint) pendingNewBlueprints.add(webContentsId);
   window.on("closed", () => pendingNewBlueprints.delete(webContentsId));
-  window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  // Only Polymarket market pages (dashboard links) open, and in the system browser, never inside the app.
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    if (/^https:\/\/polymarket\.com\/event\/[\w-]+$/.test(url)) void shell.openExternal(url);
+    return { action: "deny" };
+  });
   window.webContents.on("will-navigate", (event) => event.preventDefault());
   if (app.isPackaged || process.argv.includes("--production"))
     void window.loadFile(path.join(__dirname, "../renderer/index.html"));

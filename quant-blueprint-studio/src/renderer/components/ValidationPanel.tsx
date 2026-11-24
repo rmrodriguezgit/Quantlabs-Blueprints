@@ -7,8 +7,7 @@ import {
   Undo2,
   ChevronDown,
   ChevronRight,
-  CheckCircle2,
-} from "lucide-react";
+  CheckCircle2, Brain } from "lucide-react";
 import type { Issue } from "../validation";
 
 const icon = {
@@ -26,7 +25,13 @@ export function ValidationPanel({
   onFix,
   onRepairAll,
   onUndo,
+  execError = null,
+  cerebroBusy = false,
+  onCerebro,
 }: {
+  execError?: string | null;
+  cerebroBusy?: boolean;
+  onCerebro?: () => void;
   issues: Issue[];
   disabled: boolean;
   changes: string[];
@@ -44,7 +49,7 @@ export function ValidationPanel({
   const infos = count("info");
   const fixable = issues.filter((i) => i.fix && i.severity !== "info").length;
   const shown = issues.filter((i) => showInfo || i.severity !== "info");
-  const state = errors ? "error" : warnings ? "warning" : "ok";
+  const state = errors || execError ? "error" : warnings ? "warning" : "ok";
   return (
     <section className={`validation-panel ${state}`} aria-label="Validación del blueprint">
       <header>
@@ -68,6 +73,16 @@ export function ValidationPanel({
               <Undo2 size={14} /> Deshacer
             </button>
           )}
+          {onCerebro && (
+            <button
+              className="repair-button cerebro-fix"
+              disabled={disabled || cerebroBusy || (errors === 0 && !execError)}
+              onClick={onCerebro}
+              title="Cerebro corrige cualquier error: aplica las reparaciones, propone cambios para los errores de validación y de ejecución, y vuelve a ejecutar para comprobarlo (se puede deshacer)"
+            >
+              <Brain size={14} className={cerebroBusy ? "spin" : undefined} /> {cerebroBusy ? "Cerebro corrigiendo…" : "Corregir con Cerebro"}
+            </button>
+          )}
           <button
             className="repair-button"
             disabled={disabled || fixable === 0}
@@ -80,6 +95,11 @@ export function ValidationPanel({
       </header>
       {open && (
         <>
+          {execError && (
+            <p className="validation-exec-error">
+              Error de ejecución: {execError}
+            </p>
+          )}
           {changes.length > 0 && (
             <details className="validation-changes" open>
               <summary>Última reparación · {changes.length} cambio(s)</summary>

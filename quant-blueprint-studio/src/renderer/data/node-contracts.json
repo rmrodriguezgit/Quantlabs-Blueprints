@@ -173,6 +173,321 @@
       "input": "frame",
       "output": "frame",
       "extraInputs": {}
+    },
+    "polymarket_source": {
+      "input": null,
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "laya_updown": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "polymarket_dashboard": {
+      "input": null,
+      "output": "frame",
+      "extraInputs": {
+        "frame": "frame"
+      }
+    },
+    "yfinance_data": {
+      "input": null,
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "ml_select": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "ml_returns": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "ml_clean": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "ml_split": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "ml_train": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "ml_evaluate": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "ml_predict": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "ml_visualize": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "dl_tabular_forecast": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {
+        "network": "network"
+      }
+    },
+    "dl_sequence_classifier": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {
+        "network": "network"
+      }
+    },
+    "dl_anomaly_autoencoder": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {
+        "network": "network"
+      }
+    },
+    "dl_recurrent_compare": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {
+        "network": "network"
+      }
+    },
+    "ae_split": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "ae_standardize": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "ae_pca": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "ae_encoder": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "ae_decoder": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "ae_noise": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "ae_train": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "ae_select": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "ae_ridge": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "ae_test": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "gen_windows": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "gen_condition": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "gen_split": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "gen_scale": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "gen_cvae": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "gen_reparam": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "gen_vae_train": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "gen_gan_train": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "gen_select": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "gen_evaluate": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "sup_target": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "sup_split": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "sup_scale": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "sup_windows": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "sup_init": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "sup_mlp": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "sup_cnn": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "sup_rnn": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "sup_optimizer": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "sup_regularizer": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "sup_loss": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "sup_hpo": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "sup_train": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "sup_select": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "sup_evaluate": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "rl_env": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "rl_qnet": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "rl_replay": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "rl_target": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "rl_sync": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "rl_train": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "rl_baselines": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "rl_evaluate": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "gen_dcgan_train": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "gen_regime_compare": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
     }
   },
   "tensorSources": {

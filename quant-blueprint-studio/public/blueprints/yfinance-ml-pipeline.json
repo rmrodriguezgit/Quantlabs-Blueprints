@@ -1,0 +1,228 @@
+{
+  "format": "quantlabs-blueprint-library",
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "yfinance-ml-pipeline",
+      "title": "ML Pipeline · 8 módulos (SPY, dirección del día siguiente)",
+      "area": "Machine learning",
+      "description": "Flujo ML completo con módulos independientes: seleccionar columnas, rendimientos, limpieza, división TR/VA/TE, entrenamiento con selección en VA, evaluación en TE frente a línea base, pronóstico y gráficos.",
+      "instructions": [
+        "Requiere internet (yfinance). Cada módulo se configura en el Inspector.",
+        "Dividir: objetivo «direction» = ¿sube el día siguiente?; cambia a «next» para regresión del rendimiento.",
+        "Entrenar «Compare» prueba varios algoritmos en TR y elige con VA; Evaluar mide TE una sola vez frente a la clase mayoritaria."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "YF",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 120
+            },
+            "data": {
+              "kind": "yfinance_data",
+              "label": "0 · yfinance Data SPY 1d",
+              "params": {
+                "ticker": "SPY",
+                "interval": "1d",
+                "range_mode": "period",
+                "period": "10y"
+              }
+            }
+          },
+          {
+            "id": "S1",
+            "type": "blueprint",
+            "position": {
+              "x": 330,
+              "y": 120
+            },
+            "data": {
+              "kind": "ml_select",
+              "label": "1 · Seleccionar columnas",
+              "params": {
+                "mode": "keep",
+                "columns": "Close,Volume"
+              }
+            }
+          },
+          {
+            "id": "S2",
+            "type": "blueprint",
+            "position": {
+              "x": 660,
+              "y": 120
+            },
+            "data": {
+              "kind": "ml_returns",
+              "label": "2 · Rendimientos logarítmicos",
+              "params": {
+                "columns": "Close",
+                "return_type": "log",
+                "periods": 1
+              }
+            }
+          },
+          {
+            "id": "S3",
+            "type": "blueprint",
+            "position": {
+              "x": 990,
+              "y": 120
+            },
+            "data": {
+              "kind": "ml_clean",
+              "label": "3 · Limpieza de datos",
+              "params": {
+                "missing": "ffill",
+                "outliers": "clip_zscore",
+                "z_threshold": 5,
+                "fit_fraction": 0.7
+              }
+            }
+          },
+          {
+            "id": "S4",
+            "type": "blueprint",
+            "position": {
+              "x": 1320,
+              "y": 120
+            },
+            "data": {
+              "kind": "ml_split",
+              "label": "4 · Dividir TR / VA / TE",
+              "params": {
+                "target": "LogRet_Close",
+                "target_mode": "direction",
+                "horizon": 1,
+                "features": "LogRet_Close,Volume",
+                "train_ratio": 0.7,
+                "val_ratio": 0.15,
+                "gap": 1,
+                "scaling": "standard"
+              }
+            }
+          },
+          {
+            "id": "S5",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 380
+            },
+            "data": {
+              "kind": "ml_train",
+              "label": "5 · Entrenar modelo ML",
+              "params": {
+                "algorithm_cls": "Compare",
+                "estimators": 150,
+                "max_depth": 4
+              }
+            }
+          },
+          {
+            "id": "S6",
+            "type": "blueprint",
+            "position": {
+              "x": 330,
+              "y": 380
+            },
+            "data": {
+              "kind": "ml_evaluate",
+              "label": "6 · Evaluar el modelo",
+              "params": {}
+            }
+          },
+          {
+            "id": "S7",
+            "type": "blueprint",
+            "position": {
+              "x": 660,
+              "y": 380
+            },
+            "data": {
+              "kind": "ml_predict",
+              "label": "7 · Realizar predicciones",
+              "params": {
+                "scope": "test_future"
+              }
+            }
+          },
+          {
+            "id": "S8",
+            "type": "blueprint",
+            "position": {
+              "x": 990,
+              "y": 380
+            },
+            "data": {
+              "kind": "ml_visualize",
+              "label": "8 · Visualizar resultados",
+              "params": {}
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e0",
+            "source": "YF",
+            "target": "S1",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "e1",
+            "source": "S1",
+            "target": "S2",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "e2",
+            "source": "S2",
+            "target": "S3",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "e3",
+            "source": "S3",
+            "target": "S4",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "e4",
+            "source": "S4",
+            "target": "S5",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "e5",
+            "source": "S5",
+            "target": "S6",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "e6",
+            "source": "S6",
+            "target": "S7",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "e7",
+            "source": "S7",
+            "target": "S8",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          }
+        ]
+      }
+    }
+  ]
+}
