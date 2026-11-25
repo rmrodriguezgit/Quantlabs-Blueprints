@@ -1,11 +1,11 @@
 """Local FastAPI bridge. CPU work runs off the event loop, one graph at a time."""
 import asyncio
 import os
+# macOS: torch, scikit-learn y xgboost (Homebrew) traen cada uno su libomp. Con varios runtimes OpenMP
+# lanzando hilos en el mismo proceso, el motor hace segfault (EXC_BAD_ACCESS en libomp). Un solo hilo
+# OpenMP lo evita; debe fijarse ANTES de importar torch/numpy/sklearn/xgboost.
+os.environ.setdefault('OMP_NUM_THREADS', '1')
 import threading
-try:
-    import xgboost  # noqa: F401  antes que torch: evita el choque de libomp en macOS (ver backend/__init__.py)
-except ImportError:
-    pass
 import torch
 
 # Small tabular networks benefit from bounded CPU parallelism on desktop hosts.
