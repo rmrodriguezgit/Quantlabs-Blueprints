@@ -1,5 +1,16 @@
 import type { Edge, Node } from "@xyflow/react";
 export type Kind =
+  | "nn_data"
+  | "nn_guard"
+  | "nn_input"
+  | "nn_split"
+  | "nn_scaler"
+  | "nn_embedding"
+  | "nn_hidden"
+  | "nn_output"
+  | "nn_train"
+  | "nn_finetune"
+  | "nn_predict"
   | "dl_recurrent_compare"
   | "dl_tabular_forecast"
   | "dl_sequence_classifier"
@@ -12,6 +23,13 @@ export type Kind =
   | "ml_evaluate"
   | "ml_predict"
   | "ml_visualize"
+  | "ml_cluster"
+  | "ml_reduce"
+  | "ml_assoc"
+  | "ml_anomaly"
+  | "ml_semi"
+  | "ml_selfsup"
+  | "ml_rl"
   | "ae_split"
   | "sup_target"
   | "sup_split"
@@ -205,6 +223,214 @@ export interface Definition {
   fields: Field[];
 }
 export const catalog: Record<Kind, Definition> = {
+  nn_data: {
+    label: "Datos yfinance (NN)",
+    subtitle: "Ingesta · tickers · reintentos · caché en disco · fallback",
+    category: "17 / ML · REDES NEURONALES · TS & YFINANCE",
+    color: "#f2ad65",
+    output: "frame",
+    fields: [
+      { key: "source", label: "Fuente", value: "yfinance", options: ["yfinance", "synthetic"] },
+      { key: "ticker", label: "Ticker(s) de Yahoo (coma: SPY,QQQ)", value: "SPY" },
+      { key: "interval", label: "Intervalo", value: "1d", options: ["1m", "5m", "15m", "30m", "1h", "1d", "1wk", "1mo"] },
+      { key: "range_mode", label: "Rango", value: "period", options: ["period", "start_end"] },
+      { key: "period", label: "Periodo", value: "10y", options: ["1mo", "3mo", "6mo", "1y", "2y", "5y", "10y", "ytd", "max"], showIf: { key: "range_mode", value: "period" } },
+      { key: "start", label: "Inicio (AAAA-MM-DD)", value: "2015-01-01", showIf: { key: "range_mode", value: "start_end" } },
+      { key: "end", label: "Fin exclusivo (vacío = hoy)", value: "", showIf: { key: "range_mode", value: "start_end" } },
+      { key: "price_column", label: "Precio (close ya ajustado con auto_adjust)", value: "close", options: ["close", "adjclose"] },
+      { key: "auto_adjust", label: "auto_adjust (dividendos y splits)", value: true },
+      { key: "retries", label: "Reintentos ante fallos de red", value: 3, min: 0, max: 10 },
+      { key: "fallback", label: "Fallback si Yahoo falla", value: "cache", options: ["none", "cache", "synthetic"] },
+      { key: "cache_seconds", label: "Caché en memoria (s)", value: 300, min: 0, max: 86400 },
+      { key: "synthetic_rows", label: "Filas sintéticas", value: 1500, min: 200, max: 20000, showIf: { key: "source", value: "synthetic" } },
+      { key: "seed", label: "Semilla", value: 42, min: 0, max: 99999 },
+    ],
+  },
+  nn_guard: {
+    label: "Guardia de errores",
+    subtitle: "NaN/Inf · fechas · duplicados · shapes · bitácora transversal",
+    category: "17 / ML · REDES NEURONALES · TS & YFINANCE",
+    color: "#ff757f",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "policy", label: "Política", value: "repair", options: ["fail", "repair", "warn"] },
+      { key: "max_nan_ratio", label: "Máximo de faltantes tolerado", value: 0.05, min: 0, max: 1, step: 0.01 },
+      { key: "jump_threshold", label: "Umbral de salto |log r|", value: 0.25, min: 0.01, max: 5, step: 0.01 },
+    ],
+  },
+  nn_input: {
+    label: "Capa de entrada",
+    subtitle: "1 parámetro · polinomios · lags · activación · optimizador base",
+    category: "17 / ML · REDES NEURONALES · TS & YFINANCE",
+    color: "#7dcfff",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "mode", label: "Modo", value: "lags", options: ["simple", "polynomial", "lags"] },
+      { key: "features", label: "Parámetros (coma: LogReturn, Range, LogVolume, Close…)", value: "LogReturn" },
+      { key: "lags", label: "Ventana de lags k (t … t-k+1)", value: 10, min: 1, max: 250, showIf: { key: "mode", value: "lags" } },
+      { key: "lag_stride", label: "Stride de lags", value: 1, min: 1, max: 20, showIf: { key: "mode", value: "lags" } },
+      { key: "degree", label: "Grado polinómico", value: 2, min: 1, max: 4, showIf: { key: "mode", value: "polynomial" } },
+      { key: "interaction_only", label: "Sólo interacciones (sin potencias)", value: false, showIf: { key: "mode", value: "polynomial" } },
+      { key: "nan_policy", label: "Nulos iniciales", value: "drop", options: ["drop", "zero", "ffill"] },
+      { key: "target", label: "Objetivo", value: "LogReturn" },
+      { key: "horizon", label: "Horizonte h (t+1 … t+h)", value: 1, min: 1, max: 30 },
+      { key: "projection_units", label: "Proyección densa (0 = identidad)", value: 0, min: 0, max: 1024 },
+      { key: "activation", label: "Activación de entrada", value: "linear", options: ["linear", "relu", "leaky_relu", "gelu", "tanh", "sigmoid", "swish", "silu", "elu"] },
+      { key: "optimizer", label: "Optimizador base", value: "adam", options: ["adam", "adamw", "sgd", "rmsprop"] },
+      { key: "lr", label: "Learning rate", value: 0.001, min: 0.000001, max: 1, step: 0.0001 },
+      { key: "weight_decay", label: "Weight decay", value: 0, min: 0, max: 1, step: 0.0001 },
+      { key: "momentum", label: "Momentum (sgd / rmsprop)", value: 0.9, min: 0, max: 0.999, step: 0.01 },
+      { key: "clip", label: "Clipping de gradiente (0 = sin clip)", value: 1, min: 0, max: 1000, step: 0.1 },
+    ],
+  },
+  nn_split: {
+    label: "TR / VA / TE",
+    subtitle: "Cronológico · purga del horizonte · holdout o walk-forward",
+    category: "17 / ML · REDES NEURONALES · TS & YFINANCE",
+    color: "#bb9af7",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "train_ratio", label: "Fracción TR", value: 0.7, min: 0.3, max: 0.9, step: 0.05 },
+      { key: "val_ratio", label: "Fracción VA", value: 0.15, min: 0.05, max: 0.4, step: 0.05 },
+      { key: "gap", label: "Hueco adicional (filas)", value: 0, min: 0, max: 500 },
+      { key: "mode", label: "Validación", value: "holdout", options: ["holdout", "walk_forward"] },
+      { key: "folds", label: "Folds walk-forward", value: 4, min: 2, max: 10, showIf: { key: "mode", value: "walk_forward" } },
+    ],
+  },
+  nn_scaler: {
+    label: "Escalador",
+    subtitle: "Standard · MinMax · Robust · MaxAbs · pass-through · fit sólo TR",
+    category: "17 / ML · REDES NEURONALES · TS & YFINANCE",
+    color: "#9ece6a",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "operation", label: "Operación", value: "fit_transform", options: ["fit_transform", "load_transform"] },
+      { key: "method", label: "Método", value: "standard", options: ["standard", "minmax", "robust", "maxabs", "none"], showIf: { key: "operation", value: "fit_transform" } },
+      { key: "feature_range", label: "Rango MinMax", value: "0,1", options: ["0,1", "-1,1"], showIf: { key: "method", value: "minmax" } },
+      { key: "scale_target", label: "Escalar también el objetivo", value: true, showIf: { key: "operation", value: "fit_transform" } },
+      { key: "persist", label: "Guardar escalador (joblib)", value: false, showIf: { key: "operation", value: "fit_transform" } },
+      { key: "save_as", label: "Nombre del escalador", value: "scaler" },
+    ],
+  },
+  nn_embedding: {
+    label: "Embeddings",
+    subtitle: "Día · mes · régimen de volatilidad · ticker · concat / add",
+    category: "17 / ML · REDES NEURONALES · TS & YFINANCE",
+    color: "#e0af68",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "weekday", label: "Día de la semana", value: true },
+      { key: "month", label: "Mes (estacionalidad)", value: true },
+      { key: "regime", label: "Régimen de volatilidad (terciles TR)", value: true },
+      { key: "ticker", label: "Ticker / activo (multi-ticker)", value: false },
+      { key: "dim", label: "Dimensión del embedding", value: 4, min: 1, max: 64 },
+      { key: "fusion", label: "Fusión con rasgos numéricos", value: "concat", options: ["concat", "add"] },
+    ],
+  },
+  nn_hidden: {
+    label: "Capa oculta",
+    subtitle: "32 · 64 · 128 · 256 · duplicable · dropout · norm · L1/L2 · residual",
+    category: "17 / ML · REDES NEURONALES · TS & YFINANCE",
+    color: "#7aa2f7",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "name", label: "Nombre de la capa", value: "" },
+      { key: "units", label: "Unidades", value: "64", options: ["32", "64", "128", "256", "custom"] },
+      { key: "custom_units", label: "Unidades personalizadas", value: 96, min: 1, max: 4096, showIf: { key: "units", value: "custom" } },
+      { key: "repeat", label: "Repeticiones (duplicar N veces)", value: 1, min: 1, max: 8 },
+      { key: "activation", label: "Activación", value: "relu", options: ["inherit", ...["linear", "relu", "leaky_relu", "gelu", "tanh", "sigmoid", "swish", "silu", "elu"]] },
+      { key: "dropout", label: "Dropout", value: 0, min: 0, max: 0.9, step: 0.05 },
+      { key: "norm", label: "Normalización", value: "none", options: ["none", "batch", "layer"] },
+      { key: "l1", label: "Regularización L1", value: 0, min: 0, max: 1, step: 0.00001 },
+      { key: "l2", label: "Regularización L2", value: 0, min: 0, max: 1, step: 0.00001 },
+      { key: "residual", label: "Conexión residual / skip", value: false },
+      { key: "optimizer", label: "Optimizador (inherit = base de la entrada)", value: "inherit", options: ["inherit", "adam", "adamw", "sgd", "rmsprop"] },
+      { key: "lr", label: "Learning rate", value: 0.001, min: 0.000001, max: 1, step: 0.0001 },
+      { key: "weight_decay", label: "Weight decay", value: 0, min: 0, max: 1, step: 0.0001 },
+      { key: "momentum", label: "Momentum (sgd / rmsprop)", value: 0.9, min: 0, max: 0.999, step: 0.01 },
+      { key: "clip", label: "Clipping de gradiente (0 = sin clip)", value: 1, min: 0, max: 1000, step: 0.1 },
+    ],
+  },
+  nn_output: {
+    label: "Capa de salida",
+    subtitle: "Horizontes / clases · activación · pérdida · métricas · compilación",
+    category: "17 / ML · REDES NEURONALES · TS & YFINANCE",
+    color: "#f7768e",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "task", label: "Tarea", value: "regression", options: ["regression", "direction", "multiclass"] },
+      { key: "activation", label: "Activación de salida", value: "linear", options: ["linear", "sigmoid", "softmax", "tanh"] },
+      { key: "loss", label: "Pérdida", value: "mse", options: ["mse", "mae", "huber", "bce", "crossentropy"] },
+      { key: "huber_delta", label: "Delta de Huber", value: 1, min: 0.01, max: 100, step: 0.1, showIf: { key: "loss", value: "huber" } },
+      { key: "flat_band", label: "Banda «lateral» (multiclase)", value: 0.002, min: 0, max: 0.1, step: 0.0005, showIf: { key: "task", value: "multiclass" } },
+      { key: "metrics", label: "Métricas (regresión)", value: "rmse,mae,r2,directional_accuracy" },
+      { key: "postprocess", label: "Post-procesado", value: "none", options: ["none", "clip_quantile", "sign"] },
+      { key: "optimizer", label: "Optimizador (inherit = base de la entrada)", value: "inherit", options: ["inherit", "adam", "adamw", "sgd", "rmsprop"] },
+      { key: "lr", label: "Learning rate", value: 0.001, min: 0.000001, max: 1, step: 0.0001 },
+      { key: "weight_decay", label: "Weight decay", value: 0, min: 0, max: 1, step: 0.0001 },
+      { key: "momentum", label: "Momentum (sgd / rmsprop)", value: 0.9, min: 0, max: 0.999, step: 0.01 },
+      { key: "clip", label: "Clipping de gradiente (0 = sin clip)", value: 1, min: 0, max: 1000, step: 0.1 },
+      { key: "seed", label: "Semilla", value: 42, min: 0, max: 99999 },
+    ],
+  },
+  nn_train: {
+    label: "Entrenar",
+    subtitle: "Checkpoint en VA · early stopping · guardia NaN · guardar modelo",
+    category: "17 / ML · REDES NEURONALES · TS & YFINANCE",
+    color: "#c0caf5",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "epochs", label: "Épocas", value: 60, min: 1, max: 2000 },
+      { key: "batch_size", label: "Lote", value: 64, min: 4, max: 8192 },
+      { key: "patience", label: "Paciencia (early stopping)", value: 10, min: 1, max: 500 },
+      { key: "min_delta", label: "Mejora mínima", value: 0, min: 0, max: 1, step: 0.0001 },
+      { key: "scheduler", label: "Scheduler de lr", value: "plateau", options: ["none", "plateau", "cosine"] },
+      { key: "nan_policy", label: "Ante NaN en pérdida/gradiente", value: "reduce_lr", options: ["reduce_lr", "stop"] },
+      { key: "save_as", label: "Guardar modelo como (vacío = no)", value: "" },
+      { key: "device", label: "Dispositivo", value: "cpu", options: ["cpu", "auto", "cuda"] },
+      { key: "seed", label: "Semilla", value: 42, min: 0, max: 99999 },
+    ],
+  },
+  nn_finetune: {
+    label: "Ajuste fino",
+    subtitle: "Modelo base por pin o archivo · freeze / unfreeze · lr reducido",
+    category: "17 / ML · REDES NEURONALES · TS & YFINANCE",
+    color: "#ff9e64",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "source", label: "Modelo base", value: "pin", options: ["pin", "file"] },
+      { key: "load", label: "Archivo del modelo (nombre)", value: "", showIf: { key: "source", value: "file" } },
+      { key: "freeze", label: "Congelar", value: "hidden_bottom", options: ["none", "hidden_bottom", "all_but_output", "embeddings"] },
+      { key: "freeze_layers", label: "Capas ocultas congeladas (desde abajo)", value: 1, min: 0, max: 32, showIf: { key: "freeze", value: "hidden_bottom" } },
+      { key: "lr_factor", label: "Factor de learning rate", value: 0.1, min: 0.001, max: 1, step: 0.01 },
+      { key: "epochs", label: "Épocas", value: 30, min: 1, max: 2000 },
+      { key: "batch_size", label: "Lote", value: 64, min: 4, max: 8192 },
+      { key: "patience", label: "Paciencia", value: 6, min: 1, max: 500 },
+      { key: "save_as", label: "Guardar como (vacío = no)", value: "" },
+      { key: "device", label: "Dispositivo", value: "cpu", options: ["cpu", "auto", "cuda"] },
+    ],
+  },
+  nn_predict: {
+    label: "Predicción e inferencia",
+    subtitle: "TR/VA/TE · en vivo · desescalado · bandas conformales · CSV",
+    category: "17 / ML · REDES NEURONALES · TS & YFINANCE",
+    color: "#73daca",
+    input: "frame",
+    output: "frame",
+    fields: [
+      { key: "interval", label: "Nivel de la banda", value: 0.9, min: 0.5, max: 0.99, step: 0.01 },
+      { key: "export", label: "Exportar CSV como (vacío = no)", value: "" },
+    ],
+  },
   dl_recurrent_compare: {
     label: "DL · LSTM vs GRU (secuencias)",
     subtitle: "Secuencias batch×20×11 · LSTM / GRU / bidireccional · selección VA · vs Ridge en bps",
@@ -430,8 +656,8 @@ export const catalog: Record<Kind, Definition> = {
     input: "frame",
     output: "frame",
     fields: [
-      { key: "algorithm", label: "Algoritmo (regresión)", value: "Compare", options: ["Compare", "Linear", "Ridge", "Lasso", "ElasticNet", "Random Forest", "Gradient Boosting", "Histogram Boosting", "SVR", "KNN", "MLP"] },
-      { key: "algorithm_cls", label: "Algoritmo (clasificación)", value: "Compare", options: ["Compare", "Logistic", "Random Forest", "Gradient Boosting", "Histogram Boosting", "SVC", "KNN", "MLP"] },
+      { key: "algorithm", label: "Algoritmo (regresión)", value: "Compare", options: ["Compare", "Linear", "Ridge", "Lasso", "ElasticNet", "Decision Tree", "Random Forest", "XGBoost", "Gradient Boosting", "Histogram Boosting", "SVR", "KNN", "MLP"] },
+      { key: "algorithm_cls", label: "Algoritmo (clasificación)", value: "Compare", options: ["Compare", "Logistic", "Naive Bayes", "Decision Tree", "Random Forest", "XGBoost", "Gradient Boosting", "Histogram Boosting", "SVC", "KNN", "MLP"] },
       { key: "alpha", label: "Regularización α / C", value: 1, min: 0.0001, max: 1000, step: 0.1 },
       { key: "estimators", label: "Árboles / iteraciones", value: 200, min: 10, max: 1000 },
       { key: "max_depth", label: "Profundidad máxima", value: 6, min: 1, max: 32 },
@@ -439,6 +665,94 @@ export const catalog: Record<Kind, Definition> = {
       { key: "neighbors", label: "Vecinos (KNN)", value: 10, min: 1, max: 200 },
       { key: "hidden_layers", label: "Capas ocultas MLP (coma)", value: "64,32" },
       { key: "refit_train_val", label: "Reentrenar el ganador con TR+VA", value: false },
+      { key: "seed", label: "Semilla", value: 42, min: 0, max: 99999 },
+    ],
+  },
+  ml_cluster: {
+    label: "Clustering", subtitle: "No supervisado · K-Means · DBSCAN · Jerárquico", category: "18 / TAXONOMÍA ML", color: "#e0af68", input: "frame", output: "frame",
+    fields: [
+      { key: "algorithm", label: "Algoritmo", value: "Compare", options: ["Compare", "K-Means", "DBSCAN", "Hierarchical"] },
+      { key: "features", label: "Rasgos (coma; vacío = numéricas)", value: "" },
+      { key: "clusters", label: "Clusters (K-Means / jerárquico)", value: 3, min: 2, max: 20 },
+      { key: "linkage", label: "Enlace jerárquico", value: "ward", options: ["ward", "average", "complete", "single"] },
+      { key: "eps", label: "eps (DBSCAN, unidades z)", value: 1, min: 0.05, max: 10, step: 0.05 },
+      { key: "min_samples", label: "min_samples (DBSCAN)", value: 10, min: 2, max: 200 },
+      { key: "fit_fraction", label: "Fracción de ajuste (si no hay división)", value: 0.7, min: 0.2, max: 1, step: 0.05 }, { key: "seed", label: "Semilla", value: 42, min: 0, max: 99999 },
+    ],
+  },
+  ml_reduce: {
+    label: "Reducción de dimensionalidad", subtitle: "No supervisado · PCA · ICA · t-SNE · UMAP", category: "18 / TAXONOMÍA ML", color: "#e0af68", input: "frame", output: "frame",
+    fields: [
+      { key: "algorithm", label: "Algoritmo", value: "PCA", options: ["PCA", "ICA", "t-SNE", "UMAP"] },
+      { key: "features", label: "Rasgos (coma; vacío = numéricas)", value: "" },
+      { key: "components", label: "Componentes", value: 2, min: 1, max: 10 },
+      { key: "perplexity", label: "Perplejidad (t-SNE)", value: 30, min: 5, max: 100 },
+      { key: "neighbors", label: "Vecinos (UMAP)", value: 15, min: 2, max: 200 },
+      { key: "fit_fraction", label: "Fracción de ajuste (si no hay división)", value: 0.7, min: 0.2, max: 1, step: 0.05 }, { key: "seed", label: "Semilla", value: 42, min: 0, max: 99999 },
+    ],
+  },
+  ml_assoc: {
+    label: "Reglas de asociación", subtitle: "No supervisado · Apriori · FP-Growth · eventos de mercado", category: "18 / TAXONOMÍA ML", color: "#e0af68", input: "frame", output: "frame",
+    fields: [
+      { key: "algorithm", label: "Algoritmo", value: "Apriori", options: ["Apriori", "FP-Growth"] },
+      { key: "features", label: "Rasgos (coma; vacío = numéricas)", value: "" },
+      { key: "quantile", label: "Cuantil para ↑/↓", value: 0.33, min: 0.05, max: 0.45, step: 0.01 },
+      { key: "next_day", label: "Incluir resultado de la sesión siguiente", value: true },
+      { key: "min_support", label: "Soporte mínimo", value: 0.05, min: 0.005, max: 0.9, step: 0.005 },
+      { key: "min_confidence", label: "Confianza mínima", value: 0.55, min: 0.1, max: 1, step: 0.05 },
+      { key: "max_len", label: "Longitud máxima del conjunto", value: 3, min: 2, max: 4 },
+      { key: "top", label: "Reglas a mostrar", value: 30, min: 1, max: 200 },
+      { key: "fit_fraction", label: "Fracción de ajuste (si no hay división)", value: 0.7, min: 0.2, max: 1, step: 0.05 },
+    ],
+  },
+  ml_anomaly: {
+    label: "Detección de anomalías", subtitle: "No supervisado · Isolation Forest · Z-Score · One-Class SVM", category: "18 / TAXONOMÍA ML", color: "#e0af68", input: "frame", output: "frame",
+    fields: [
+      { key: "algorithm", label: "Algoritmo", value: "Compare", options: ["Compare", "Isolation Forest", "Z-Score", "One-Class SVM"] },
+      { key: "features", label: "Rasgos (coma; vacío = numéricas)", value: "" },
+      { key: "contamination", label: "Contaminación esperada", value: 0.02, min: 0.001, max: 0.3, step: 0.005 },
+      { key: "z_threshold", label: "Umbral |z| (Z-Score)", value: 3, min: 1, max: 10, step: 0.1 },
+      { key: "fit_fraction", label: "Fracción de ajuste (si no hay división)", value: 0.7, min: 0.2, max: 1, step: 0.05 }, { key: "seed", label: "Semilla", value: 42, min: 0, max: 99999 },
+    ],
+  },
+  ml_semi: {
+    label: "Semi-supervisado", subtitle: "Self-Training · Co-Training · Label Propagation · tras Dividir", category: "18 / TAXONOMÍA ML", color: "#e0af68", input: "frame", output: "frame",
+    fields: [
+      { key: "algorithm", label: "Técnica", value: "Compare", options: ["Compare", "Self-Training", "Co-Training", "Label Propagation"] },
+      { key: "labeled_fraction", label: "Fracción de TR con etiqueta", value: 0.1, min: 0.01, max: 0.9, step: 0.01 },
+      { key: "threshold", label: "Confianza mínima (Self-Training)", value: 0.6, min: 0.5, max: 0.99, step: 0.01 },
+      { key: "neighbors", label: "Vecinos (Label Propagation)", value: 10, min: 2, max: 100 },
+      { key: "rounds", label: "Rondas (Co-Training)", value: 10, min: 1, max: 50 },
+      { key: "seed", label: "Semilla", value: 42, min: 0, max: 99999 },
+    ],
+  },
+  ml_selfsup: {
+    label: "Auto-supervisado", subtitle: "Contrastivo · Masked modeling · Autoencoder · sonda lineal", category: "18 / TAXONOMÍA ML", color: "#e0af68", input: "frame", output: "frame",
+    fields: [
+      { key: "algorithm", label: "Enfoque", value: "Contrastive", options: ["Contrastive", "Masked Modeling", "Autoencoder"] },
+      { key: "window", label: "Ventana (filas)", value: 10, min: 2, max: 60 },
+      { key: "embedding", label: "Dimensión del embedding", value: 8, min: 2, max: 64 },
+      { key: "mask_ratio", label: "Fracción enmascarada", value: 0.3, min: 0.05, max: 0.9, step: 0.05 },
+      { key: "epochs", label: "Épocas", value: 30, min: 1, max: 300 },
+      { key: "learning_rate", label: "Learning rate", value: 0.001, min: 0.00001, max: 0.1, step: 0.0001 },
+      { key: "seed", label: "Semilla", value: 42, min: 0, max: 99999 },
+    ],
+  },
+  ml_rl: {
+    label: "Refuerzo · model-free / model-based", subtitle: "Q-Learning · DQN · PPO · Dyna-Q · MCTS", category: "18 / TAXONOMÍA ML", color: "#e0af68", input: "frame", output: "frame",
+    fields: [
+      { key: "family", label: "Familia (Compare)", value: "model-free", options: ["model-free", "model-based", "all"] },
+      { key: "algorithm", label: "Algoritmo", value: "Compare", options: ["Compare", "Q-Learning", "DQN", "PPO", "Dyna-Q", "MCTS"] },
+      { key: "features", label: "Rasgos extra del estado (coma)", value: "" },
+      { key: "episodes", label: "Episodios", value: 20, min: 1, max: 300 },
+      { key: "gamma", label: "Gamma", value: 0.95, min: 0.5, max: 0.999, step: 0.005 },
+      { key: "bins", label: "Intervalos por rasgo (tabular)", value: 3, min: 2, max: 8 },
+      { key: "planning_steps", label: "Pasos de planificación (Dyna-Q)", value: 10, min: 1, max: 100 },
+      { key: "simulations", label: "Simulaciones (MCTS)", value: 60, min: 10, max: 1000 },
+      { key: "depth", label: "Profundidad (MCTS)", value: 5, min: 1, max: 20 },
+      { key: "fee_bps", label: "Coste por cambio (bps)", value: 5, min: 0, max: 100 },
+      { key: "train_ratio", label: "Fracción TR", value: 0.7, min: 0.3, max: 0.9, step: 0.05 },
+      { key: "val_ratio", label: "Fracción VA", value: 0.15, min: 0.05, max: 0.4, step: 0.05 },
       { key: "seed", label: "Semilla", value: 42, min: 0, max: 99999 },
     ],
   },
@@ -2725,6 +3039,7 @@ export function inputHandles(kind: Kind): Record<string, string> {
   if (kind === "dl_tabular_forecast" || kind === "dl_sequence_classifier" || kind === "dl_anomaly_autoencoder" || kind === "dl_recurrent_compare")
     handles.network = "network"; // optional: Network Input → Layers → Network Output replaces the hidden layers
   if (kind === "merge") handles.frame_b = "frame";
+  if (kind === "nn_finetune") handles.pretrained = "frame"; // modelo base: salida de «Entrenar» de otra rama
   if (kind === "polymarket_dashboard") handles.frame = "frame";   // optional: one market from Polymarket Market
   if (kind === "plot") {
     handles.frame = "frame";

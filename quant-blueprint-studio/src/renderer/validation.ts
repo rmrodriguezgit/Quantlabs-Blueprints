@@ -160,7 +160,7 @@ export function validateGraph(graph: Graph): Issue[] {
     add({ severity: "error", message: "El motor admite como máximo 50 nodos por blueprint." });
   const ids = new Set(graph.nodes.map((n) => n.id));
   const nodes = new Map(graph.nodes.map((n) => [n.id, n]));
-  if (!graph.nodes.some((n) => ["source", "yfinance_data", "portfolio_data", "polymarket_source", "polymarket_dashboard"].includes(n.data.kind)))
+  if (!graph.nodes.some((n) => ["source", "yfinance_data", "nn_data", "portfolio_data", "polymarket_source", "polymarket_dashboard"].includes(n.data.kind)))
     add({
       severity: "error",
       message: "No hay fuente de datos. Añade Market Data, yfinance Data, Portfolio Data o Polymarket Market al inicio del flujo.",
@@ -307,8 +307,8 @@ export function validateGraph(graph: Graph): Issue[] {
       add({ severity: "error", node: node.id, message: `${name}: su entrada debe venir de Polymarket Market (o déjala sin conectar para ver todo Polymarket).` });
     {
       const ML_ORDER: Kind[] = ["ml_select", "ml_returns", "ml_clean", "ml_split", "ml_train", "ml_evaluate", "ml_predict", "ml_visualize"];
-      const step = ML_ORDER.indexOf(node.data.kind);
-      const needs: Partial<Record<Kind, Kind>> = { ml_train: "ml_split", ml_evaluate: "ml_train", ml_predict: "ml_train", ml_visualize: "ml_train" };
+      const step = [...ML_ORDER, "ml_semi", "ml_selfsup"].indexOf(node.data.kind);
+      const needs: Partial<Record<Kind, Kind>> = { ml_semi: "ml_split", ml_selfsup: "ml_split", ml_train: "ml_split", ml_evaluate: "ml_train", ml_predict: "ml_train", ml_visualize: "ml_train" };
       const need = needs[node.data.kind];
       if (step >= 0 && need && graph.edges.some((e) => e.target === node.id) && !up.includes(need))
         add({ severity: "error", node: node.id, message: `${name}: necesita «${catalog[need].label}» aguas arriba (orden del ML Pipeline).` });
@@ -353,6 +353,26 @@ export function validateGraph(graph: Graph): Issue[] {
         add({ severity: "error", node: node.id, message: `${name}: TR + VA debe ser < 0.95 para dejar datos de prueba.` });
       if (node.data.kind === "study" || node.data.kind === "rl_agent")
         add({ severity: "warning", node: node.id, message: `${name}: nodo monolítico heredado. Usa los Blueprints «· herramientas» de cada unidad.` });
+    }
+    {
+      // Submenú 17 · Redes neuronales: orden de las herramientas nn_*
+      const needs: Partial<Record<Kind, Kind>> = {
+        nn_split: "nn_input", nn_scaler: "nn_split", nn_embedding: "nn_scaler", nn_hidden: "nn_input",
+        nn_output: "nn_scaler", nn_train: "nn_output", nn_finetune: "nn_scaler",
+      };
+      const need = needs[node.data.kind];
+      if (need && graph.edges.some((e) => e.target === node.id) && !up.includes(need))
+        add({ severity: "error", node: node.id, message: `${name}: necesita «${catalog[need].label}» aguas arriba (Redes neuronales).` });
+      if (node.data.kind === "nn_predict" && !up.includes("nn_train") && !up.includes("nn_finetune"))
+        add({ severity: "error", node: node.id, message: `${name}: conecta «${catalog.nn_train.label}» o «${catalog.nn_finetune.label}» antes de predecir.` });
+      if (node.data.kind === "nn_finetune" && paramValue(node, "source") === "pin" && !graph.edges.some((e) => e.target === node.id && e.targetHandle === "pretrained"))
+        add({ severity: "error", node: node.id, message: `${name}: conecta la salida de «${catalog.nn_train.label}» del modelo base al pin pretrained (o usa source = file).` });
+      if (node.data.kind === "nn_output" && !up.includes("nn_hidden"))
+        add({ severity: "warning", node: node.id, message: `${name}: sin «${catalog.nn_hidden.label}» el modelo es lineal (entrada → salida).` });
+      if (node.data.kind === "nn_split" && Number(paramValue(node, "train_ratio")) + Number(paramValue(node, "val_ratio")) >= 0.95)
+        add({ severity: "error", node: node.id, message: `${name}: TR + VA debe ser < 0.95 para dejar datos de prueba (TE).` });
+      if (node.data.kind === "nn_input" && !up.includes("nn_guard"))
+        add({ severity: "warning", node: node.id, message: `${name}: sin «${catalog.nn_guard.label}» antes, un NaN/Inf de la fuente detendrá la ejecución.` });
     }
     {
       const needs: Partial<Record<Kind, Kind>> = {

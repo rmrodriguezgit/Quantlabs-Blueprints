@@ -47,6 +47,17 @@ import {
 import "@xyflow/react/dist/style.css";
 import { validConnection, payloadLabel } from "../connections";
 const icons = {
+  nn_data: Database,
+  nn_guard: Settings2,
+  nn_input: Layers3,
+  nn_split: Workflow,
+  nn_scaler: SlidersHorizontal,
+  nn_embedding: Layers3,
+  nn_hidden: BrainCircuit,
+  nn_output: Layers3,
+  nn_train: BrainCircuit,
+  nn_finetune: BrainCircuit,
+  nn_predict: ChartNoAxesCombined,
   dl_recurrent_compare: BrainCircuit,
   dl_tabular_forecast: BrainCircuit,
   dl_sequence_classifier: BrainCircuit,
@@ -59,6 +70,13 @@ const icons = {
   ml_evaluate: SlidersHorizontal,
   ml_predict: BrainCircuit,
   ml_visualize: ChartNoAxesCombined,
+  ml_cluster: BrainCircuit,
+  ml_reduce: BrainCircuit,
+  ml_assoc: BrainCircuit,
+  ml_anomaly: BrainCircuit,
+  ml_semi: BrainCircuit,
+  ml_selfsup: BrainCircuit,
+  ml_rl: BrainCircuit,
   ae_split: Layers3,
   sup_target: SlidersHorizontal,
   sup_split: Layers3,
@@ -168,6 +186,15 @@ function nodeSummary(data: BlueprintNode["data"]): string {
       return [p.eval_tr && "TR", p.eval_va && "VA", p.eval_te && "TE"].filter(Boolean).join(" · ") + " · línea base";
     case "ml_predict":
       return `${p.scope} → ${p.output_column}`;
+    case "ml_cluster":
+    case "ml_reduce":
+    case "ml_assoc":
+    case "ml_anomaly":
+    case "ml_semi":
+    case "ml_selfsup":
+      return `${p.algorithm}`;
+    case "ml_rl":
+      return `${p.algorithm} · ${p.family} · ${p.episodes} episodios`;
     case "ml_visualize":
       return [p.series && "serie", p.scatter && "dispersión", p.residuals && "residuos", p.importance && "importancia"].filter(Boolean).join(" · ");
     case "gen_windows":
@@ -329,6 +356,28 @@ function nodeSummary(data: BlueprintNode["data"]): string {
       return `Max Sharpe + min variance · ${Number(p.train_fraction) * 100}% estimation`;
     case "risk":
       return `VaR ${Number(p.confidence) * 100}% · RF ${Number(p.risk_free_rate) * 100}%`;
+    case "nn_data":
+      return `${p.source === "synthetic" ? "sintético" : "yfinance"} · ${p.ticker} · ${p.interval} · fallback ${p.fallback}`;
+    case "nn_guard":
+      return `política ${p.policy} · NaN ≤ ${p.max_nan_ratio}`;
+    case "nn_input":
+      return `${p.mode === "lags" ? `${String(p.features).split(",").length} × ${p.lags} lags` : p.mode === "polynomial" ? `polinomio grado ${p.degree}` : `1 parámetro: ${p.features}`} → ${p.target} t+1..t+${p.horizon} · ${p.activation} · ${p.optimizer}`;
+    case "nn_split":
+      return `TR ${p.train_ratio} / VA ${p.val_ratio} / TE · ${p.mode}`;
+    case "nn_scaler":
+      return p.operation === "load_transform" ? `cargar ${p.save_as}` : `${p.method}${p.method === "minmax" ? ` [${p.feature_range}]` : ""} · fit TR${p.persist ? ` · guarda ${p.save_as}` : ""}`;
+    case "nn_embedding":
+      return `${[p.weekday && "día", p.month && "mes", p.regime && "régimen", p.ticker && "ticker"].filter(Boolean).join(" · ")} · dim ${p.dim} · ${p.fusion}`;
+    case "nn_hidden":
+      return `${Number(p.repeat) > 1 ? `${p.repeat} × ` : ""}Dense(${p.units === "custom" ? p.custom_units : p.units}) · ${p.activation}${Number(p.dropout) ? ` · drop ${p.dropout}` : ""}${p.norm !== "none" ? ` · ${p.norm}norm` : ""}${p.residual ? " · residual" : ""}`;
+    case "nn_output":
+      return `${p.task} · ${p.activation} · ${p.loss}`;
+    case "nn_train":
+      return `${p.epochs} épocas · lote ${p.batch_size} · paciencia ${p.patience}${p.save_as ? ` · → ${p.save_as}` : ""}`;
+    case "nn_finetune":
+      return `${p.source === "file" ? p.load : "pin pretrained"} · congelar ${p.freeze} · lr × ${p.lr_factor}`;
+    case "nn_predict":
+      return `banda ${Math.round(Number(p.interval) * 100)}%${p.export ? ` · CSV ${p.export}` : ""}`;
     case "plot":
       return `${String(p.plot_source)} · ${String(p.plot_columns || "default series")}`;
     case "backtest":
@@ -345,9 +394,10 @@ interface Pin {
 const PinContext = createContext<(pin: Pin) => void>(() => {});
 /** Nodes whose result is shown as a view (report, plot, dashboard…) and can be switched off with the eye. */
 export const VIEW_KINDS: Kind[] = [
+  "nn_data", "nn_guard", "nn_input", "nn_split", "nn_scaler", "nn_embedding", "nn_hidden", "nn_output", "nn_train", "nn_finetune", "nn_predict",
   "yfinance_data", "plot", "study", "ml_model", "rl_agent", "curve_fit", "portfolio", "risk", "model", "backtest",
   "laya_signal", "laya_calibrate", "laya_feedback", "laya_updown", "polymarket_source", "polymarket_dashboard",
-  "dl_recurrent_compare", "dl_tabular_forecast", "dl_sequence_classifier", "dl_anomaly_autoencoder", "ml_select", "ml_returns", "ml_clean", "ml_split", "ml_train", "ml_evaluate", "ml_predict", "ml_visualize",
+  "dl_recurrent_compare", "dl_tabular_forecast", "dl_sequence_classifier", "dl_anomaly_autoencoder", "ml_select", "ml_returns", "ml_clean", "ml_split", "ml_train", "ml_evaluate", "ml_predict", "ml_visualize", "ml_cluster", "ml_reduce", "ml_assoc", "ml_anomaly", "ml_semi", "ml_selfsup", "ml_rl",
   "gen_windows", "gen_condition", "gen_split", "gen_scale", "gen_cvae", "gen_reparam", "gen_vae_train", "gen_gan_train", "gen_select", "gen_evaluate",
   "ae_split", "ae_standardize", "ae_pca", "ae_encoder", "ae_decoder", "ae_noise", "ae_train", "ae_select", "ae_ridge", "ae_test",
   "sup_target", "sup_split", "sup_scale", "sup_windows", "sup_init", "sup_mlp", "sup_cnn", "sup_rnn", "sup_optimizer", "sup_regularizer", "sup_loss", "sup_hpo", "sup_train", "sup_select", "sup_evaluate", "rl_env", "rl_qnet", "rl_replay", "rl_target", "rl_sync", "rl_train", "rl_baselines", "rl_evaluate", "gen_dcgan_train", "gen_regime_compare",

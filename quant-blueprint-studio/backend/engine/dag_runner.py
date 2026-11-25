@@ -15,10 +15,12 @@ from .nodes.study_nodes import study
 from .nodes.data_nodes import source, features, merge_features
 from .nodes.yfinance_nodes import yfinance_data
 from .nodes.ml_pipeline_nodes import STEPS as ML_STEPS
+from .nodes.taxonomy_nodes import STEPS as TAX_STEPS
 from .nodes.ae_pipeline_nodes import STEPS as AE_STEPS
 from .nodes.gen_pipeline_nodes import STEPS as GEN_STEPS
 from .nodes.sup_pipeline_nodes import STEPS as SUP_STEPS
 from .nodes.rl_pipeline_nodes import STEPS as RL_STEPS
+from .nodes.nn_blueprint_nodes import STEPS as NN_STEPS, SOURCES as NN_SOURCES
 from .nodes.dl_tool_nodes import KINDS as DL_TOOL_KINDS, run_dl_tool
 from .nodes.stats_nodes import PreparedData, prepare
 from .nodes.dl_nodes import ModelResult, NetworkSpec, train
@@ -150,12 +152,17 @@ class DAGRunner:
                     if 'network' in inputs: params['_network']=inputs['network']
                     output,study_report=run_dl_tool(kind,upstream,params,(lambda event: progress({'node':key,'status':'running',**event})) if progress else None)
                     report['studies'].append({'id':key,'title':node['data'].get('label',kind),**study_report})
+                elif kind in NN_SOURCES or (kind in NN_STEPS and isinstance(upstream,pd.DataFrame)):
+                    cb=(lambda event: progress({'node':key,'status':'epoch' if 'epoch' in event else 'running',**event})) if progress else None
+                    if kind=='nn_finetune': params['_pretrained']=inputs.get('pretrained')
+                    output,study_report=NN_SOURCES[kind](upstream,params,cb) if kind in NN_SOURCES else NN_STEPS[kind](upstream,params,cb)
+                    report['studies'].append({'id':key,'title':node['data'].get('label',kind),**study_report})
                 elif (kind in GEN_STEPS or kind in SUP_STEPS or kind in RL_STEPS) and isinstance(upstream,pd.DataFrame):
                     output,study_report=(GEN_STEPS.get(kind) or SUP_STEPS.get(kind) or RL_STEPS[kind])(upstream,params,(lambda event: progress({'node':key,'status':'epoch' if 'epoch' in event else 'running',**event})) if progress else None)
                     report['scaling_audits'].extend({'id':key,'node_title':node['data'].get('label',kind),**audit} for audit in study_report.pop('scaling_audits',[]))
                     report['studies'].append({'id':key,'title':node['data'].get('label',kind),**study_report})
-                elif (kind in ML_STEPS or kind in AE_STEPS) and isinstance(upstream,pd.DataFrame):
-                    output,study_report=(ML_STEPS.get(kind) or AE_STEPS[kind])(upstream,params,(lambda event: progress({'node':key,'status':'running',**event})) if progress else None)
+                elif (kind in ML_STEPS or kind in AE_STEPS or kind in TAX_STEPS) and isinstance(upstream,pd.DataFrame):
+                    output,study_report=(ML_STEPS.get(kind) or TAX_STEPS.get(kind) or AE_STEPS[kind])(upstream,params,(lambda event: progress({'node':key,'status':'running',**event})) if progress else None)
                     report['studies'].append({'id':key,'title':node['data'].get('label',kind),**study_report})
                 elif kind == 'yfinance_data':
                     output,study_report=yfinance_data(params,(lambda event: progress({'node':key,'status':'running',**event})) if progress else None)

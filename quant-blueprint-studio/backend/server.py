@@ -2,6 +2,10 @@
 import asyncio
 import os
 import threading
+try:
+    import xgboost  # noqa: F401  antes que torch: evita el choque de libomp en macOS (ver backend/__init__.py)
+except ImportError:
+    pass
 import torch
 
 # Small tabular networks benefit from bounded CPU parallelism on desktop hosts.
@@ -52,7 +56,7 @@ class Graph(BaseModel):
     edges: list[Edge] = Field(default_factory=list, max_length=150)
 
 
-app = FastAPI(title='Quant Blueprint Engine', version='0.7.1')
+app = FastAPI(title='Quant Blueprint Engine', version='0.8.0')
 app.add_middleware(CORSMiddleware, allow_origins=['http://127.0.0.1:5173', 'http://localhost:5173'],
                    allow_methods=['GET', 'POST'], allow_headers=['Content-Type'])
 execution_lock = threading.Lock()

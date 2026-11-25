@@ -488,6 +488,98 @@
       "input": "frame",
       "output": "frame",
       "extraInputs": {}
+    },
+    "ml_cluster": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "ml_reduce": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "ml_assoc": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "ml_anomaly": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "ml_semi": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "ml_selfsup": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "ml_rl": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "nn_data": {
+      "input": null,
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "nn_guard": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "nn_input": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "nn_split": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "nn_scaler": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "nn_embedding": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "nn_hidden": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "nn_output": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "nn_train": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
+    },
+    "nn_finetune": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {
+        "pretrained": "frame"
+      }
+    },
+    "nn_predict": {
+      "input": "frame",
+      "output": "frame",
+      "extraInputs": {}
     }
   },
   "tensorSources": {

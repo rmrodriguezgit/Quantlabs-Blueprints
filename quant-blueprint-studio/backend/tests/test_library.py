@@ -33,9 +33,10 @@ class LibraryTests(unittest.TestCase):
                 graph=deepcopy(entry['graph'])
                 for node in graph['nodes']:
                     if node['data']['kind']=='plot':node['data']['params']['skip_rows']=0
+                    if node['data']['kind']=='nn_data':node['data']['params']['source']='synthetic'  # sin red
                     if node['data']['kind']=='source' and entry['id'].startswith(('notebook-','laya-')):
                         node['data']['params']['source']='synthetic'
-                    if node['data']['kind'] in ('study','rl_agent','model','curve_fit','sup_train','sup_hpo','rl_train','rl_baselines','gen_vae_train','gen_gan_train','gen_dcgan_train','ae_train'):
+                    if node['data']['kind'] in ('study','rl_agent','model','curve_fit','sup_train','sup_hpo','rl_train','rl_baselines','gen_vae_train','gen_gan_train','gen_dcgan_train','ae_train','nn_train','nn_finetune'):
                         node['data']['params']['epochs']=2
                         node['data']['params']['trials']=2
                 result=DAGRunner(graph).execute()

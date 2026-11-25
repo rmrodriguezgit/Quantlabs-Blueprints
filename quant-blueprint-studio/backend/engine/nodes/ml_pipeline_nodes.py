@@ -334,8 +334,8 @@ def split(frame: pd.DataFrame, p: dict[str, Any], progress: Progress = None) -> 
 
 
 # 5 · Train ----------------------------------------------------------------------------------------
-REGRESSORS = ('Linear', 'Ridge', 'Lasso', 'ElasticNet', 'Random Forest', 'Gradient Boosting', 'Histogram Boosting', 'SVR', 'KNN', 'MLP')
-CLASSIFIERS = ('Logistic', 'Random Forest', 'Gradient Boosting', 'Histogram Boosting', 'SVC', 'KNN', 'MLP')
+REGRESSORS = ('Linear', 'Ridge', 'Lasso', 'ElasticNet', 'Decision Tree', 'Random Forest', 'XGBoost', 'Gradient Boosting', 'Histogram Boosting', 'SVR', 'KNN', 'MLP')
+CLASSIFIERS = ('Logistic', 'Naive Bayes', 'Decision Tree', 'Random Forest', 'XGBoost', 'Gradient Boosting', 'Histogram Boosting', 'SVC', 'KNN', 'MLP')
 
 
 def _meta(frame: pd.DataFrame) -> dict[str, Any]:
@@ -345,8 +345,22 @@ def _meta(frame: pd.DataFrame) -> dict[str, Any]:
     return ml
 
 
+def _xgb(classify: bool, trees: int, depth: int, lr: float, seed: int) -> Any:
+    """XGBoost when the library loads (macOS needs libomp: brew install libomp); otherwise sklearn's
+    histogram gradient boosting, the same second-order boosted-tree family, flagged in the report."""
+    try:
+        import xgboost
+        cls = xgboost.XGBClassifier if classify else xgboost.XGBRegressor
+        return cls(n_estimators=trees, max_depth=min(depth, 12), learning_rate=lr, subsample=0.9, random_state=seed, n_jobs=1, verbosity=0)
+    except Exception:  # ImportError or a missing native OpenMP runtime
+        from sklearn import ensemble
+        model = (ensemble.HistGradientBoostingClassifier if classify else ensemble.HistGradientBoostingRegressor)(max_iter=trees, max_depth=depth, learning_rate=lr, random_state=seed)
+        model.xgb_fallback = True
+        return model
+
+
 def _factory(name: str, task: str, p: dict[str, Any]) -> Any:
-    from sklearn import ensemble, linear_model, neighbors, neural_network, svm
+    from sklearn import ensemble, linear_model, naive_bayes, neighbors, neural_network, svm, tree
     warnings.filterwarnings('ignore', category=FutureWarning, module='sklearn')
     warnings.filterwarnings('ignore', module='sklearn.neural_network')
     seed, alpha = int(p.get('seed', 42)), float(p.get('alpha', 1.0))
@@ -355,6 +369,9 @@ def _factory(name: str, task: str, p: dict[str, Any]) -> Any:
     if task == 'classification':
         table = {
             'Logistic': lambda: linear_model.LogisticRegression(C=1 / max(alpha, 1e-6), max_iter=2000),
+            'Naive Bayes': lambda: naive_bayes.GaussianNB(),
+            'Decision Tree': lambda: tree.DecisionTreeClassifier(max_depth=depth, min_samples_leaf=5, random_state=seed),
+            'XGBoost': lambda: _xgb(True, trees, depth, lr, seed),
             'Random Forest': lambda: ensemble.RandomForestClassifier(n_estimators=trees, max_depth=depth, min_samples_leaf=3, random_state=seed, n_jobs=1),
             'Gradient Boosting': lambda: ensemble.GradientBoostingClassifier(n_estimators=trees, max_depth=min(depth, 8), learning_rate=lr, random_state=seed),
             'Histogram Boosting': lambda: ensemble.HistGradientBoostingClassifier(max_iter=trees, max_depth=depth, learning_rate=lr, random_state=seed),
@@ -368,6 +385,8 @@ def _factory(name: str, task: str, p: dict[str, Any]) -> Any:
             'Ridge': lambda: linear_model.Ridge(alpha=alpha),
             'Lasso': lambda: linear_model.Lasso(alpha=alpha * 1e-3, max_iter=10000),
             'ElasticNet': lambda: linear_model.ElasticNet(alpha=alpha * 1e-3, l1_ratio=0.5, max_iter=10000),
+            'Decision Tree': lambda: tree.DecisionTreeRegressor(max_depth=depth, min_samples_leaf=5, random_state=seed),
+            'XGBoost': lambda: _xgb(False, trees, depth, lr, seed),
             'Random Forest': lambda: ensemble.RandomForestRegressor(n_estimators=trees, max_depth=depth, min_samples_leaf=3, random_state=seed, n_jobs=1),
             'Gradient Boosting': lambda: ensemble.GradientBoostingRegressor(n_estimators=trees, max_depth=min(depth, 8), learning_rate=lr, random_state=seed),
             'Histogram Boosting': lambda: ensemble.HistGradientBoostingRegressor(max_iter=trees, max_depth=depth, learning_rate=lr, random_state=seed),
@@ -453,6 +472,8 @@ def train(frame: pd.DataFrame, p: dict[str, Any], progress: Progress = None) -> 
     va_metric = [r for r in rows if r['algoritmo'] == chosen][0]
     notes = [f'{len(candidates)} candidato(s) entrenados sólo en TR ({len(X["TR"])} filas); VA ({len(X["VA"])}) elige «{chosen}» por {metric}.',
              'TE no se ha usado todavía: conecta «Evaluar el modelo» para medirlo una sola vez.']
+    if 'XGBoost' in candidates and getattr(_factory('XGBoost', task, p), 'xgb_fallback', False):
+        notes.append('XGBoost no pudo cargarse (en macOS: brew install libomp); se usó HistGradientBoosting de scikit-learn como sustituto.')
     if p.get('refit_train_val', False):
         notes.append('Tras elegir, el ganador se reentrenó con TR+VA; las métricas VA de la tabla son previas al reentreno.')
     gap_note = _overfit(task, tr_scores, va_metric)

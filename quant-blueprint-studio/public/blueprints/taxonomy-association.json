@@ -1,0 +1,107 @@
+{
+  "format": "quantlabs-blueprint-library",
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "taxonomy-association",
+      "title": "No supervisado · Reglas de asociación",
+      "area": "Taxonomía ML · panorámica",
+      "description": "Apriori y FP-Growth descubren eventos que co-ocurren (soporte, confianza, lift, validación fuera de muestra).",
+      "instructions": [
+        "Fuente synthetic para ejecutar sin internet; cambia a yfinance para activos reales. Todo lo ajustado usa sólo TR.",
+        "Cambia «Algoritmo» en el Inspector para recorrer cada método."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "Datos",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 100
+            },
+            "data": {
+              "kind": "source",
+              "label": "Datos",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 4
+              }
+            }
+          },
+          {
+            "id": "Indicadores",
+            "type": "blueprint",
+            "position": {
+              "x": 300,
+              "y": 100
+            },
+            "data": {
+              "kind": "features",
+              "label": "Indicadores",
+              "params": {}
+            }
+          },
+          {
+            "id": "Limpiar",
+            "type": "blueprint",
+            "position": {
+              "x": 600,
+              "y": 100
+            },
+            "data": {
+              "kind": "ml_clean",
+              "label": "Limpieza",
+              "params": {
+                "missing": "drop"
+              }
+            }
+          },
+          {
+            "id": "Tool",
+            "type": "blueprint",
+            "position": {
+              "x": 900,
+              "y": 100
+            },
+            "data": {
+              "kind": "ml_assoc",
+              "label": "Reglas de asociación",
+              "params": {
+                "algorithm": "Apriori",
+                "features": "LogReturn,Volatility,RSI"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "Datos-Indicadores",
+            "source": "Datos",
+            "target": "Indicadores",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Indicadores-Limpiar",
+            "source": "Indicadores",
+            "target": "Limpiar",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Limpiar-Tool",
+            "source": "Limpiar",
+            "target": "Tool",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          }
+        ]
+      }
+    }
+  ]
+}

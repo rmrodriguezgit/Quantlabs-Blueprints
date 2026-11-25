@@ -1,0 +1,107 @@
+{
+  "format": "quantlabs-blueprint-library",
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "taxonomy-anomaly",
+      "title": "No supervisado · Detección de anomalías",
+      "area": "Taxonomía ML · panorámica",
+      "description": "Isolation Forest, Z-Score y One-Class SVM marcan sesiones raras.",
+      "instructions": [
+        "Fuente synthetic para ejecutar sin internet; cambia a yfinance para activos reales. Todo lo ajustado usa sólo TR.",
+        "Cambia «Algoritmo» en el Inspector para recorrer cada método."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "Datos",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 100
+            },
+            "data": {
+              "kind": "source",
+              "label": "Datos",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 4
+              }
+            }
+          },
+          {
+            "id": "Indicadores",
+            "type": "blueprint",
+            "position": {
+              "x": 300,
+              "y": 100
+            },
+            "data": {
+              "kind": "features",
+              "label": "Indicadores",
+              "params": {}
+            }
+          },
+          {
+            "id": "Limpiar",
+            "type": "blueprint",
+            "position": {
+              "x": 600,
+              "y": 100
+            },
+            "data": {
+              "kind": "ml_clean",
+              "label": "Limpieza",
+              "params": {
+                "missing": "drop"
+              }
+            }
+          },
+          {
+            "id": "Tool",
+            "type": "blueprint",
+            "position": {
+              "x": 900,
+              "y": 100
+            },
+            "data": {
+              "kind": "ml_anomaly",
+              "label": "Detección de anomalías",
+              "params": {
+                "algorithm": "Compare",
+                "features": "LogReturn,Volatility"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "Datos-Indicadores",
+            "source": "Datos",
+            "target": "Indicadores",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Indicadores-Limpiar",
+            "source": "Indicadores",
+            "target": "Limpiar",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Limpiar-Tool",
+            "source": "Limpiar",
+            "target": "Tool",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          }
+        ]
+      }
+    }
+  ]
+}
