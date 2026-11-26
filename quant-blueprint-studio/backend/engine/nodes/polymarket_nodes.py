@@ -280,7 +280,7 @@ BINANCE = 'https://api.binance.com/api/v3/klines'
 BINANCE_SYMBOLS = {'btc': 'BTCUSDT', 'eth': 'ETHUSDT', 'sol': 'SOLUSDT', 'xrp': 'XRPUSDT', 'doge': 'DOGEUSDT', 'bnb': 'BNBUSDT'}
 
 
-def _klines(asset: str, t0: int, t1: int, historical: bool, timeout: float) -> list[tuple[int, float, float]] | None:
+def _klines(asset: str, t0: int, t1: int, historical: bool, timeout: float) -> list[tuple[int, float, float, float]] | None:
     symbol = BINANCE_SYMBOLS.get(asset.lower())
     if not symbol:
         return None
@@ -291,7 +291,40 @@ def _klines(asset: str, t0: int, t1: int, historical: bool, timeout: float) -> l
         return None
     if not isinstance(rows, list):
         return None
-    return [(int(r[0]) // 1000, float(r[1]), float(r[4])) for r in rows]   # open_time, open, close
+    return [(int(r[0]) // 1000, float(r[1]), float(r[4]), float(r[5]) if len(r) > 5 else float('nan')) for r in rows]   # open_time, open, close, volume
+
+
+def rsi(closes: list[float] | np.ndarray, period: int = 14) -> float | None:
+    """Wilder RSI of the last close; None without period+1 closes."""
+    c = np.asarray(closes, dtype=float)
+    if len(c) < period + 1:
+        return None
+    d = np.diff(c)
+    up, dn = np.clip(d, 0, None), np.clip(-d, 0, None)
+    au, ad = up[:period].mean(), dn[:period].mean()
+    for u, v in zip(up[period:], dn[period:]):
+        au, ad = (au * (period - 1) + u) / period, (ad * (period - 1) + v) / period
+    if ad == 0:
+        return 100.0 if au > 0 else 50.0
+    return float(100 - 100 / (1 + au / ad))
+
+
+def volume_trend(volumes: list[float], recent: int = 5, base: int = 15, band: float = .15) -> str | None:
+    """'increasing' / 'decreasing' / 'stable': mean of the last `recent` bars vs the `base` before them."""
+    v = [float(x) for x in volumes]
+    if len(v) < recent + 3:
+        return None
+    now, ref = np.mean(v[-recent:]), np.mean(v[-recent - base:-recent])
+    if ref <= 0:
+        return None
+    r = now / ref - 1
+    return 'increasing' if r > band else 'decreasing' if r < -band else 'stable'
+
+
+def orderbook_bias(imbalance: float | None, band: float = .1) -> str | None:
+    if imbalance is None or not np.isfinite(imbalance):
+        return None
+    return 'bullish_depth' if imbalance > band else 'bearish_depth' if imbalance < -band else 'balanced'
 
 
 def target_from_klines(k: list[Any], start: int, t_dec: float, end: int, historical: bool, vol_minutes: int = 30, source: str = 'Binance 1m') -> dict[str, Any] | None:
@@ -305,21 +338,24 @@ def target_from_klines(k: list[Any], start: int, t_dec: float, end: int, histori
     if not k or len(k) < 10 or t_dec < start:
         return None
     k = [tuple(x) for x in k]
-    opens = [o for ts, o, _c in k if ts == start]
+    opens = [x[1] for x in k if x[0] == start]
     if not opens:
         return None
     # price known at t_dec: close of the last kline finished by t_dec (live: the current partial one)
-    done = [c for ts, _o, c in k if ts + 60 <= t_dec] if historical else [k[-1][2]]
+    known = [x for x in k if x[0] + 60 <= t_dec] if historical else list(k)
+    done = [x[2] for x in known]
     if not done:
         return None
     p_open, p_now = opens[0], done[-1]
-    closes = np.array([c for ts, _o, c in k if ts < start][-vol_minutes:])
+    closes = np.array([x[2] for x in k if x[0] < start][-vol_minutes:])
     sigma = float(np.std(np.diff(np.log(closes))) * 100) if len(closes) > 5 else 0.0
     sigma = max(sigma, 0.005)                      # floor: 0.005 % per minute
     minutes_left = max((end - t_dec) / 60, 0.25)
     diff_pct = (p_now / p_open - 1) * 100
     z = float(np.clip(diff_pct / (sigma * np.sqrt(minutes_left)), -6, 6))
-    return {'z': z, 'diff_pct': diff_pct, 'sigma_pct_min': sigma, 'minutes_left': minutes_left, 'source': source}
+    vols = [x[3] for x in known if len(x) > 3 and np.isfinite(x[3])]
+    return {'z': z, 'diff_pct': diff_pct, 'sigma_pct_min': sigma, 'minutes_left': minutes_left, 'source': source,
+            'p_open': p_open, 'p_now': p_now, 'rsi_14': rsi(done), 'volume_trend': volume_trend(vols) if len(vols) == len(known) else None}
 
 
 def target_signal(asset: str, start: int, t_dec: float, end: int, vol_minutes: int = 30, timeout: float = 8, historical: bool = False) -> dict[str, Any] | None:
@@ -459,8 +495,31 @@ def market_signals(prices: pd.Series, p_mkt: float, imbalance: float, lookback: 
             'target': float(target['z']) if target else 0.0, '_momentum_raw': mom, '_target_pct': target['diff_pct'] if target else None}
 
 
-def laya_state(question: str, window: str, p_mkt: float, z: dict[str, float], spread: float | None, minutes_to_close: float | None) -> dict[str, Any]:
-    return {'market': question, 'horizon': window, 'implied_probability_up': round(p_mkt, 4),
+def _strip(z: dict[str, Any]) -> dict[str, Any]:
+    for k in ('_momentum_raw', '_target_pct'):
+        z.pop(k, None)
+    return z
+
+
+def asset_of(slug: Any) -> str | None:
+    m = re.match(r'([a-z]+)-updown-', str(slug or ''))
+    return m.group(1) if m else None
+
+
+def symbol_of(asset: str | None) -> str | None:
+    return f'{asset.upper()}/USD' if asset else None
+
+
+def laya_state(question: str, window: str, p_mkt: float, z: dict[str, float], spread: float | None, minutes_to_close: float | None,
+               target: dict[str, Any] | None = None, asset: str | None = None, has_book: bool = False) -> dict[str, Any]:
+    """Everything Laya sees, all known at decision time; target = target_from_klines(...) of this window."""
+    t = target or {}
+    rnd = lambda v, n: None if v is None or not np.isfinite(v) else round(float(v), n)
+    return {'symbol': symbol_of(asset), 'market': question, 'timeframe': window, 'horizon': window,
+            'current_price': rnd(t.get('p_now'), 2), 'reference_price': rnd(t.get('p_open'), 2),
+            'rsi_14': rnd(t.get('rsi_14'), 1), 'volume_trend': t.get('volume_trend'),
+            'recent_orderbook_bias': orderbook_bias(z['imbalance'] / 2) if has_book else None,
+            'implied_probability_up': round(p_mkt, 4),
             'momentum_over_lookback': round(z['_momentum_raw'], 4), 'normalized_momentum': round(z['momentum'] / 2, 3),
             'orderbook_imbalance': round(z['imbalance'] / 2, 3), 'spread': None if spread is None or not np.isfinite(spread) else round(float(spread), 4),
             'minutes_to_close': None if minutes_to_close is None or not np.isfinite(minutes_to_close) else round(float(minutes_to_close), 1),
@@ -468,15 +527,26 @@ def laya_state(question: str, window: str, p_mkt: float, z: dict[str, float], sp
             'distance_to_price_to_beat_z': round(z['target'], 3)}
 
 
-def laya_question(window: str, text: str | None = None, risk: str | None = None) -> dict[str, Any]:
-    q = {'direction': {'type': 'choice', 'instructions': text or f'Given this prediction-market state, will the outcome resolve UP or DOWN at the end of the {window} window?',
-                          'criteria': {'up': f'the asset finishes the {window} window higher (UP resolves)', 'down': f'the asset finishes the {window} window lower (DOWN resolves)'}}}
+def laya_question(window: str, text: str | None = None, risk: str | None = None, asset: str | None = None, reference: float | None = None) -> dict[str, Any]:
+    """Direction (choice) and, optionally, reversal risk (noul); worded with this window's asset and price to beat when known."""
+    name = asset.upper() if asset else 'the asset'
+    ref = f'{reference:,.2f} USD' if reference is not None and np.isfinite(reference) else None
+    if ref:
+        default = f'Will the price of {name} be at or above the reference price of {ref} at the close of the {window} window?'
+        crit = {'up': f'the price stays at or rises above {ref} at the close of the {window} window (UP resolves)',
+                'down': f'the price falls below the reference price of {ref} at the close of the {window} window (DOWN resolves)'}
+    else:
+        default = f'Given this prediction-market state, will the outcome resolve UP or DOWN at the end of the {window} window?'
+        crit = {'up': f'{name} finishes the {window} window higher (UP resolves)', 'down': f'{name} finishes the {window} window lower (DOWN resolves)'}
+    q = {'direction': {'type': 'choice', 'instructions': text or default, 'criteria': crit}}
     if risk:
-        q['high_volatility_risk'] = {'type': 'noul', 'instructions': risk}
+        q['high_volatility_risk'] = {'type': 'noul', 'instructions': risk,
+                                     'criteria': {'true': 'high risk of a reversal or false breakout before the window closes',
+                                                  'false': 'stable price behaviour, the current direction is likely to hold'}}
     return q
 
 
-RISK_Q = 'Volatility in the remaining minutes of the window is high enough to reverse the current direction.'
+RISK_Q = 'Is there an elevated risk of volatility or a false breakout in the remaining minutes of the window, enough to reverse the current direction?'
 
 
 def execution_policy(conf: float, risk: float | None, execute_at: float, escalate_at: float, max_risk: float) -> tuple[str, str]:
@@ -515,7 +585,7 @@ def bucket_of(elapsed: float, bucket_s: int, step: int) -> int | None:
 
 def _window_raw(slug: str, start: int, step: int, lookback: int, up_index: str, timeout: float) -> dict[str, Any] | None:
     """Everything needed to rebuild any decision point of one settled window (kept on disk: it never changes)."""
-    cache = _learning_dir() / 'windows' / f'v3_{slug}_{lookback}_{up_index}.json'
+    cache = _learning_dir() / 'windows' / f'v4_{slug}_{lookback}_{up_index}.json'
     if cache.exists():
         try:
             return json.loads(cache.read_text())
@@ -817,13 +887,18 @@ def laya_updown(frame: pd.DataFrame, p: dict[str, Any], progress: Progress = Non
     if 'Laya_P_up' in frame and np.isfinite(last('Laya_P_up')):  # Laya Signal upstream already answered
         up, dn = last('Laya_P_up'), last('Laya_P_down')
         z['laya'] = float(np.log(max(up, 1e-4) / max(dn, 1e-4)))
-        laya_detail = {'used': True, 'via': 'Laya Signal', 'P_up': up, 'P_down': dn}
+        laya_detail = {'used': True, 'via': 'Laya Signal', 'P_up': up, 'P_down': dn, 'state': frame.attrs.get('laya_state')}
+        if ask_risk and np.isfinite(last('Laya_Risk_high_volatility')):
+            risk = last('Laya_Risk_high_volatility')
     elif use_laya:
         from .laya_nodes import _agent
         sec = last('SecondsToClose')
-        state = laya_state(meta.get('question', 'market'), window, p_mkt, z, last('Book_spread'), sec / 60 if np.isfinite(sec) else None)
+        tgt, asset = (meta.get('underlying') or {}).get('signal'), asset_of(meta.get('slug'))
+        state = laya_state(meta.get('question', 'market'), window, p_mkt, z, last('Book_spread'), sec / 60 if np.isfinite(sec) else None,
+                           tgt, asset, has_book=np.isfinite(last('Book_imbalance')))
         if progress: progress({'detail': 'Consultando Laya-MLX'})
-        ans = _agent(str(p.get('checkpoint', 'laya-mlx'))).predict(state, laya_question(window, p.get('question'), str(p.get('risk_question') or RISK_Q) if ask_risk else None))['answers']
+        qs = laya_question(window, p.get('question'), str(p.get('risk_question') or RISK_Q) if ask_risk else None, asset, state['reference_price'])
+        ans = _agent(str(p.get('checkpoint', 'laya-mlx'))).predict(state, qs)['answers']
         res = ans['direction']
         if ask_risk and 'high_volatility_risk' in ans:
             risk = float(ans['high_volatility_risk']['noul'])
@@ -868,7 +943,7 @@ def laya_updown(frame: pd.DataFrame, p: dict[str, Any], progress: Progress = Non
         'notes': [
             f'Decisión {decision} para la ventana {window}: P(UP) = σ(bias + Σ wᵢ·zᵢ) = {p_up:.4f}. ' + ('Supera' if actionable else 'No supera') + f' la confianza mínima {threshold}.',
             f'Política de ejecución: {action} — {action_why}. Reglas: confianza ≥ {execute_at} y riesgo < {max_risk} → EXECUTE; ≥ {escalate_at} → ESCALATE (System 2); resto → CANCEL.'
-            + ('' if risk is not None else ' Sin pregunta de riesgo (Laya desactivado, vía Laya Signal o ask_risk=false): solo cuenta la confianza.'),
+            + ('' if risk is not None else ' Sin pregunta de riesgo (Laya desactivado, Laya Signal con ask_risk=false o ask_risk=false aquí): solo cuenta la confianza.'),
             (f'Minuto {bucket + 1} de {n_buckets} ({elapsed:.0f}s transcurridos, tramos de {bucket_s}s): se usan los pesos de ese tramo.' if bucket is not None else 'Un único juego de pesos para toda la ventana.'),
             ('Aprendizaje en línea: al resolverse cada ventana, w ← w − lr·((p − y)·z + L2·w) con la decisión registrada antes del cierre. '
              + (f'Acierto últimas {learning["window"]}: {learning["hit_rate"]:.1%} vs mercado {learning["market_hit_rate"]:.1%}.' if learning and learning['hit_rate'] is not None and learning['market_hit_rate'] is not None else 'Aún sin ventanas resueltas.')) if source == 'online' else
@@ -891,20 +966,33 @@ def laya_updown(frame: pd.DataFrame, p: dict[str, Any], progress: Progress = Non
 _LAYA_CACHE: dict[str, dict[str, float]] = {}
 
 
-def _ask_laya(states: list[dict[str, Any]], questions: dict[str, Any], checkpoint: str, progress: Progress) -> list[dict[str, float]]:
+def _ask_laya(states: list[dict[str, Any]], questions: dict[str, Any] | list[dict[str, Any]], checkpoint: str, progress: Progress) -> list[dict[str, float]]:
+    """One answer per state; `questions` is shared or one per state (states with the same questions are batched together)."""
     from .laya_nodes import _agent
-    qkey = json.dumps(questions, sort_keys=True) + checkpoint
-    keys = [qkey + json.dumps(s, sort_keys=True) for s in states]
+    qs = questions if isinstance(questions, list) else [questions] * len(states)
+    qkeys = [json.dumps(q, sort_keys=True) + checkpoint for q in qs]
+    keys = [qk + json.dumps(s, sort_keys=True) for qk, s in zip(qkeys, states)]
     todo = [i for i, k in enumerate(keys) if k not in _LAYA_CACHE]
+    groups: dict[str, list[int]] = {}
+    for i in todo:
+        groups.setdefault(qkeys[i], []).append(i)
+    done = 0
     if todo:
         agent = _agent(checkpoint)
-        for j in range(0, len(todo), 64):
-            part = todo[j:j + 64]
-            res = agent.predict_batch([states[i] for i in part], questions, batch_size=64) if hasattr(agent, 'predict_batch') else [agent.predict(states[i], questions) for i in part]
-            for i, r in zip(part, res):
-                pr = r['answers']['direction']['probabilities']
-                _LAYA_CACHE[keys[i]] = {'up': float(pr['up']), 'down': float(pr['down'])}
-            if progress: progress({'detail': f'Laya {min(j + 64, len(todo))}/{len(todo)} ventanas'})
+        for idx in groups.values():
+            q = qs[idx[0]]
+            for j in range(0, len(idx), 64):
+                part = idx[j:j + 64]
+                res = agent.predict_batch([states[i] for i in part], q, batch_size=64) if hasattr(agent, 'predict_batch') else [agent.predict(states[i], q) for i in part]
+                for i, r in zip(part, res):
+                    ans = r['answers']
+                    pr = ans['direction']['probabilities']
+                    out = {'up': float(pr['up']), 'down': float(pr['down'])}
+                    if 'high_volatility_risk' in ans:
+                        out['risk'] = float(ans['high_volatility_risk']['noul'])
+                    _LAYA_CACHE[keys[i]] = out
+                done += len(part)
+                if progress: progress({'detail': f'Laya {done}/{len(todo)} ventanas'})
     return [_LAYA_CACHE[k] for k in keys]
 
 
@@ -920,9 +1008,10 @@ def laya_signal_polymarket(frame: pd.DataFrame, p: dict[str, Any], progress: Pro
     offsets = decision_offsets(window, bucket_s, single)
     started = time.perf_counter()
     recs_raw = resolved_windows(series, n, offsets, lookback, str(p.get('up_outcome', 'auto')), progress=progress)
-    questions = laya_question(window)
+    asset = asset_of(meta.get('slug'))
+    ask_risk = bool(p.get('ask_risk', True))
     hist_z = [market_signals(pd.Series(r['prices']), r['p_market'], 0.0, lookback, r.get('target')) for r in recs_raw]
-    states = [laya_state(r['question'], window, r['p_market'], z, None, r['minutes_to_close']) for r, z in zip(recs_raw, hist_z)]
+    states = [laya_state(r['question'], window, r['p_market'], z, None, r['minutes_to_close'], r.get('target'), asset) for r, z in zip(recs_raw, hist_z)]
     # current window: same features, plus the live book
     close = frame['Close'].astype(float)
     last = lambda col: float(frame[col].iloc[-1]) if col in frame else np.nan
@@ -932,20 +1021,26 @@ def laya_signal_polymarket(frame: pd.DataFrame, p: dict[str, Any], progress: Pro
         p_now = (bb + ba) / 2
     z_now = market_signals(close, p_now, last('Book_imbalance'), lookback, (meta.get('underlying') or {}).get('signal'))
     sec = last('SecondsToClose')
-    states.append(laya_state(meta['question'], window, p_now, z_now, last('Book_spread'), sec / 60 if np.isfinite(sec) else None))
+    states.append(laya_state(meta['question'], window, p_now, z_now, last('Book_spread'), sec / 60 if np.isfinite(sec) else None,
+                             (meta.get('underlying') or {}).get('signal'), asset, has_book=np.isfinite(last('Book_imbalance'))))
+    # history: direction only, worded with each window's own price to beat; current state: + reversal risk
+    questions = [laya_question(window, asset=asset, reference=s['reference_price']) for s in states[:-1]]
+    questions.append(laya_question(window, risk=str(p.get('risk_question') or RISK_Q) if ask_risk else None, asset=asset, reference=states[-1]['reference_price']))
     answers = _ask_laya(states, questions, checkpoint, progress)
     records = []
     for r, z, a in zip(recs_raw, hist_z, answers):
-        z = {**z, 'laya': float(np.log(max(a['up'], 1e-4) / max(a['down'], 1e-4)))}
-        z.pop('_momentum_raw', None); z.pop('_target_pct', None)
+        z = _strip({**z, 'laya': float(np.log(max(a['up'], 1e-4) / max(a['down'], 1e-4)))})
         records.append({'slug': r['slug'], 'start': r['start'], 'offset': r['offset'], 'bucket': r['bucket'], 'y': r['y'],
                         'p_market': r['p_market'], 'laya_p_up': a['up'], 'z': z})
     cur = answers[-1]
     out = frame.copy()
-    for col, val in (('Laya_P_up', cur['up']), ('Laya_P_down', cur['down']), ('Laya_P_flat', 0.0), ('Laya_P_higher', cur['up']), ('Laya_Risk', 1.0), ('Laya_Confidence', max(cur['up'], cur['down']))):
+    for col, val in (('Laya_P_up', cur['up']), ('Laya_P_down', cur['down']), ('Laya_P_flat', 0.0), ('Laya_P_higher', cur['up']), ('Laya_Risk', 1.0), ('Laya_Confidence', max(cur['up'], cur['down'])),
+                     ('Laya_Risk_high_volatility', cur.get('risk', np.nan))):
         out[col] = np.nan
         out.iloc[-1, out.columns.get_loc(col)] = val
     out.attrs.update(frame.attrs)
+    out.attrs['laya_state'] = states[-1]
+    out.attrs['laya_questions'] = questions[-1]
     out.attrs['polymarket_windows'] = records
     out.attrs['polymarket_windows_meta'] = {'series': series, 'offsets': offsets, 'bucket_s': bucket_s, 'lookback': lookback, 'window': window}
     windows_n = len({r['start'] for r in records})
@@ -967,12 +1062,14 @@ def laya_signal_polymarket(frame: pd.DataFrame, p: dict[str, Any], progress: Pro
             f'con lookback {lookback} puntos de 1 min y su resultado real. Tramos de {bucket_s or "—"}s (punto medio de cada tramo).' if bucket_s else
             f'Modo Polymarket: una pregunta por ventana resuelta de {series}, con el estado a {single}s del inicio.',
             'Mismas funciones de señales que LAYA UP/DOWN en vivo. El histórico no tiene libro de órdenes: desequilibrio = 0 y spread vacío.',
-            f'Pregunta: «{questions["direction"]["instructions"]}». Última fila = estado actual ({meta["slug"]}).',
+            f'Pregunta actual: «{questions[-1]["direction"]["instructions"]}» (cada ventana histórica usa su propio precio de referencia). Última fila = estado actual ({meta["slug"]}).',
+            'Estado enviado a Laya ahora: ' + json.dumps(states[-1], ensure_ascii=False),
+            (f'Riesgo de volatilidad / ruptura falsa (noul) ahora: P = {cur["risk"]:.3f}; LAYA UP/DOWN lo usa en la política EXECUTE/ESCALATE/CANCEL.' if 'risk' in cur else 'Sin pregunta de riesgo (ask_risk=false).'),
             f'Tasa base UP: {y_all.mean():.3f} en {windows_n} ventanas. {len(records)} preguntas a Laya, {time.perf_counter() - started:.1f}s.',
             'La tabla muestra, por minuto, el acierto del mercado, de Laya y de la distancia al precio a vencer (signo de z).',
         ],
         'table': per,
-        'metrics': {'ventanas': windows_n, 'tramos': len(offsets), 'tasa_base_up': float(y_all.mean()) if len(y_all) else None, 'laya_actual_p_up': cur['up']},
+        'metrics': {'ventanas': windows_n, 'tramos': len(offsets), 'tasa_base_up': float(y_all.mean()) if len(y_all) else None, 'laya_actual_p_up': cur['up'], 'laya_actual_riesgo': cur.get('risk')},
         'charts': [{'title': 'Acierto por minuto de la ventana', 'rows': per, 'series': ['acierto mercado', 'acierto Laya', 'acierto distancia'], 'x_key': 'minuto', 'chart_type': 'line'}],
     }
     return out, report
