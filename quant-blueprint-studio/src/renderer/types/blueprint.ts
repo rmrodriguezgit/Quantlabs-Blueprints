@@ -1519,6 +1519,11 @@ export const catalog: Record<Kind, Definition> = {
       { key: "bias", label: "Sesgo", value: 0, min: -5, max: 5, step: 0.05 },
       { key: "lookback_bars", label: "Lookback (barras)", value: 30, min: 3, max: 2000 },
       { key: "min_confidence", label: "Confianza mínima accionable", value: 0.55, min: 0.5, max: 0.99, step: 0.01 },
+      { key: "ask_risk", label: "Preguntar riesgo de volatilidad (noul)", value: true },
+      { key: "risk_question", label: "Proposición noul de riesgo", value: "Volatility in the remaining minutes of the window is high enough to reverse the current direction." },
+      { key: "execute_confidence", label: "Política · confianza para EXECUTE", value: 0.8, min: 0.5, max: 0.99, step: 0.01 },
+      { key: "max_risk", label: "Política · riesgo máximo para EXECUTE", value: 0.3, min: 0.01, max: 1, step: 0.01 },
+      { key: "escalate_confidence", label: "Política · confianza para ESCALATE (System 2)", value: 0.5, min: 0.5, max: 0.99, step: 0.01 },
     ],
   },
   laya_signal: {

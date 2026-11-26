@@ -468,9 +468,25 @@ def laya_state(question: str, window: str, p_mkt: float, z: dict[str, float], sp
             'distance_to_price_to_beat_z': round(z['target'], 3)}
 
 
-def laya_question(window: str, text: str | None = None) -> dict[str, Any]:
-    return {'direction': {'type': 'choice', 'instructions': text or f'Given this prediction-market state, will the outcome resolve UP or DOWN at the end of the {window} window?',
+def laya_question(window: str, text: str | None = None, risk: str | None = None) -> dict[str, Any]:
+    q = {'direction': {'type': 'choice', 'instructions': text or f'Given this prediction-market state, will the outcome resolve UP or DOWN at the end of the {window} window?',
                           'criteria': {'up': f'the asset finishes the {window} window higher (UP resolves)', 'down': f'the asset finishes the {window} window lower (DOWN resolves)'}}}
+    if risk:
+        q['high_volatility_risk'] = {'type': 'noul', 'instructions': risk}
+    return q
+
+
+RISK_Q = 'Volatility in the remaining minutes of the window is high enough to reverse the current direction.'
+
+
+def execution_policy(conf: float, risk: float | None, execute_at: float, escalate_at: float, max_risk: float) -> tuple[str, str]:
+    """Three-tier policy: EXECUTE / ESCALATE (System 2) / CANCEL."""
+    if conf >= execute_at and (risk is None or risk < max_risk):
+        return 'EXECUTE', f'confianza {conf:.2f} ≥ {execute_at}' + (f' y riesgo {risk:.2f} < {max_risk}' if risk is not None else ' (sin medida de riesgo)')
+    if conf >= escalate_at:
+        why = f'riesgo {risk:.2f} ≥ {max_risk}' if conf >= execute_at else f'confianza {conf:.2f} entre {escalate_at} y {execute_at}'
+        return 'ESCALATE', why + ' → revisión System 2'
+    return 'CANCEL', f'confianza {conf:.2f} < {escalate_at}'
 
 
 def bucket_seconds(window: str, setting: Any = 'auto') -> int:
@@ -728,6 +744,11 @@ def laya_updown(frame: pd.DataFrame, p: dict[str, Any], progress: Progress = Non
     use_laya = bool(p.get('use_laya', True))
     if not (3 <= lookback_bars <= 2000 and .5 <= threshold < 1 and source in ('manual', 'calibrated', 'online')):
         raise ValueError('Lookback 3–2000 barras, confianza mínima 0.5–0.99, pesos manual|calibrated|online.')
+    execute_at, escalate_at, max_risk = float(p.get('execute_confidence', .80)), float(p.get('escalate_confidence', .50)), float(p.get('max_risk', .30))
+    ask_risk = bool(p.get('ask_risk', True))
+    if not (.5 <= escalate_at <= execute_at < 1 and 0 < max_risk <= 1):
+        raise ValueError('Política: 0.5 ≤ confianza para escalar ≤ confianza para ejecutar < 1 y riesgo máximo en (0, 1].')
+    risk = None
     online_lr, online_l2 = float(p.get('online_lr', .05)), float(p.get('online_l2', .001))
     commit = str(p.get('commit_at', 'first'))
     if not (0 < online_lr <= 1 and 0 <= online_l2 <= .1 and commit in ('first', 'last')):
@@ -802,7 +823,10 @@ def laya_updown(frame: pd.DataFrame, p: dict[str, Any], progress: Progress = Non
         sec = last('SecondsToClose')
         state = laya_state(meta.get('question', 'market'), window, p_mkt, z, last('Book_spread'), sec / 60 if np.isfinite(sec) else None)
         if progress: progress({'detail': 'Consultando Laya-MLX'})
-        res = _agent(str(p.get('checkpoint', 'laya-mlx'))).predict(state, laya_question(window, p.get('question')))['answers']['direction']
+        ans = _agent(str(p.get('checkpoint', 'laya-mlx'))).predict(state, laya_question(window, p.get('question'), str(p.get('risk_question') or RISK_Q) if ask_risk else None))['answers']
+        res = ans['direction']
+        if ask_risk and 'high_volatility_risk' in ans:
+            risk = float(ans['high_volatility_risk']['noul'])
         up, dn = float(res['probabilities']['up']), float(res['probabilities']['down'])
         z['laya'] = float(np.log(max(up, 1e-4) / max(dn, 1e-4)))
         laya_detail = {'used': True, 'via': 'laya-mlx directo', 'P_up': up, 'P_down': dn, 'state': state}
@@ -813,6 +837,7 @@ def laya_updown(frame: pd.DataFrame, p: dict[str, Any], progress: Progress = Non
     conf = max(p_up, 1 - p_up)
     decision = 'UP' if p_up >= .5 else 'DOWN'
     actionable = conf >= threshold
+    action, action_why = execution_policy(conf, risk, execute_at, escalate_at, max_risk)
     trace = [{'señal': k, 'z (log-odds)': round(z[k], 4), 'peso': round(w[k], 4), 'contribución': round(contrib[k], 4)} for k in SIGNALS]
     trace.append({'señal': 'bias', 'z (log-odds)': 1.0, 'peso': round(bias, 4), 'contribución': round(bias, 4)})
     if source == 'online':
@@ -829,6 +854,8 @@ def laya_updown(frame: pd.DataFrame, p: dict[str, Any], progress: Progress = Non
     out.iloc[-1, out.columns.get_loc('UpDown_Decision')] = 1.0 if decision == 'UP' else -1.0
     out.attrs.update(frame.attrs)
     result = {'decision': decision, 'probability_up': round(p_up, 4), 'confidence': round(conf, 4), 'actionable': actionable,
+              'action': action, 'action_reason': action_why, 'risk_high_volatility': None if risk is None else round(risk, 4),
+              'policy': {'execute_confidence': execute_at, 'escalate_confidence': escalate_at, 'max_risk': max_risk},
               'horizon': window, 'market': meta.get('slug'), 'as_of': str(frame.index[-1]), 'weights': {**w, 'bias': bias},
               'weight_source': origin, 'signals': z, 'contributions': {**contrib, 'bias': bias}, 'laya': laya_detail,
               'question': meta.get('question'), 'p_market': p_mkt, 'threshold': threshold, 'learning': learning,
@@ -840,17 +867,19 @@ def laya_updown(frame: pd.DataFrame, p: dict[str, Any], progress: Progress = Non
         'splits': {'train': 0, 'validation': 0, 'test': 1},
         'notes': [
             f'Decisión {decision} para la ventana {window}: P(UP) = σ(bias + Σ wᵢ·zᵢ) = {p_up:.4f}. ' + ('Supera' if actionable else 'No supera') + f' la confianza mínima {threshold}.',
+            f'Política de ejecución: {action} — {action_why}. Reglas: confianza ≥ {execute_at} y riesgo < {max_risk} → EXECUTE; ≥ {escalate_at} → ESCALATE (System 2); resto → CANCEL.'
+            + ('' if risk is not None else ' Sin pregunta de riesgo (Laya desactivado, vía Laya Signal o ask_risk=false): solo cuenta la confianza.'),
             (f'Minuto {bucket + 1} de {n_buckets} ({elapsed:.0f}s transcurridos, tramos de {bucket_s}s): se usan los pesos de ese tramo.' if bucket is not None else 'Un único juego de pesos para toda la ventana.'),
             ('Aprendizaje en línea: al resolverse cada ventana, w ← w − lr·((p − y)·z + L2·w) con la decisión registrada antes del cierre. '
              + (f'Acierto últimas {learning["window"]}: {learning["hit_rate"]:.1%} vs mercado {learning["market_hit_rate"]:.1%}.' if learning and learning['hit_rate'] is not None and learning['market_hit_rate'] is not None else 'Aún sin ventanas resueltas.')) if source == 'online' else
             f'Pesos: {origin}. Cámbialos en el Inspector o conecta Laya Calibrate y usa weight_source=calibrated.',
             'z_market = logit P(UP) implícita; z_momentum = tanh(Δp/σ·√n)·2; z_imbalance = 2·desequilibrio del libro; z_laya = log(P_up/P_down) de Laya; z_target = Δ% desde la apertura / (σ 1m · √min restantes) (≈ probit de P(UP) en paseo aleatorio).',
             ('Laya: ' + laya_detail['via'] + f' P_up={laya_detail["P_up"]:.3f}.') if laya_detail['used'] else 'Laya desactivado: z_laya = 0.',
-            'JSON de decisión: ' + json.dumps({k: result[k] for k in ('decision', 'probability_up', 'confidence', 'actionable', 'horizon', 'market', 'as_of')}, ensure_ascii=False),
+            'JSON de decisión: ' + json.dumps({k: result[k] for k in ('decision', 'probability_up', 'confidence', 'risk_high_volatility', 'action', 'actionable', 'horizon', 'market', 'as_of')}, ensure_ascii=False),
             'No es asesoría financiera: es una señal de investigación sin garantía de acierto.',
         ],
         'table': trace + ([{'señal': f'aprendido · {e["slug"]}', 'z (log-odds)': e['p_up'], 'peso': e['outcome'], 'contribución': e['hit']} for e in learned]),
-        'metrics': {'p_up': p_up, 'confidence': conf, 'actionable': float(actionable), 'score': score, 'decision_up': 1.0 if decision == 'UP' else 0.0},
+        'metrics': {'p_up': p_up, 'confidence': conf, 'actionable': float(actionable), 'action_code': {'CANCEL': 0.0, 'ESCALATE': 1.0, 'EXECUTE': 2.0}[action], 'score': score, 'decision_up': 1.0 if decision == 'UP' else 0.0},
         'charts': [{'title': 'Contribución por señal (log-odds)', 'rows': [{'señal': r['señal'], 'contribución': r['contribución']} for r in trace], 'series': ['contribución'], 'x_key': 'señal', 'chart_type': 'bar'}],
         'decision': result,
     }
