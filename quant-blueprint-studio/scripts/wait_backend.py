@@ -3,13 +3,15 @@ import sys
 import time
 import urllib.request
 import json
+import os
 
 pid = int(sys.argv[1])
+port = os.environ.get('QL_ENGINE_PORT', '8000')
 for _ in range(120):
     try:
-        with urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=1) as response:
+        with urllib.request.urlopen(f'http://127.0.0.1:{port}/api/health', timeout=1) as response:
             if json.load(response)['pid'] != pid:
-                raise RuntimeError('Port 8000 belongs to another process.')
+                raise RuntimeError(f'Port {port} belongs to another process.')
         break
     except (OSError, ValueError):
         time.sleep(0.5)

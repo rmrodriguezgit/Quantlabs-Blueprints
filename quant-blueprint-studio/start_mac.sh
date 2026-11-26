@@ -12,6 +12,21 @@ done
 source .venv/bin/activate
 python -m pip install -r requirements.txt
 [ -d node_modules ] || npm install
+if [ -z "${QL_ENGINE_PORT:-}" ]; then
+  QL_ENGINE_PORT="$(python - <<'PY'
+import socket
+for port in range(8000, 8100):
+    with socket.socket() as s:
+        try:
+            s.bind(('127.0.0.1', port)); print(port); break
+        except OSError:
+            continue
+PY
+)"
+fi
+export QL_ENGINE_PORT
+export VITE_ENGINE_PORT="$QL_ENGINE_PORT"
+echo "Python engine on 127.0.0.1:${QL_ENGINE_PORT}"
 python backend/server.py &
 ENGINE_PID=$!
 trap 'kill "$ENGINE_PID" 2>/dev/null || true' EXIT INT TERM

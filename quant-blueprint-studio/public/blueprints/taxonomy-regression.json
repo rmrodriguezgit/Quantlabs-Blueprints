@@ -1,0 +1,177 @@
+{
+  "format": "quantlabs-blueprint-library",
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "taxonomy-regression",
+      "title": "Supervisado · Regresión",
+      "area": "Taxonomía ML · panorámica",
+      "description": "Lineal múltiple, Lasso, Ridge, Árbol, Random Forest, XGBoost, KNN, SVR… Compare entrena todos en TR, elige en VA y mide TE una vez.",
+      "instructions": [
+        "Fuente synthetic para ejecutar sin internet; cambia a yfinance para activos reales. Todo lo ajustado usa sólo TR.",
+        "Elige un algoritmo concreto en Entrenar para estudiarlo aislado.",
+        "XGBoost usa la librería xgboost si carga (macOS: brew install libomp); si no, HistGradientBoosting."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "Datos",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 100
+            },
+            "data": {
+              "kind": "source",
+              "label": "Datos",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 4
+              }
+            }
+          },
+          {
+            "id": "Indicadores",
+            "type": "blueprint",
+            "position": {
+              "x": 300,
+              "y": 100
+            },
+            "data": {
+              "kind": "features",
+              "label": "Indicadores",
+              "params": {}
+            }
+          },
+          {
+            "id": "Limpiar",
+            "type": "blueprint",
+            "position": {
+              "x": 600,
+              "y": 100
+            },
+            "data": {
+              "kind": "ml_clean",
+              "label": "Limpieza",
+              "params": {
+                "missing": "drop"
+              }
+            }
+          },
+          {
+            "id": "Dividir",
+            "type": "blueprint",
+            "position": {
+              "x": 900,
+              "y": 100
+            },
+            "data": {
+              "kind": "ml_split",
+              "label": "Dividir TR / VA / TE",
+              "params": {
+                "target": "LogReturn",
+                "target_mode": "next",
+                "features": "LogReturn,Volatility,RSI,EMA,SMA",
+                "gap": 1
+              }
+            }
+          },
+          {
+            "id": "Entrenar",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 380
+            },
+            "data": {
+              "kind": "ml_train",
+              "label": "Entrenar · Compare",
+              "params": {
+                "algorithm": "Compare",
+                "estimators": 100,
+                "max_depth": 4
+              }
+            }
+          },
+          {
+            "id": "Evaluar",
+            "type": "blueprint",
+            "position": {
+              "x": 300,
+              "y": 380
+            },
+            "data": {
+              "kind": "ml_evaluate",
+              "label": "Evaluar TE",
+              "params": {}
+            }
+          },
+          {
+            "id": "Ver",
+            "type": "blueprint",
+            "position": {
+              "x": 600,
+              "y": 380
+            },
+            "data": {
+              "kind": "ml_visualize",
+              "label": "Visualizar",
+              "params": {}
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "Datos-Indicadores",
+            "source": "Datos",
+            "target": "Indicadores",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Indicadores-Limpiar",
+            "source": "Indicadores",
+            "target": "Limpiar",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Limpiar-Dividir",
+            "source": "Limpiar",
+            "target": "Dividir",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Dividir-Entrenar",
+            "source": "Dividir",
+            "target": "Entrenar",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Entrenar-Evaluar",
+            "source": "Entrenar",
+            "target": "Evaluar",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Evaluar-Ver",
+            "source": "Evaluar",
+            "target": "Ver",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          }
+        ]
+      }
+    }
+  ]
+}

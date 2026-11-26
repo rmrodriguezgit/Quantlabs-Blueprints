@@ -1,0 +1,107 @@
+{
+  "format": "quantlabs-blueprint-library",
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "taxonomy-clustering",
+      "title": "No supervisado · Clustering",
+      "area": "Taxonomía ML · panorámica",
+      "description": "K-Means, DBSCAN y jerárquico agrupan sesiones similares (regímenes); silhouette compara.",
+      "instructions": [
+        "Fuente synthetic para ejecutar sin internet; cambia a yfinance para activos reales. Todo lo ajustado usa sólo TR.",
+        "Cambia «Algoritmo» en el Inspector para recorrer cada método."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "Datos",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 100
+            },
+            "data": {
+              "kind": "source",
+              "label": "Datos",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 4
+              }
+            }
+          },
+          {
+            "id": "Indicadores",
+            "type": "blueprint",
+            "position": {
+              "x": 300,
+              "y": 100
+            },
+            "data": {
+              "kind": "features",
+              "label": "Indicadores",
+              "params": {}
+            }
+          },
+          {
+            "id": "Limpiar",
+            "type": "blueprint",
+            "position": {
+              "x": 600,
+              "y": 100
+            },
+            "data": {
+              "kind": "ml_clean",
+              "label": "Limpieza",
+              "params": {
+                "missing": "drop"
+              }
+            }
+          },
+          {
+            "id": "Tool",
+            "type": "blueprint",
+            "position": {
+              "x": 900,
+              "y": 100
+            },
+            "data": {
+              "kind": "ml_cluster",
+              "label": "Clustering",
+              "params": {
+                "algorithm": "Compare",
+                "features": "LogReturn,Volatility,RSI"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "Datos-Indicadores",
+            "source": "Datos",
+            "target": "Indicadores",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Indicadores-Limpiar",
+            "source": "Indicadores",
+            "target": "Limpiar",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Limpiar-Tool",
+            "source": "Limpiar",
+            "target": "Tool",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          }
+        ]
+      }
+    }
+  ]
+}

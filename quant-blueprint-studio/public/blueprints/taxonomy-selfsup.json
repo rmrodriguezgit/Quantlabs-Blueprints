@@ -1,0 +1,133 @@
+{
+  "format": "quantlabs-blueprint-library",
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "taxonomy-selfsup",
+      "title": "Auto-supervisado",
+      "area": "Taxonomía ML · panorámica",
+      "description": "Aprendizaje contrastivo, masked modeling y autoencoder sin etiquetas; sonda lineal frente a rasgos brutos.",
+      "instructions": [
+        "Fuente synthetic para ejecutar sin internet; cambia a yfinance para activos reales. Todo lo ajustado usa sólo TR.",
+        "Cambia el enfoque/técnica en el Inspector."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "Datos",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 100
+            },
+            "data": {
+              "kind": "source",
+              "label": "Datos",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 4
+              }
+            }
+          },
+          {
+            "id": "Indicadores",
+            "type": "blueprint",
+            "position": {
+              "x": 300,
+              "y": 100
+            },
+            "data": {
+              "kind": "features",
+              "label": "Indicadores",
+              "params": {}
+            }
+          },
+          {
+            "id": "Limpiar",
+            "type": "blueprint",
+            "position": {
+              "x": 600,
+              "y": 100
+            },
+            "data": {
+              "kind": "ml_clean",
+              "label": "Limpieza",
+              "params": {
+                "missing": "drop"
+              }
+            }
+          },
+          {
+            "id": "Dividir",
+            "type": "blueprint",
+            "position": {
+              "x": 900,
+              "y": 100
+            },
+            "data": {
+              "kind": "ml_split",
+              "label": "Dividir TR / VA / TE",
+              "params": {
+                "target": "LogReturn",
+                "target_mode": "direction",
+                "features": "LogReturn,Volatility,RSI,EMA,SMA",
+                "gap": 1
+              }
+            }
+          },
+          {
+            "id": "Tool",
+            "type": "blueprint",
+            "position": {
+              "x": 1200,
+              "y": 100
+            },
+            "data": {
+              "kind": "ml_selfsup",
+              "label": "Auto-supervisado",
+              "params": {
+                "algorithm": "Contrastive",
+                "epochs": 30
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "Datos-Indicadores",
+            "source": "Datos",
+            "target": "Indicadores",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Indicadores-Limpiar",
+            "source": "Indicadores",
+            "target": "Limpiar",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Limpiar-Dividir",
+            "source": "Limpiar",
+            "target": "Dividir",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Dividir-Tool",
+            "source": "Dividir",
+            "target": "Tool",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          }
+        ]
+      }
+    }
+  ]
+}

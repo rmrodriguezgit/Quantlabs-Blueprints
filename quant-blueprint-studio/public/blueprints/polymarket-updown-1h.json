@@ -1,0 +1,85 @@
+{
+  "format": "quantlabs-blueprint-library",
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "polymarket-updown-1h",
+      "title": "Polymarket · LAYA UP/DOWN 1h",
+      "area": "Polymarket · decisiones UP/DOWN",
+      "description": "Lee un mercado Up/Down de Polymarket (ventana 1h), combina P(UP) implícita, momentum, libro de órdenes y Laya-MLX con pesos editables y emite UP o DOWN.",
+      "instructions": [
+        "Requiere internet (Gamma y CLOB son APIs públicas de sólo lectura) y laya-mlx en .venv para la señal Laya; desactiva «Consultar Laya-MLX» si no está disponible.",
+        "Paso 1: en el Inspector busca otro mercado o pulsa ↻ para validar; el alias sin timestamp apunta a la ventana activa.",
+        "Paso 2: ajusta los pesos de LAYA UP/DOWN y vuelve a ejecutar: la traza muestra la contribución de cada señal.",
+        "Señal de investigación; no es asesoría financiera."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "PM",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 120
+            },
+            "data": {
+              "kind": "polymarket_source",
+              "label": "1 · Polymarket 1h",
+              "params": {
+                "market": "btc-updown-1h",
+                "window": "auto"
+              }
+            }
+          },
+          {
+            "id": "UD",
+            "type": "blueprint",
+            "position": {
+              "x": 340,
+              "y": 120
+            },
+            "data": {
+              "kind": "laya_updown",
+              "label": "2 · LAYA UP/DOWN",
+              "params": {
+                "window": "inherit"
+              }
+            }
+          },
+          {
+            "id": "Plot",
+            "type": "blueprint",
+            "position": {
+              "x": 680,
+              "y": 120
+            },
+            "data": {
+              "kind": "plot",
+              "label": "3 · P(UP) implícita",
+              "params": {
+                "title": "P(UP) 1h",
+                "plot_columns": "P_up,P_down"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "PM",
+            "target": "UD",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "e2",
+            "source": "UD",
+            "target": "Plot",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          }
+        ]
+      }
+    }
+  ]
+}

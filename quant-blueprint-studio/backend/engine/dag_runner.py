@@ -6,11 +6,22 @@ import pandas as pd
 import torch
 from .nodes.ml_nodes import train_ml
 from .nodes.research_nodes import data_quality, quant_features
+from .nodes.laya_nodes import laya_signal, laya_calibrate, laya_feedback
+from .nodes.polymarket_nodes import polymarket_source, laya_updown, polymarket_dashboard
 from .nodes.transform_nodes import transform
 from .nodes.scaling_nodes import affine_audit
 from .nodes.curve_nodes import monthly_curve, curve_fit
 from .nodes.study_nodes import study
 from .nodes.data_nodes import source, features, merge_features
+from .nodes.yfinance_nodes import yfinance_data
+from .nodes.ml_pipeline_nodes import STEPS as ML_STEPS
+from .nodes.taxonomy_nodes import STEPS as TAX_STEPS
+from .nodes.ae_pipeline_nodes import STEPS as AE_STEPS
+from .nodes.gen_pipeline_nodes import STEPS as GEN_STEPS
+from .nodes.sup_pipeline_nodes import STEPS as SUP_STEPS
+from .nodes.rl_pipeline_nodes import STEPS as RL_STEPS
+from .nodes.nn_blueprint_nodes import STEPS as NN_STEPS, SOURCES as NN_SOURCES
+from .nodes.dl_tool_nodes import KINDS as DL_TOOL_KINDS, run_dl_tool
 from .nodes.stats_nodes import PreparedData, prepare
 from .nodes.dl_nodes import ModelResult, NetworkSpec, train
 from .nodes.backtest_nodes import backtest
@@ -68,6 +79,29 @@ class DAGRunner:
                 raise ValueError('Only one connection per input pin is allowed.')
             self.incoming[edge['target']].append(edge)
 
+    def source_ticker(self, key: str) -> str:
+        """Ticker of the nearest Market Data node upstream (what «auto» means for Laya Signal's asset name)."""
+        seen, frontier = set(), [key]
+        while frontier:
+            nxt = []
+            for node_id in frontier:
+                for edge in self.incoming[node_id]:
+                    src = edge['source']
+                    if src in seen:
+                        continue
+                    seen.add(src)
+                    data = self.nodes[src]['data']
+                    if data['kind'] == 'yfinance_data':
+                        return str(data.get('params', {}).get('ticker', 'SPY')).strip().upper() or 'ASSET'
+                    if data['kind'] == 'source':
+                        p = data.get('params', {})
+                        if p.get('source', 'synthetic') == 'synthetic':
+                            return 'SYNTHETIC'
+                        return str(p.get('ticker', 'SPY')).strip().upper() or 'ASSET'
+                    nxt.append(src)
+            frontier = nxt
+        return 'ASSET'
+
     def topological_sort(self) -> list[str]:
         degrees = {key: len(edges) for key, edges in self.incoming.items()}
         outgoing: dict[str, list[str]] = {key: [] for key in self.nodes}
@@ -100,6 +134,8 @@ class DAGRunner:
         for key in order:
             node = self.nodes[key]
             kind, params = node['data']['kind'], dict(node['data'].get('params', {}))
+            if kind == 'laya_signal' and str(params.get('ticker', 'auto')).strip().lower() in ('', 'auto'):
+                params['ticker'] = self.source_ticker(key)
             upstream: Any = None
             inputs: dict[str, Any] = {}
             for edge in self.incoming[key]:
@@ -112,10 +148,42 @@ class DAGRunner:
             if progress:
                 progress({'node': key, 'label': node['data'].get('label') or kind, 'status': 'running'})
             try:
-                if kind == 'source':
+                if kind in DL_TOOL_KINDS and isinstance(upstream,pd.DataFrame):
+                    if 'network' in inputs: params['_network']=inputs['network']
+                    output,study_report=run_dl_tool(kind,upstream,params,(lambda event: progress({'node':key,'status':'running',**event})) if progress else None)
+                    report['studies'].append({'id':key,'title':node['data'].get('label',kind),**study_report})
+                elif kind in NN_SOURCES or (kind in NN_STEPS and isinstance(upstream,pd.DataFrame)):
+                    cb=(lambda event: progress({'node':key,'status':'epoch' if 'epoch' in event else 'running',**event})) if progress else None
+                    if kind=='nn_finetune': params['_pretrained']=inputs.get('pretrained')
+                    output,study_report=NN_SOURCES[kind](upstream,params,cb) if kind in NN_SOURCES else NN_STEPS[kind](upstream,params,cb)
+                    report['studies'].append({'id':key,'title':node['data'].get('label',kind),**study_report})
+                elif (kind in GEN_STEPS or kind in SUP_STEPS or kind in RL_STEPS) and isinstance(upstream,pd.DataFrame):
+                    output,study_report=(GEN_STEPS.get(kind) or SUP_STEPS.get(kind) or RL_STEPS[kind])(upstream,params,(lambda event: progress({'node':key,'status':'epoch' if 'epoch' in event else 'running',**event})) if progress else None)
+                    report['scaling_audits'].extend({'id':key,'node_title':node['data'].get('label',kind),**audit} for audit in study_report.pop('scaling_audits',[]))
+                    report['studies'].append({'id':key,'title':node['data'].get('label',kind),**study_report})
+                elif (kind in ML_STEPS or kind in AE_STEPS or kind in TAX_STEPS) and isinstance(upstream,pd.DataFrame):
+                    output,study_report=(ML_STEPS.get(kind) or TAX_STEPS.get(kind) or AE_STEPS[kind])(upstream,params,(lambda event: progress({'node':key,'status':'running',**event})) if progress else None)
+                    report['studies'].append({'id':key,'title':node['data'].get('label',kind),**study_report})
+                elif kind == 'yfinance_data':
+                    output,study_report=yfinance_data(params,(lambda event: progress({'node':key,'status':'running',**event})) if progress else None)
+                    report['studies'].append({'id':key,'title':node['data'].get('label',kind),**study_report})
+                elif kind == 'polymarket_dashboard':
+                    output,study_report=polymarket_dashboard(params,(lambda event: progress({'node':key,'status':'running',**event})) if progress else None,inputs.get('frame'))
+                    report['studies'].append({'id':key,'title':node['data'].get('label',kind),**study_report})
+                    report['dashboards']=[*report.get('dashboards',[]),{'id':key,**study_report['dashboard']}]
+                elif kind == 'polymarket_source' or (kind == 'laya_updown' and isinstance(upstream,pd.DataFrame)):
+                    cb=(lambda event: progress({'node':key,'status':'running',**event})) if progress else None
+                    output,study_report=polymarket_source(params,cb) if kind=='polymarket_source' else laya_updown(upstream,params,cb)
+                    report['studies'].append({'id':key,'title':node['data'].get('label',kind),**study_report})
+                    if kind=='laya_updown':report.setdefault('decisions',[]).append({'id':key,**study_report['decision']})
+                elif kind == 'source':
                     output: Any = source(params)
                 elif kind == 'data_quality' and isinstance(upstream,pd.DataFrame):
                     output=data_quality(upstream,params)
+                elif kind in ('laya_signal','laya_calibrate','laya_feedback') and isinstance(upstream,pd.DataFrame):
+                    fn={'laya_signal':laya_signal,'laya_calibrate':laya_calibrate,'laya_feedback':laya_feedback}[kind]
+                    output,study_report=fn(upstream,params,(lambda event: progress({'node':key,'status':'epoch' if 'epoch' in event else 'running',**event})) if progress else None)
+                    report['studies'].append({'id':key,'title':node['data'].get('label',kind),**study_report})
                 elif kind == 'quant_features' and isinstance(upstream,pd.DataFrame):
                     output=quant_features(upstream,params)
                 elif kind == 'portfolio_data':

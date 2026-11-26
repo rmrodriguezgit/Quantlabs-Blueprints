@@ -1,0 +1,84 @@
+{
+  "format": "quantlabs-blueprint-library",
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "yfinance-data-intraday",
+      "title": "yfinance Data · intradía, ajustes y acciones corporativas",
+      "area": "Datos e indicadores",
+      "description": "Descarga un ticker de Yahoo Finance eligiendo intervalo, periodo o fechas, ajuste por dividendos/splits, pre/post mercado y acciones corporativas, y lo prepara con Technical Features.",
+      "instructions": [
+        "Requiere internet. Cambia ticker, intervalo y periodo en el Inspector de yfinance Data.",
+        "Intradía: 1m hasta ~7 días, 2m–90m hasta 60 días, 1h hasta 730 días; la validación avisa y propone un periodo válido.",
+        "Desactiva auto_adjust para ver AdjClose y activa actions para Dividends/StockSplits."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "YF",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 120
+            },
+            "data": {
+              "kind": "yfinance_data",
+              "label": "1 · yfinance Data QQQ 1h",
+              "params": {
+                "ticker": "QQQ",
+                "interval": "1h",
+                "range_mode": "period",
+                "period": "6mo"
+              }
+            }
+          },
+          {
+            "id": "TF",
+            "type": "blueprint",
+            "position": {
+              "x": 340,
+              "y": 120
+            },
+            "data": {
+              "kind": "features",
+              "label": "2 · Technical Features",
+              "params": {}
+            }
+          },
+          {
+            "id": "PL",
+            "type": "blueprint",
+            "position": {
+              "x": 680,
+              "y": 120
+            },
+            "data": {
+              "kind": "plot",
+              "label": "3 · Close y medias",
+              "params": {
+                "title": "QQQ 1h",
+                "plot_columns": "Close,SMA,EMA"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "YF",
+            "target": "TF",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "e2",
+            "source": "TF",
+            "target": "PL",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          }
+        ]
+      }
+    }
+  ]
+}

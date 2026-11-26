@@ -31,9 +31,6 @@ export function PlotDock({
   if (!plots.length) return null;
   return (
     <section className="plot-dock" aria-label="Custom plot outputs">
-      <h2>
-        PLOT NODES · {plots.length} chart{plots.length === 1 ? "" : "s"}
-      </h2>
       <div>
         {plots.map((plot) => (
           <article

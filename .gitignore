@@ -5,3 +5,15 @@ quant-blueprint-studio/dist/
 __pycache__/
 *.pyc
 *.log
+
+# Local brain memory (history, ratings, missing-tool requests)
+.quantlabs/
+
+# Test caches, local run artifacts and secrets
+.pytest_cache/
+quant-blueprint-studio/outputs/
+quant-blueprint-studio/artifacts/
+*.joblib
+.env
+.env.*
+!.env.example

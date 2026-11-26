@@ -23,12 +23,20 @@ class LibraryTests(unittest.TestCase):
     def test_all_distributed_graphs_execute(self) -> None:
         for entry in self.entries:
             with self.subTest(entry=entry['id']):
+                if entry['id'].startswith(('polymarket-', 'yfinance-')):
+                    continue  # live network; covered offline by test_polymarket.py / test_yfinance_data.py
+                if entry['id'].startswith('laya-'):
+                    try:
+                        import laya_mlx  # noqa: F401  Apple Silicon only
+                    except ImportError:
+                        continue
                 graph=deepcopy(entry['graph'])
                 for node in graph['nodes']:
                     if node['data']['kind']=='plot':node['data']['params']['skip_rows']=0
-                    if node['data']['kind']=='source' and entry['id'].startswith('notebook-'):
+                    if node['data']['kind']=='nn_data':node['data']['params']['source']='synthetic'  # sin red
+                    if node['data']['kind']=='source' and entry['id'].startswith(('notebook-','laya-')):
                         node['data']['params']['source']='synthetic'
-                    if node['data']['kind'] in ('study','rl_agent','model','curve_fit'):
+                    if node['data']['kind'] in ('study','rl_agent','model','curve_fit','sup_train','sup_hpo','rl_train','rl_baselines','gen_vae_train','gen_gan_train','gen_dcgan_train','ae_train','nn_train','nn_finetune'):
                         node['data']['params']['epochs']=2
                         node['data']['params']['trials']=2
                 result=DAGRunner(graph).execute()
@@ -40,7 +48,13 @@ class LibraryTests(unittest.TestCase):
                     self.assertEqual(len(result['plots']),3)
                     self.assertEqual(result['plots'][1]['x_key'],'coordinate')
                     self.assertEqual(len(result['plots'][1]['line_rows']),300)
-                if entry.get('infographic') and not entry['id'].startswith('notebook-'):
+                tools=any(n['data']['kind'].startswith(('sup_','rl_','gen_','ae_')) for n in graph['nodes'])
+                if entry.get('infographic') and tools:
+                    # Blueprints de herramientas atómicas: un informe por herramienta; el último mide TE.
+                    self.assertTrue(all(s['selected'] for s in result['studies']))
+                    self.assertTrue(result['studies'][-1]['metrics'])
+                    self.assertGreaterEqual(len(result['studies'][-1]['charts']),1)
+                elif entry.get('infographic') and not entry['id'].startswith('notebook-'):
                     report=result['studies'][0]
                     self.assertTrue(report['selected'])
                     self.assertTrue(report['metrics'])

@@ -1,6 +1,10 @@
 """Local FastAPI bridge. CPU work runs off the event loop, one graph at a time."""
 import asyncio
 import os
+# macOS: torch, scikit-learn y xgboost (Homebrew) traen cada uno su libomp. Con varios runtimes OpenMP
+# lanzando hilos en el mismo proceso, el motor hace segfault (EXC_BAD_ACCESS en libomp). Un solo hilo
+# OpenMP lo evita; debe fijarse ANTES de importar torch/numpy/sklearn/xgboost.
+os.environ.setdefault('OMP_NUM_THREADS', '1')
 import threading
 import torch
 
@@ -12,13 +16,25 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field
 try:
     from .engine.dag_runner import DAGRunner
+    from .engine.nodes import polymarket_nodes as polymarket
+    from .brain import fixer as brain_fixer
+    from .brain import explain as brain_explain, llm as brain_llm, planner as brain_planner, store as brain_store, tutor as brain_tutor
 except ImportError:
     from engine.dag_runner import DAGRunner
+    from engine.nodes import polymarket_nodes as polymarket
+    from brain import fixer as brain_fixer
+    from brain import explain as brain_explain, llm as brain_llm, planner as brain_planner, store as brain_store, tutor as brain_tutor
+
+
+import json as _json
+from pathlib import Path as _Path
+NODE_KINDS = tuple(_json.loads((_Path(__file__).resolve().parents[1]/'src/renderer/data/node-contracts.json').read_text())['nodes'])
+NodeKind = Literal[NODE_KINDS]  # type: ignore[valid-type]
 
 
 class NodeData(BaseModel):
     model_config = ConfigDict(extra='ignore')
-    kind: Literal['data_quality','quant_features','ml_model','rl_agent','resample','select_columns','coordinate','center','scale_columns','source', 'features', 'prepare', 'model', 'backtest', 'config', 'network_input', 'layer', 'network_output', 'merge', 'plot', 'portfolio_data', 'portfolio', 'risk', 'study', 'curve_data', 'curve_fit']
+    kind: NodeKind  # derivado de node-contracts.json: una herramienta nueva no requiere editar esta lista
     label: str = ''
     params: dict[str, str | int | float | bool] = Field(default_factory=dict)
 
@@ -40,10 +56,40 @@ class Graph(BaseModel):
     edges: list[Edge] = Field(default_factory=list, max_length=150)
 
 
-app = FastAPI(title='Quant Blueprint Engine', version='0.7.1')
+app = FastAPI(title='Quant Blueprint Engine', version='0.8.0')
 app.add_middleware(CORSMiddleware, allow_origins=['http://127.0.0.1:5173', 'http://localhost:5173'],
                    allow_methods=['GET', 'POST'], allow_headers=['Content-Type'])
 execution_lock = threading.Lock()
+
+
+class PolymarketQuery(BaseModel):
+    query: str = Field(min_length=1, max_length=300)
+    up_outcome: str = 'auto'
+
+
+@app.post('/api/polymarket/search')
+def polymarket_search(request: PolymarketQuery) -> dict[str, Any]:
+    try:
+        return {'results': polymarket.search_markets(request.query, 10)}
+    except ValueError as exc:
+        raise HTTPException(502, str(exc)) from exc
+
+
+@app.post('/api/polymarket/resolve')
+def polymarket_resolve(request: PolymarketQuery) -> dict[str, Any]:
+    try:
+        return {'market': polymarket.market_meta(request.query, request.up_outcome)}
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
+class LearningKey(BaseModel):
+    key: str = Field(min_length=1, max_length=120)
+
+
+@app.post('/api/polymarket/learning/reset')
+def polymarket_learning_reset(request: LearningKey) -> dict[str, Any]:
+    return {'reset': polymarket.reset_learning(request.key)}
 
 
 @app.get('/api/health')
@@ -60,6 +106,111 @@ def run(graph: Graph) -> dict[str, Any]:
         raise HTTPException(422, str(exc)) from exc
     finally:
         execution_lock.release()
+
+
+class PlanRequest(BaseModel):
+    prompt: str = Field(min_length=1, max_length=2000)
+    engine: Literal['auto', 'ollama', 'rules'] = 'auto'
+    catalog: dict[str, dict[str, Any]]
+
+
+class ExplainRequest(BaseModel):
+    report: dict[str, Any]
+    engine: Literal['auto', 'ollama', 'rules'] = 'auto'
+
+
+class AskRequest(BaseModel):
+    question: str = Field(min_length=1, max_length=1000)
+    engine: Literal['auto', 'ollama', 'rules'] = 'auto'
+    node_type: str | None = None
+    catalog: dict[str, dict[str, Any]]
+
+
+class FeedbackRequest(BaseModel):
+    plan_id: str = Field(min_length=1, max_length=40)
+    rating: Literal[-1, 0, 1]
+
+
+class RequestStatus(BaseModel):
+    id: str = Field(min_length=1, max_length=40)
+    status: Literal['pending', 'planned', 'discarded']
+
+
+@app.post('/api/brain/ask')
+def brain_ask(request: AskRequest) -> dict[str, Any]:
+    try:
+        return brain_tutor.ask(request.question, request.catalog, request.engine, request.node_type)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@app.get('/api/brain/ping')
+def brain_ping() -> dict[str, Any]:
+    return brain_llm.ping()
+
+
+@app.get('/api/brain/memory')
+def brain_memory() -> dict[str, Any]:
+    return brain_store.memory()
+
+
+@app.post('/api/brain/feedback')
+def brain_feedback(request: FeedbackRequest) -> dict[str, Any]:
+    try:
+        return brain_store.rate(request.plan_id, request.rating)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@app.post('/api/brain/request-status')
+def brain_request_status(request: RequestStatus) -> dict[str, Any]:
+    try:
+        return brain_store.set_request_status(request.id, request.status)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@app.post('/api/validate')
+def validate(graph: Graph) -> dict[str, Any]:
+    """Engine-side structural check (pins, cycles, required inputs) without executing."""
+    return brain_planner.structural_check(graph.model_dump())
+
+
+@app.get('/api/brain/status')
+def brain_status() -> dict[str, Any]:
+    return brain_llm.status()
+
+
+@app.post('/api/brain/plan')
+def brain_plan(request: PlanRequest) -> dict[str, Any]:
+    try:
+        return brain_planner.plan(request.prompt, request.catalog, request.engine)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+class FixRequest(BaseModel):
+    graph: dict[str, Any]
+    error: str | None = Field(default=None, max_length=4000)
+    issues: list[dict[str, Any]] = Field(default_factory=list, max_length=100)
+    catalog: dict[str, dict[str, Any]]
+    engine: Literal['auto', 'ollama', 'rules'] = 'auto'
+
+
+@app.post('/api/brain/fix')
+def brain_fix(request: FixRequest) -> dict[str, Any]:
+    try:
+        return brain_fixer.fix(request.graph, request.error, request.issues, request.catalog, request.engine)
+    except (ValueError, KeyError, TypeError) as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@app.post('/api/brain/explain')
+def brain_explain_result(request: ExplainRequest) -> dict[str, Any]:
+    try:
+        return brain_explain.explain(request.report, request.engine)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
 
 
 @app.post('/api/execute')
@@ -116,4 +267,4 @@ async def execute_ws(socket: WebSocket) -> None:
 
 if __name__ == '__main__':
     import uvicorn
-    uvicorn.run(app, host='127.0.0.1', port=8000)
+    uvicorn.run(app, host='127.0.0.1', port=int(os.environ.get('QL_ENGINE_PORT', '8000')))

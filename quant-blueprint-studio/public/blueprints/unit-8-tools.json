@@ -1,0 +1,270 @@
+{
+  "format": "quantlabs-blueprint-library",
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "unit-8-tools",
+      "title": "Unidad 8 · Autoencoders en 10 herramientas",
+      "area": "Representaciones",
+      "description": "Los diez segmentos de la infografía como nodos independientes: validar/dividir, estandarizar en TR, PCA, encoder, decoder, ruido, entrenar AE/DAE, seleccionar por reconstrucción, Ridge sobre factores y medición en test.",
+      "instructions": [
+        "Serie sintética reproducible, sin internet; cambia SPY / Market Data a yfinance para datos reales.",
+        "Cada herramienta se configura en el Inspector y muestra su propio informe: arquitectura, curvas de VA, comparación y métricas.",
+        "Encoder/Decoder definen la red; Ruido sólo afecta a la entrada del DAE. Desactiva «Entrenar DAE» si quitas el nodo Ruido.",
+        "Seleccionar usa sólo VA; Medir en test evalúa TE una vez y compara reconstrucción frente a predicción de y_bps."
+      ],
+      "infographic": "unidad-8.png",
+      "graph": {
+        "nodes": [
+          {
+            "id": "data",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 120
+            },
+            "data": {
+              "kind": "source",
+              "label": "SPY · synthetic / yfinance",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 5
+              }
+            }
+          },
+          {
+            "id": "features",
+            "type": "blueprint",
+            "position": {
+              "x": 330,
+              "y": 120
+            },
+            "data": {
+              "kind": "features",
+              "label": "11 causal indicators",
+              "params": {
+                "lags": 0,
+                "use_rsi": true,
+                "use_ema": true,
+                "use_sma": true,
+                "use_macd": true,
+                "use_vwap": true,
+                "use_bb": true
+              }
+            }
+          },
+          {
+            "id": "AE_SPLIT",
+            "type": "blueprint",
+            "position": {
+              "x": 660,
+              "y": 120
+            },
+            "data": {
+              "kind": "ae_split",
+              "label": "1 · Validar y dividir",
+              "params": {}
+            }
+          },
+          {
+            "id": "AE_STANDARDIZE",
+            "type": "blueprint",
+            "position": {
+              "x": 990,
+              "y": 120
+            },
+            "data": {
+              "kind": "ae_standardize",
+              "label": "2 · Estandarizar (TR)",
+              "params": {}
+            }
+          },
+          {
+            "id": "AE_PCA",
+            "type": "blueprint",
+            "position": {
+              "x": 1320,
+              "y": 120
+            },
+            "data": {
+              "kind": "ae_pca",
+              "label": "3 · Referencia PCA",
+              "params": {}
+            }
+          },
+          {
+            "id": "AE_ENCODER",
+            "type": "blueprint",
+            "position": {
+              "x": 1650,
+              "y": 120
+            },
+            "data": {
+              "kind": "ae_encoder",
+              "label": "4 · Encoder",
+              "params": {}
+            }
+          },
+          {
+            "id": "AE_DECODER",
+            "type": "blueprint",
+            "position": {
+              "x": 1980,
+              "y": 120
+            },
+            "data": {
+              "kind": "ae_decoder",
+              "label": "5 · Decoder",
+              "params": {}
+            }
+          },
+          {
+            "id": "AE_NOISE",
+            "type": "blueprint",
+            "position": {
+              "x": 660,
+              "y": 380
+            },
+            "data": {
+              "kind": "ae_noise",
+              "label": "6 · Ruido (denoising)",
+              "params": {}
+            }
+          },
+          {
+            "id": "AE_TRAIN",
+            "type": "blueprint",
+            "position": {
+              "x": 990,
+              "y": 380
+            },
+            "data": {
+              "kind": "ae_train",
+              "label": "7 · Entrenar AE / DAE",
+              "params": {}
+            }
+          },
+          {
+            "id": "AE_SELECT",
+            "type": "blueprint",
+            "position": {
+              "x": 1320,
+              "y": 380
+            },
+            "data": {
+              "kind": "ae_select",
+              "label": "8 · Seleccionar por reconstrucción",
+              "params": {}
+            }
+          },
+          {
+            "id": "AE_RIDGE",
+            "type": "blueprint",
+            "position": {
+              "x": 1650,
+              "y": 380
+            },
+            "data": {
+              "kind": "ae_ridge",
+              "label": "9 · Ridge sobre factores",
+              "params": {}
+            }
+          },
+          {
+            "id": "AE_TEST",
+            "type": "blueprint",
+            "position": {
+              "x": 1980,
+              "y": 380
+            },
+            "data": {
+              "kind": "ae_test",
+              "label": "10 · Medir en test",
+              "params": {}
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e0",
+            "source": "data",
+            "target": "features",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "e1",
+            "source": "features",
+            "target": "AE_SPLIT",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "e2",
+            "source": "AE_SPLIT",
+            "target": "AE_STANDARDIZE",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "e3",
+            "source": "AE_STANDARDIZE",
+            "target": "AE_PCA",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "e4",
+            "source": "AE_PCA",
+            "target": "AE_ENCODER",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "e5",
+            "source": "AE_ENCODER",
+            "target": "AE_DECODER",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "e6",
+            "source": "AE_DECODER",
+            "target": "AE_NOISE",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "e7",
+            "source": "AE_NOISE",
+            "target": "AE_TRAIN",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "e8",
+            "source": "AE_TRAIN",
+            "target": "AE_SELECT",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "e9",
+            "source": "AE_SELECT",
+            "target": "AE_RIDGE",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "e10",
+            "source": "AE_RIDGE",
+            "target": "AE_TEST",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,302 @@
+{
+  "format": "quantlabs-blueprint-library",
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "taxonomy-overview",
+      "title": "Machine Learning · mapa completo",
+      "area": "Taxonomía ML · panorámica",
+      "description": "Supervisado, no supervisado (clustering, reducción, asociación, anomalías), semi-supervisado, auto-supervisado y refuerzo en un solo lienzo.",
+      "instructions": [
+        "Fuente synthetic para ejecutar sin internet; cambia a yfinance para activos reales. Todo lo ajustado usa sólo TR.",
+        "Cada rama produce su propio informe; abre las fichas de cada familia para estudiarlas con detalle."
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "Datos",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 400
+            },
+            "data": {
+              "kind": "source",
+              "label": "Datos",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 4
+              }
+            }
+          },
+          {
+            "id": "Indicadores",
+            "type": "blueprint",
+            "position": {
+              "x": 300,
+              "y": 400
+            },
+            "data": {
+              "kind": "features",
+              "label": "Indicadores",
+              "params": {}
+            }
+          },
+          {
+            "id": "Limpiar",
+            "type": "blueprint",
+            "position": {
+              "x": 600,
+              "y": 400
+            },
+            "data": {
+              "kind": "ml_clean",
+              "label": "Limpieza",
+              "params": {
+                "missing": "drop"
+              }
+            }
+          },
+          {
+            "id": "Dividir",
+            "type": "blueprint",
+            "position": {
+              "x": 900,
+              "y": 100
+            },
+            "data": {
+              "kind": "ml_split",
+              "label": "Dividir TR / VA / TE",
+              "params": {
+                "target": "LogReturn",
+                "target_mode": "direction",
+                "features": "LogReturn,Volatility,RSI,EMA,SMA",
+                "gap": 1
+              }
+            }
+          },
+          {
+            "id": "Clas",
+            "type": "blueprint",
+            "position": {
+              "x": 1200,
+              "y": 0
+            },
+            "data": {
+              "kind": "ml_train",
+              "label": "Supervisado · Compare",
+              "params": {
+                "algorithm_cls": "Compare",
+                "estimators": 60,
+                "max_depth": 4
+              }
+            }
+          },
+          {
+            "id": "Clu",
+            "type": "blueprint",
+            "position": {
+              "x": 900,
+              "y": 250
+            },
+            "data": {
+              "kind": "ml_cluster",
+              "label": "Clustering",
+              "params": {
+                "algorithm": "K-Means",
+                "features": "LogReturn,Volatility,RSI"
+              }
+            }
+          },
+          {
+            "id": "Red",
+            "type": "blueprint",
+            "position": {
+              "x": 900,
+              "y": 400
+            },
+            "data": {
+              "kind": "ml_reduce",
+              "label": "Reducción · PCA",
+              "params": {
+                "algorithm": "PCA",
+                "features": "LogReturn,Volatility,RSI,EMA,SMA"
+              }
+            }
+          },
+          {
+            "id": "Aso",
+            "type": "blueprint",
+            "position": {
+              "x": 900,
+              "y": 550
+            },
+            "data": {
+              "kind": "ml_assoc",
+              "label": "Asociación · FP-Growth",
+              "params": {
+                "algorithm": "FP-Growth",
+                "features": "LogReturn,Volatility,RSI"
+              }
+            }
+          },
+          {
+            "id": "Ano",
+            "type": "blueprint",
+            "position": {
+              "x": 900,
+              "y": 700
+            },
+            "data": {
+              "kind": "ml_anomaly",
+              "label": "Anomalías · Isolation Forest",
+              "params": {
+                "algorithm": "Isolation Forest",
+                "features": "LogReturn,Volatility"
+              }
+            }
+          },
+          {
+            "id": "Semi",
+            "type": "blueprint",
+            "position": {
+              "x": 1200,
+              "y": 150
+            },
+            "data": {
+              "kind": "ml_semi",
+              "label": "Semi-supervisado",
+              "params": {
+                "algorithm": "Compare"
+              }
+            }
+          },
+          {
+            "id": "Self",
+            "type": "blueprint",
+            "position": {
+              "x": 1200,
+              "y": 300
+            },
+            "data": {
+              "kind": "ml_selfsup",
+              "label": "Auto-supervisado",
+              "params": {
+                "algorithm": "Contrastive",
+                "epochs": 15
+              }
+            }
+          },
+          {
+            "id": "RL",
+            "type": "blueprint",
+            "position": {
+              "x": 300,
+              "y": 850
+            },
+            "data": {
+              "kind": "ml_rl",
+              "label": "Refuerzo · todos",
+              "params": {
+                "family": "all",
+                "algorithm": "Compare",
+                "episodes": 10
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "Datos-Indicadores",
+            "source": "Datos",
+            "target": "Indicadores",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Indicadores-Limpiar",
+            "source": "Indicadores",
+            "target": "Limpiar",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Limpiar-Dividir",
+            "source": "Limpiar",
+            "target": "Dividir",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Limpiar-Clu",
+            "source": "Limpiar",
+            "target": "Clu",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Limpiar-Red",
+            "source": "Limpiar",
+            "target": "Red",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Limpiar-Aso",
+            "source": "Limpiar",
+            "target": "Aso",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Limpiar-Ano",
+            "source": "Limpiar",
+            "target": "Ano",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Dividir-Clas",
+            "source": "Dividir",
+            "target": "Clas",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Dividir-Semi",
+            "source": "Dividir",
+            "target": "Semi",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Dividir-Self",
+            "source": "Dividir",
+            "target": "Self",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "Datos-RL",
+            "source": "Datos",
+            "target": "RL",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          }
+        ]
+      }
+    }
+  ]
+}

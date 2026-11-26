@@ -1,0 +1,296 @@
+{
+  "format": "quantlabs-blueprint-library",
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "unit-9-tools",
+      "title": "Unidad 9 · Modelos generativos en 10 herramientas",
+      "area": "Modelos generativos",
+      "description": "Los diez segmentos de la infografía como nodos independientes: ventanas de 16 retornos, condición causal de volatilidad, purga en cortes, escalas TR, CVAE, reparametrización, MSE + β·KL, cGAN alternada, selección con ruido fijo en VA y evaluación de distribución, dependencia y colas en TE.",
+      "instructions": [
+        "Serie sintética reproducible, sin internet; cambia SPY / Market Data a yfinance para datos reales.",
+        "Cada herramienta se configura en el Inspector y muestra su propio informe: ventanas, condición, cortes, escalas, arquitectura, curvas y métricas.",
+        "07 entrena el CVAE y 08 la cGAN sólo con TR y guardan instantáneas; 09 elige modelo y época en VA con ruido fijo; 10 mide TE una vez frente a un bootstrap de TR.",
+        "Quita 07 u 08 para estudiar un solo modelo; sube β en 07 para ver el colapso posterior, o la temperatura en 06 para dispersar escenarios."
+      ],
+      "infographic": "unidad-9.png",
+      "graph": {
+        "nodes": [
+          {
+            "id": "data",
+            "type": "blueprint",
+            "position": {
+              "x": 0,
+              "y": 120
+            },
+            "data": {
+              "kind": "source",
+              "label": "SPY · synthetic / yfinance",
+              "params": {
+                "source": "synthetic",
+                "ticker": "SPY",
+                "years": 10
+              }
+            }
+          },
+          {
+            "id": "features",
+            "type": "blueprint",
+            "position": {
+              "x": 330,
+              "y": 120
+            },
+            "data": {
+              "kind": "features",
+              "label": "LogReturn causal",
+              "params": {
+                "lags": 0,
+                "use_rsi": false,
+                "use_ema": false,
+                "use_sma": false,
+                "use_macd": false,
+                "use_vwap": false,
+                "use_bb": false
+              }
+            }
+          },
+          {
+            "id": "GEN_WINDOWS",
+            "type": "blueprint",
+            "position": {
+              "x": 660,
+              "y": 120
+            },
+            "data": {
+              "kind": "gen_windows",
+              "label": "01 · Crear ventanas",
+              "params": {}
+            }
+          },
+          {
+            "id": "GEN_CONDITION",
+            "type": "blueprint",
+            "position": {
+              "x": 990,
+              "y": 120
+            },
+            "data": {
+              "kind": "gen_condition",
+              "label": "02 · Condición causal",
+              "params": {}
+            }
+          },
+          {
+            "id": "GEN_SPLIT",
+            "type": "blueprint",
+            "position": {
+              "x": 1320,
+              "y": 120
+            },
+            "data": {
+              "kind": "gen_split",
+              "label": "03 · Separar ventanas",
+              "params": {}
+            }
+          },
+          {
+            "id": "GEN_SCALE",
+            "type": "blueprint",
+            "position": {
+              "x": 1650,
+              "y": 120
+            },
+            "data": {
+              "kind": "gen_scale",
+              "label": "04 · Escalar con TR",
+              "params": {}
+            }
+          },
+          {
+            "id": "GEN_CVAE",
+            "type": "blueprint",
+            "position": {
+              "x": 1980,
+              "y": 120
+            },
+            "data": {
+              "kind": "gen_cvae",
+              "label": "05 · VAE condicional",
+              "params": {}
+            }
+          },
+          {
+            "id": "GEN_REPARAM",
+            "type": "blueprint",
+            "position": {
+              "x": 660,
+              "y": 380
+            },
+            "data": {
+              "kind": "gen_reparam",
+              "label": "06 · Reparametrizar",
+              "params": {}
+            }
+          },
+          {
+            "id": "GEN_VAE_TRAIN",
+            "type": "blueprint",
+            "position": {
+              "x": 990,
+              "y": 380
+            },
+            "data": {
+              "kind": "gen_vae_train",
+              "label": "07 · Reconstrucción + KL",
+              "params": {}
+            }
+          },
+          {
+            "id": "GEN_GAN_TRAIN",
+            "type": "blueprint",
+            "position": {
+              "x": 1320,
+              "y": 380
+            },
+            "data": {
+              "kind": "gen_gan_train",
+              "label": "08 · Generador y discriminador",
+              "params": {}
+            }
+          },
+          {
+            "id": "GEN_SELECT",
+            "type": "blueprint",
+            "position": {
+              "x": 1650,
+              "y": 380
+            },
+            "data": {
+              "kind": "gen_select",
+              "label": "09 · Seleccionar sin mirar test",
+              "params": {}
+            }
+          },
+          {
+            "id": "GEN_EVALUATE",
+            "type": "blueprint",
+            "position": {
+              "x": 1980,
+              "y": 380
+            },
+            "data": {
+              "kind": "gen_evaluate",
+              "label": "10 · Evaluar escenarios y colas",
+              "params": {}
+            }
+          },
+          {
+            "id": "chart-var",
+            "type": "blueprint",
+            "position": {
+              "x": 2310,
+              "y": 380
+            },
+            "data": {
+              "kind": "plot",
+              "label": "VaR generado vs real (TE)",
+              "params": {
+                "title": "VaR generado vs real (TE)",
+                "plot_source": "columns",
+                "plot_columns": "Real_cum,Gen_VaR_cum",
+                "chart_type": "line",
+                "color": "Coral"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e0",
+            "source": "data",
+            "target": "features",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "e1",
+            "source": "features",
+            "target": "GEN_WINDOWS",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "e2",
+            "source": "GEN_WINDOWS",
+            "target": "GEN_CONDITION",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "e3",
+            "source": "GEN_CONDITION",
+            "target": "GEN_SPLIT",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "e4",
+            "source": "GEN_SPLIT",
+            "target": "GEN_SCALE",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "e5",
+            "source": "GEN_SCALE",
+            "target": "GEN_CVAE",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "e6",
+            "source": "GEN_CVAE",
+            "target": "GEN_REPARAM",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "e7",
+            "source": "GEN_REPARAM",
+            "target": "GEN_VAE_TRAIN",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "e8",
+            "source": "GEN_VAE_TRAIN",
+            "target": "GEN_GAN_TRAIN",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "e9",
+            "source": "GEN_GAN_TRAIN",
+            "target": "GEN_SELECT",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "e10",
+            "source": "GEN_SELECT",
+            "target": "GEN_EVALUATE",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          },
+          {
+            "id": "e-plot",
+            "source": "GEN_EVALUATE",
+            "target": "chart-var",
+            "sourceHandle": "frame",
+            "targetHandle": "frame"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -5,6 +5,13 @@ import {
   type BlueprintNode,
   type Param,
 } from "../types/blueprint";
+import { PolymarketPicker, OnlineReset } from "./PolymarketPicker";
+/** Laya nodes run in Polymarket mode after a Polymarket Market node unless «mode» says otherwise. */
+function fieldMode(node: BlueprintNode, polymarketUpstream: boolean): "daily" | "polymarket" {
+  const mode = String(node.data.params.mode ?? "auto");
+  if (mode === "daily" || mode === "polymarket") return mode;
+  return polymarketUpstream ? "polymarket" : "daily";
+}
 interface Props {
   node: BlueprintNode | undefined;
   onChange: (key: string, value: Param) => void;
@@ -14,6 +21,9 @@ interface Props {
   onDuplicate: () => void;
   networkConnected?: boolean;
   frameConnected?: boolean;
+  onMarketResolved?: (market: { question: string; slug: string; window: string | null }) => void;
+  /** A Polymarket Market node feeds this one (directly or further upstream). */
+  polymarketUpstream?: boolean;
 }
 export function DetailsInspector({
   node,
@@ -24,6 +34,8 @@ export function DetailsInspector({
   onDuplicate,
   networkConnected = false,
   frameConnected = false,
+  onMarketResolved,
+  polymarketUpstream = false,
 }: Props) {
   return (
     <aside className="inspector">
@@ -85,6 +97,88 @@ export function DetailsInspector({
               Acciones Short/Cash/Long. Replay sólo TR; VA elige checkpoint; TE
               usa política greedy sin aprender. Compara Double DQN, Q-learning,
               largo y efectivo. El informe se conecta a Plot.
+            </p>
+          )}
+          {node.data.kind === "polymarket_source" && (
+            <>
+              <PolymarketPicker
+                market={String(node.data.params.market ?? catalog.polymarket_source.fields[0].value)}
+                upOutcome={String(node.data.params.up_outcome ?? "auto")}
+                disabled={disabled}
+                onChange={onChange}
+                onResolved={onMarketResolved}
+              />
+              <p className="inspector-hint">
+                Lee cualquier mercado binario de Polymarket (Gamma + CLOB). Un
+                alias como btc-updown-15m apunta a la ventana activa. Close =
+                P(UP) implícita; el libro sólo se escribe en la última fila.
+              </p>
+            </>
+          )}
+          {node.data.kind === "yfinance_data" && (
+            <p className="inspector-hint">
+              Descarga un ticker de Yahoo Finance con las opciones de yfinance.download.
+              Límites de Yahoo para intradía: 1m ≈ 7 días (sólo los últimos 30), 2m–90m
+              hasta 60 días, 60m/1h hasta 730 días; diario o mayor, sin límite. La fecha
+              de fin es exclusiva. El intradía se expresa en la zona horaria elegida.
+            </p>
+          )}
+          {node.data.kind === "polymarket_dashboard" && (
+            <p className="inspector-hint">
+              Conectado a Polymarket Market muestra el dashboard de ese mercado:
+              outcomes, cuenta atrás, subyacente vs precio a vencer, KPIs, historial,
+              profundidad y niveles del libro, flujo de operaciones hacia cada
+              outcome, últimas operaciones, mercados del mismo evento y concentración
+              de tenedores (sólo agregados). Sin conexión, descarga los eventos
+              activos de Polymarket (Gamma API), los organiza y
+              los presenta como dashboard: KPIs, volumen por categoría, mercados más
+              negociados, mayores movimientos 24 h, más disputados, cierran en 24 h,
+              más líquidos y spreads amplios. Con una categoría elegida, el desglose
+              es por subcategoría. Usa ● En vivo para refrescarlo en ciclo. Categoría,
+              orden, páginas y filas sólo aplican sin conexión.
+            </p>
+          )}
+          {node.data.kind === "laya_updown" && (
+            <OnlineReset
+              params={node.data.params}
+              disabled={disabled}
+            />
+          )}
+          {node.data.kind === "laya_updown" && (
+            <p className="inspector-hint">
+              P(UP) = σ(sesgo + Σ wᵢ·zᵢ) con señales mercado, momentum, Laya y
+              desequilibrio del libro. Ajusta los pesos aquí o usa «calibrated»
+              con Laya Calibrate aguas arriba. Cada cambio queda en el informe
+              (traza por señal y JSON de decisión).
+            </p>
+          )}
+          {node.data.kind === "laya_signal" && (
+            <p className="inspector-hint">
+              Cada día envía a Laya un estado JSON con indicadores conocidos al
+              cierre (RSI, MACD, retornos, volatilidad, posición Bollinger) y
+              tres preguntas tipadas. Laya devuelve probabilidades calibradas
+              sin generar texto. Edita las preguntas para ver cómo cambian las
+              respuestas. La primera ejecución descarga el modelo; después hay
+              caché. Tras Polymarket Market (modo auto) pregunta una vez por cada
+              ventana resuelta de la serie, con su resultado real, y por la
+              ventana actual.
+            </p>
+          )}
+          {node.data.kind === "laya_calibrate" && (
+            <p className="inspector-hint">
+              Ajuste de pesos: aprende w en p = σ(w·x) con x = [sesgo,
+              log(P_up/P_down), logit P(higher), riesgo]. Gradiente sólo con
+              TR, VA elige la época, TE se mide una vez. Compara Brier, logloss
+              y ECE de Laya cruda vs calibrada. Con Polymarket ajusta sesgo y
+              pesos de mercado, momentum y Laya sobre las ventanas resueltas y
+              los compara con seguir al mercado.
+            </p>
+          )}
+          {node.data.kind === "laya_feedback" && (
+            <p className="inspector-hint">
+              Retroalimentación diaria: predice con w, espera el retorno real de
+              t+1 y corrige w ← w − lr·(p − y)·x. Parte de los pesos de Laya
+              Calibrate si está conectado. Lista los errores de mayor pérdida.
             </p>
           )}
           {node.data.kind === "data_quality" && (
@@ -182,7 +276,20 @@ export function DetailsInspector({
             </p>
           )}
           <fieldset disabled={disabled}>
-            {catalog[node.data.kind].fields.map((field) => (
+            {node.data.kind.startsWith("laya_") && catalog[node.data.kind].fields.some((f) => f.mode) && (
+              <p className="inspector-hint">
+                Modo {fieldMode(node, polymarketUpstream) === "polymarket" ? "Polymarket (ventanas resueltas)" : "diario (acciones / yfinance)"}:
+                sólo se muestran los parámetros que usa este modo.
+              </p>
+            )}
+            {catalog[node.data.kind].fields
+              .filter((field) => !field.mode || field.mode === fieldMode(node, polymarketUpstream))
+              .filter((field) => {
+                if (!field.showIf) return true;
+                const own = node.data.params[field.showIf.key] ?? catalog[node.data.kind].fields.find((f) => f.key === field.showIf!.key)?.value;
+                return own === field.showIf.value;
+              })
+              .map((field) => (
               <div className="inspector-field" key={field.key}>
                 <label htmlFor={`param-${field.key}`}>{field.label}</label>
                 {field.key === "feature_columns" ? (

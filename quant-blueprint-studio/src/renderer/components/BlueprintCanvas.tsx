@@ -30,6 +30,9 @@ import {
   BrainCircuit,
   ChartNoAxesCombined,
   Settings2,
+  Workflow,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import {
   studyArchitecture,
@@ -44,6 +47,88 @@ import {
 import "@xyflow/react/dist/style.css";
 import { validConnection, payloadLabel } from "../connections";
 const icons = {
+  nn_data: Database,
+  nn_guard: Settings2,
+  nn_input: Layers3,
+  nn_split: Workflow,
+  nn_scaler: SlidersHorizontal,
+  nn_embedding: Layers3,
+  nn_hidden: BrainCircuit,
+  nn_output: Layers3,
+  nn_train: BrainCircuit,
+  nn_finetune: BrainCircuit,
+  nn_predict: ChartNoAxesCombined,
+  dl_recurrent_compare: BrainCircuit,
+  dl_tabular_forecast: BrainCircuit,
+  dl_sequence_classifier: BrainCircuit,
+  dl_anomaly_autoencoder: BrainCircuit,
+  ml_select: SlidersHorizontal,
+  ml_returns: ChartNoAxesCombined,
+  ml_clean: Database,
+  ml_split: Layers3,
+  ml_train: BrainCircuit,
+  ml_evaluate: SlidersHorizontal,
+  ml_predict: BrainCircuit,
+  ml_visualize: ChartNoAxesCombined,
+  ml_cluster: BrainCircuit,
+  ml_reduce: BrainCircuit,
+  ml_assoc: BrainCircuit,
+  ml_anomaly: BrainCircuit,
+  ml_semi: BrainCircuit,
+  ml_selfsup: BrainCircuit,
+  ml_rl: BrainCircuit,
+  ae_split: Layers3,
+  sup_target: SlidersHorizontal,
+  sup_split: Layers3,
+  sup_scale: SlidersHorizontal,
+  sup_windows: Layers3,
+  sup_init: Settings2,
+  sup_mlp: BrainCircuit,
+  sup_cnn: BrainCircuit,
+  sup_rnn: BrainCircuit,
+  sup_optimizer: Settings2,
+  sup_regularizer: Settings2,
+  sup_loss: Settings2,
+  sup_hpo: BrainCircuit,
+  sup_train: BrainCircuit,
+  sup_select: SlidersHorizontal,
+  sup_evaluate: ChartNoAxesCombined,
+  rl_env: Layers3,
+  rl_qnet: BrainCircuit,
+  rl_replay: BrainCircuit,
+  rl_target: BrainCircuit,
+  rl_sync: BrainCircuit,
+  rl_train: BrainCircuit,
+  rl_baselines: ChartNoAxesCombined,
+  rl_evaluate: ChartNoAxesCombined,
+  gen_dcgan_train: BrainCircuit,
+  gen_regime_compare: ChartNoAxesCombined,
+  gen_windows: Layers3,
+  gen_condition: SlidersHorizontal,
+  gen_split: Layers3,
+  gen_scale: SlidersHorizontal,
+  gen_cvae: BrainCircuit,
+  gen_reparam: SlidersHorizontal,
+  gen_vae_train: BrainCircuit,
+  gen_gan_train: BrainCircuit,
+  gen_select: SlidersHorizontal,
+  gen_evaluate: ChartNoAxesCombined,
+  ae_standardize: SlidersHorizontal,
+  ae_pca: ChartNoAxesCombined,
+  ae_encoder: BrainCircuit,
+  ae_decoder: BrainCircuit,
+  ae_noise: SlidersHorizontal,
+  ae_train: BrainCircuit,
+  ae_select: SlidersHorizontal,
+  ae_ridge: ChartNoAxesCombined,
+  ae_test: ChartNoAxesCombined,
+  yfinance_data: Database,
+  polymarket_dashboard: ChartNoAxesCombined,
+  polymarket_source: Database,
+  laya_updown: BrainCircuit,
+  laya_signal: BrainCircuit,
+  laya_calibrate: SlidersHorizontal,
+  laya_feedback: ChartNoAxesCombined,
   data_quality: Database,
   quant_features: ChartNoAxesCombined,
   ml_model: BrainCircuit,
@@ -79,6 +164,143 @@ function nodeSummary(data: BlueprintNode["data"]): string {
     ...data.params,
   };
   switch (data.kind) {
+    case "dl_recurrent_compare":
+      return `${[p.use_lstm !== false && "LSTM", p.use_gru !== false && "GRU", p.use_lstm_bi !== false && "LSTM bi", p.use_gru_bi === true && "GRU bi"].filter(Boolean).join(" · ")} · ${p.lookback}×${String(p.features).split(",").filter(Boolean).length || "auto"} → ${p.target} (bps) · vs Ridge`;
+    case "dl_tabular_forecast":
+      return `In ${String(p.architecture).toUpperCase()} ${p.input_units} → ${p.layers || `${p.hidden_layers}×${p.units} ${p.activation}`} → Out ${p.horizon} · ${p.optimizer}`;
+    case "dl_sequence_classifier":
+      return `In GRU ${p.input_units} → ${p.layers || `${p.hidden_layers}×${p.units} ${p.activation}`} → Out ${p.classes} clases · ${p.optimizer}`;
+    case "dl_anomaly_autoencoder":
+      return `In ${p.input_units} → ${p.layers || `${p.hidden_layers}×${p.units}`} → z${p.latent} → espejo → Out · ${p.optimizer}`;
+    case "ml_select":
+      return `${p.mode} · ${String(p.columns || "todas").slice(0, 32)}`;
+    case "ml_returns":
+      return `${p.return_type} · ${p.columns} · k=${p.periods}`;
+    case "ml_clean":
+      return `faltantes ${p.missing} · atípicos ${p.outliers}`;
+    case "ml_split":
+      return `${p.target || "auto"} ${p.target_mode} · ${p.method} · TR ${p.train_ratio} / VA ${p.val_ratio} · ${p.scaling}`;
+    case "ml_train":
+      return `${p.algorithm} / ${p.algorithm_cls} · ajuste TR · selección VA`;
+    case "ml_evaluate":
+      return [p.eval_tr && "TR", p.eval_va && "VA", p.eval_te && "TE"].filter(Boolean).join(" · ") + " · línea base";
+    case "ml_predict":
+      return `${p.scope} → ${p.output_column}`;
+    case "ml_cluster":
+    case "ml_reduce":
+    case "ml_assoc":
+    case "ml_anomaly":
+    case "ml_semi":
+    case "ml_selfsup":
+      return `${p.algorithm}`;
+    case "ml_rl":
+      return `${p.algorithm} · ${p.family} · ${p.episodes} episodios`;
+    case "ml_visualize":
+      return [p.series && "serie", p.scatter && "dispersión", p.residuals && "residuos", p.importance && "importancia"].filter(Boolean).join(" · ");
+    case "gen_windows":
+      return `w = ret[i:i+${p.horizon}] · paso ${p.stride}`;
+    case "gen_condition":
+      return `${[p.use_log_vol && "log σ", p.use_momentum && "momentum"].filter(Boolean).join(" + ")} de ret[i-${p.lookback}:i]`;
+    case "gen_split":
+      return p.cut_mode === "dates" ? `VAL ${p.val_start} · TEST ${p.test_start} · purga cortes` : `TR ${p.train_ratio} / VA ${p.val_ratio} · purga cortes`;
+    case "gen_scale":
+      return `media/σ TR · retornos ${p.return_scale} · condición`;
+    case "gen_cvae":
+      return `cat(x, c) → ${p.widths} → μ, log σ² (ZDIM ${p.latent_dim})`;
+    case "gen_reparam":
+      return `z = μ + σ ⊙ ε · ${p.mode} · T=${p.temperature}`;
+    case "gen_vae_train":
+      return `MSE + ${p.beta}·KL · ${p.epochs} épocas · ${p.device}`;
+    case "gen_gan_train":
+      return `G/D ${p.widths} · ${p.epochs} épocas · d_steps ${p.d_steps}${p.amp ? " · AMP" : ""}`;
+    case "gen_select":
+      return `ruido fijo (semilla ${p.noise_seed}) · score VA`;
+    case "gen_evaluate":
+      return `${p.scenarios_per_condition} escenarios/ventana · VaR ${p.var_level}${p.bootstrap_baseline ? " · vs bootstrap" : ""}`;
+    case "sup_target":
+      return `${String(p.features).split(",").filter(Boolean).length} rasgos · ${p.task === "direction" ? "dirección t+1" : "y_bps intradía t+1"}`;
+    case "sup_split":
+      return p.cut_mode === "dates" ? `VAL ${p.val_start} · TEST ${p.test_start}` : `TR ${p.train_ratio} / VA ${p.val_ratio}`;
+    case "sup_scale":
+      return `${p.method} · fit TR${p.scale_target ? " · y_scaler" : ""}`;
+    case "sup_windows":
+      return `(batch, ${p.lookback}, rasgos)`;
+    case "sup_init":
+      return `${p.scheme} · semilla ${p.seed}`;
+    case "sup_mlp":
+      return `${p.name || "MLP"} · ${p.widths} ${p.activation}${Number(p.dropout) ? ` · dropout ${p.dropout}` : ""}${p.include_as_candidate === false ? " · plantilla" : ""}`;
+    case "sup_cnn":
+      return `Conv1d ${p.channels} · k ${p.kernel} · pool → 1`;
+    case "sup_rnn":
+      return `${p.bidirectional ? "Bi" : ""}${p.cell} ${p.hidden} · estado final → 1`;
+    case "sup_optimizer":
+      return `${p.optimizer} · lr ${p.lr}`;
+    case "sup_regularizer":
+      return `${p.kind}${["Baseline", "BatchNorm"].includes(String(p.kind)) ? "" : ` ${p.value}`}`;
+    case "sup_loss":
+      return `pérdida ${p.loss}`;
+    case "sup_hpo":
+      return `${p.trials} pruebas · folds ${p.folds} · lr 10^[${p.log_lr_min}, ${p.log_lr_max}]`;
+    case "sup_train":
+      return `${p.epochs} épocas · lote ${p.batch_size} · paciencia ${p.patience} · ${p.device}`;
+    case "sup_select":
+      return "menor pérdida en VA";
+    case "sup_evaluate":
+      return `TE · costes ${p.cost_bps} bps${p.ridge ? " · vs Ridge" : ""}`;
+    case "rl_env":
+      return `rasgos + posición · acciones −1/0/1 · ${p.cost_bps} bps`;
+    case "rl_qnet":
+      return `online + target · ${p.widths} → 3 Q`;
+    case "rl_replay":
+      return `buffer ${p.capacity} · lote ${p.batch_size} · ε ${p.eps_start}→${p.eps_end}`;
+    case "rl_target":
+      return `${p.double ? "Double DQN" : "DQN"} · γ ${p.gamma}`;
+    case "rl_sync":
+      return `copiar cada ${p.sync_every} · checkpoint ${p.checkpoint_metric}`;
+    case "rl_train":
+      return `${p.epochs} épocas · Huber · clip ${p.grad_clip}`;
+    case "rl_baselines":
+      return [p.q_learning && "Q-learning", p.always_long && "largo", p.cash && "efectivo"].filter(Boolean).join(" · ");
+    case "rl_evaluate":
+      return "greedy en TE · sin aprender";
+    case "gen_dcgan_train":
+      return `z ${p.latent_dim} · emb ${p.embedding_dim} · ${p.channels} canales · ${p.epochs} épocas`;
+    case "gen_regime_compare":
+      return `${p.scenarios} escenarios × 3 regímenes · semilla ${p.noise_seed}`;
+    case "ae_split":
+      return `${String(p.features).split(",").filter(Boolean).length} indicadores · y_bps ${p.horizon} filas · TR ${p.train_ratio} / VA ${p.val_ratio}`;
+    case "ae_standardize":
+      return "fit TR → transform TR/VA/TE";
+    case "ae_pca":
+      return `PCA(n_components=${p.components})`;
+    case "ae_encoder":
+      return `Lineal(d, ${p.hidden}) → ${p.activation} → Lineal(${p.hidden}, ${p.latent})`;
+    case "ae_decoder":
+      return `Lineal(k, ${p.hidden}) → ${p.activation} → Lineal(${p.hidden}, d)`;
+    case "ae_noise":
+      return `inp = xb + ${p.sigma}·randn_like(xb)`;
+    case "ae_train":
+      return `${[p.train_ae && "AE", p.train_dae && "DAE"].filter(Boolean).join(" + ")} · ${p.epochs} épocas · paciencia ${p.patience} · ${p.device}`;
+    case "ae_select":
+      return `menor MSE VA${p.include_pca ? " · incluye PCA" : ""}`;
+    case "ae_ridge":
+      return `Ridge(alpha=${p.alpha}) · z → y_bps`;
+    case "ae_test":
+      return "MSE reconstrucción · RMSE/R² y_bps en TE";
+    case "yfinance_data":
+      return `${String(p.ticker).toUpperCase()} · ${p.interval} · ${p.range_mode === "start_end" ? `${p.start} → ${p.end || "hoy"}` : p.period}${p.auto_adjust === false ? " · sin ajustar" : ""}`;
+    case "polymarket_dashboard":
+      return `${p.category} · ${p.sort} · ${p.pages}×50 eventos (sin entrada) · o el mercado conectado`;
+    case "polymarket_source":
+      return `${String(p.market).slice(0, 28)} · ${p.window}`;
+    case "laya_updown":
+      return `${p.window} · ${p.weight_source} · Laya ${p.use_laya ? "on" : "off"}`;
+    case "laya_signal":
+      return `${p.checkpoint} · ${p.max_rows} días · 3 preguntas`;
+    case "laya_calibrate":
+      return `TR ${p.train_ratio} · VA ${p.val_ratio} · lr ${p.lr} · ${p.epochs} épocas`;
+    case "laya_feedback":
+      return `lr ${p.lr} · conf ≥ ${p.min_confidence} · ${p.positions}`;
     case "data_quality":
       return `${p.duplicates} duplicates · ${p.missing} missing`;
     case "quant_features":
@@ -134,6 +356,28 @@ function nodeSummary(data: BlueprintNode["data"]): string {
       return `Max Sharpe + min variance · ${Number(p.train_fraction) * 100}% estimation`;
     case "risk":
       return `VaR ${Number(p.confidence) * 100}% · RF ${Number(p.risk_free_rate) * 100}%`;
+    case "nn_data":
+      return `${p.source === "synthetic" ? "sintético" : "yfinance"} · ${p.ticker} · ${p.interval} · fallback ${p.fallback}`;
+    case "nn_guard":
+      return `política ${p.policy} · NaN ≤ ${p.max_nan_ratio}`;
+    case "nn_input":
+      return `${p.mode === "lags" ? `${String(p.features).split(",").length} × ${p.lags} lags` : p.mode === "polynomial" ? `polinomio grado ${p.degree}` : `1 parámetro: ${p.features}`} → ${p.target} t+1..t+${p.horizon} · ${p.activation} · ${p.optimizer}`;
+    case "nn_split":
+      return `TR ${p.train_ratio} / VA ${p.val_ratio} / TE · ${p.mode}`;
+    case "nn_scaler":
+      return p.operation === "load_transform" ? `cargar ${p.save_as}` : `${p.method}${p.method === "minmax" ? ` [${p.feature_range}]` : ""} · fit TR${p.persist ? ` · guarda ${p.save_as}` : ""}`;
+    case "nn_embedding":
+      return `${[p.weekday && "día", p.month && "mes", p.regime && "régimen", p.ticker && "ticker"].filter(Boolean).join(" · ")} · dim ${p.dim} · ${p.fusion}`;
+    case "nn_hidden":
+      return `${Number(p.repeat) > 1 ? `${p.repeat} × ` : ""}Dense(${p.units === "custom" ? p.custom_units : p.units}) · ${p.activation}${Number(p.dropout) ? ` · drop ${p.dropout}` : ""}${p.norm !== "none" ? ` · ${p.norm}norm` : ""}${p.residual ? " · residual" : ""}`;
+    case "nn_output":
+      return `${p.task} · ${p.activation} · ${p.loss}`;
+    case "nn_train":
+      return `${p.epochs} épocas · lote ${p.batch_size} · paciencia ${p.patience}${p.save_as ? ` · → ${p.save_as}` : ""}`;
+    case "nn_finetune":
+      return `${p.source === "file" ? p.load : "pin pretrained"} · congelar ${p.freeze} · lr × ${p.lr_factor}`;
+    case "nn_predict":
+      return `banda ${Math.round(Number(p.interval) * 100)}%${p.export ? ` · CSV ${p.export}` : ""}`;
     case "plot":
       return `${String(p.plot_source)} · ${String(p.plot_columns || "default series")}`;
     case "backtest":
@@ -148,6 +392,22 @@ interface Pin {
   direction: "source" | "target";
 }
 const PinContext = createContext<(pin: Pin) => void>(() => {});
+/** Nodes whose result is shown as a view (report, plot, dashboard…) and can be switched off with the eye. */
+export const VIEW_KINDS: Kind[] = [
+  "nn_data", "nn_guard", "nn_input", "nn_split", "nn_scaler", "nn_embedding", "nn_hidden", "nn_output", "nn_train", "nn_finetune", "nn_predict",
+  "yfinance_data", "plot", "study", "ml_model", "rl_agent", "curve_fit", "portfolio", "risk", "model", "backtest",
+  "laya_signal", "laya_calibrate", "laya_feedback", "laya_updown", "polymarket_source", "polymarket_dashboard",
+  "dl_recurrent_compare", "dl_tabular_forecast", "dl_sequence_classifier", "dl_anomaly_autoencoder", "ml_select", "ml_returns", "ml_clean", "ml_split", "ml_train", "ml_evaluate", "ml_predict", "ml_visualize", "ml_cluster", "ml_reduce", "ml_assoc", "ml_anomaly", "ml_semi", "ml_selfsup", "ml_rl",
+  "gen_windows", "gen_condition", "gen_split", "gen_scale", "gen_cvae", "gen_reparam", "gen_vae_train", "gen_gan_train", "gen_select", "gen_evaluate",
+  "ae_split", "ae_standardize", "ae_pca", "ae_encoder", "ae_decoder", "ae_noise", "ae_train", "ae_select", "ae_ridge", "ae_test",
+  "sup_target", "sup_split", "sup_scale", "sup_windows", "sup_init", "sup_mlp", "sup_cnn", "sup_rnn", "sup_optimizer", "sup_regularizer", "sup_loss", "sup_hpo", "sup_train", "sup_select", "sup_evaluate", "rl_env", "rl_qnet", "rl_replay", "rl_target", "rl_sync", "rl_train", "rl_baselines", "rl_evaluate", "gen_dcgan_train", "gen_regime_compare",
+];
+/** Hidden views by node id and the toggle, provided by App (kept outside the graph so results survive). */
+export const ViewContext = createContext<{ hidden: Set<string>; toggle: (id: string) => void }>({ hidden: new Set(), toggle: () => {} });
+/** Worst validation severity and count per node id, provided by App. */
+export const IssueContext = createContext<
+  Record<string, { severity: "error" | "warning"; count: number; first: string }>
+>({});
 function visibleInputs(node: BlueprintNode): Record<string, string> {
   return Object.fromEntries(
     Object.entries(inputHandles(node.data.kind)).filter(
@@ -160,11 +420,14 @@ function visibleInputs(node: BlueprintNode): Record<string, string> {
 }
 function VisualNode({ id: nodeId, data, selected }: NodeProps<BlueprintNode>) {
   const openPin = useContext(PinContext);
+  const issue = useContext(IssueContext)[nodeId];
+  const views = useContext(ViewContext);
+  const hidden = views.hidden.has(nodeId);
   const def = catalog[data.kind];
   const Icon = icons[data.kind];
   return (
     <div
-      className={`blueprint-node ${selected ? "selected" : ""}`}
+      className={`blueprint-node ${selected ? "selected" : ""} ${issue ? `has-${issue.severity}` : ""} ${hidden ? "view-hidden" : ""}`}
       style={
         {
           "--node-color":
@@ -174,9 +437,32 @@ function VisualNode({ id: nodeId, data, selected }: NodeProps<BlueprintNode>) {
         } as React.CSSProperties
       }
     >
+      {issue && (
+        <span className={`node-issue ${issue.severity}`} title={issue.first}>
+          {issue.count}
+        </span>
+      )}
       <div className="node-category">
         {def.category}
-        <span>•••</span>
+        <span className="node-actions">
+          {VIEW_KINDS.includes(data.kind) && (
+            <button
+              type="button"
+              className="node-eye nodrag nopan"
+              aria-pressed={!hidden}
+              aria-label={hidden ? "Mostrar la vista de esta herramienta" : "Ocultar la vista de esta herramienta"}
+              title={hidden ? "Vista oculta · clic para mostrarla" : "Vista visible · clic para ocultarla"}
+              onMouseDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation();
+                views.toggle(nodeId);
+              }}
+            >
+              {hidden ? <EyeOff size={14} /> : <Eye size={14} />}
+            </button>
+          )}
+          <span>•••</span>
+        </span>
       </div>
       <div className="node-title">
         <Icon size={19} />
@@ -301,27 +587,56 @@ function VisualNode({ id: nodeId, data, selected }: NodeProps<BlueprintNode>) {
 const nodeTypes = { blueprint: VisualNode };
 export function Palette({
   onAdd,
+  onBuilder,
   disabled,
 }: {
   onAdd: (kind: Kind) => void;
+  onBuilder: () => void;
   disabled: boolean;
 }) {
   const [query, setQuery] = useState("");
+  const [area, setArea] = useState<string | null>(null);
+  const areas = [...new Set(Object.values(catalog).map((d) => d.category))].sort();
+  const areaName = (category: string) => category.replace(/^\d+\s*\/\s*/, "");
+  const browsing = !query && area === null;
   return (
     <aside className="palette">
       <div className="aside-heading">
-        NODE LIBRARY <span>{Object.keys(catalog).length}</span>
+        BIBLIOTECA <span>{Object.keys(catalog).length}</span>
       </div>
-      <p className="muted">
-        Biblioteca única · añade herramientas y combínalas en recetas.
-      </p>
       <input
         aria-label="Buscar herramientas"
-        placeholder="Buscar herramienta o área…"
+        placeholder="Buscar en todas las áreas…"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
-      {(Object.keys(catalog) as Kind[])
+      {browsing ? (
+        <>
+          <p className="muted">Elige un área para ver sus herramientas.</p>
+          <nav className="palette-areas" aria-label="Áreas">
+            {areas.map((category) => {
+              const kinds = (Object.keys(catalog) as Kind[]).filter((k) => catalog[k].category === category);
+              const Icon = icons[kinds[0]];
+              return (
+                <button key={category} onClick={() => setArea(category)} style={{ color: catalog[kinds[0]].color }}>
+                  <Icon size={16} />
+                  <span>{areaName(category)}</span>
+                  <small>{kinds.length}</small>
+                  <b>›</b>
+                </button>
+              );
+            })}
+          </nav>
+        </>
+      ) : (
+        !query && (
+          <button className="palette-back" onClick={() => setArea(null)}>
+            ‹ Áreas · <strong>{areaName(area ?? "")}</strong>
+          </button>
+        )
+      )}
+      {!browsing && (Object.keys(catalog) as Kind[])
+        .filter((kind) => query || catalog[kind].category === area)
         .filter((kind) =>
           `${catalog[kind].label} ${catalog[kind].category} ${catalog[kind].subtitle}`
             .toLowerCase()
@@ -388,10 +703,19 @@ export function Palette({
           Configuration
         </span>
       </div>
-      <div className="library-note">
-        <Layers3 size={20} />
-        <strong>Build your research pipeline</strong>
-        <p>Connect typed pins, configure nodes, then execute the graph.</p>
+      <div className="palette-footer">
+        <button className="builder-card" disabled={disabled} onClick={onBuilder} title="Describe el análisis y el Cerebro Constructor arma un flujo validado">
+          <span className="builder-emblem">
+            <Workflow size={17} />
+          </span>
+          <span>
+            <strong>Cerebro Constructor</strong>
+            <small>Construye un flujo</small>
+          </span>
+        </button>
+        <small className="muted">
+          {Object.keys(catalog).length} herramientas · {areas.length} áreas
+        </small>
       </div>
     </aside>
   );

@@ -1,0 +1,3 @@
+-r requirements.txt
+# Test runner (some suites use pytest fixtures/parametrize).
+pytest>=8,<10

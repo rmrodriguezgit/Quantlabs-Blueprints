@@ -172,7 +172,7 @@ class PortfolioTests(unittest.TestCase):
         self.assertEqual(result['portfolios'][0]['benchmark'],'SPY')
 
     def test_risk_metrics_on_frame_and_backtest_graph(self) -> None:
-        from test_engine import graph
+        from backend.tests.test_engine import graph
         payload=graph()
         payload['nodes'].extend([{'id':'asset-risk','data':{'kind':'risk','params':{}}},
                                  {'id':'strategy-risk','data':{'kind':'risk','params':{}}}])

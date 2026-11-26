@@ -2,11 +2,29 @@ import {
   app,
   BrowserWindow,
   ipcMain,
+  shell,
   Menu,
   type MenuItemConstructorOptions,
 } from "electron";
 import path from "node:path";
 const pendingNewBlueprints = new Set<number>();
+const ENGINE_HOST = `127.0.0.1:${process.env.QL_ENGINE_PORT ?? "8000"}`;
+// Renderer may only reach these engine routes through the bridge.
+const ENGINE_ROUTES = new Set([
+  "/api/validate",
+  "/api/polymarket/search",
+  "/api/polymarket/resolve",
+  "/api/polymarket/learning/reset",
+  "/api/brain/plan",
+  "/api/brain/explain",
+  "/api/brain/fix",
+  "/api/brain/status",
+  "/api/brain/ask",
+  "/api/brain/ping",
+  "/api/brain/memory",
+  "/api/brain/feedback",
+  "/api/brain/request-status",
+]);
 function createWindow(newBlueprint = false): void {
   const window = new BrowserWindow({
     width: 1560,
@@ -25,7 +43,11 @@ function createWindow(newBlueprint = false): void {
   const webContentsId = window.webContents.id;
   if (newBlueprint) pendingNewBlueprints.add(webContentsId);
   window.on("closed", () => pendingNewBlueprints.delete(webContentsId));
-  window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  // Only Polymarket market pages (dashboard links) open, and in the system browser, never inside the app.
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    if (/^https:\/\/polymarket\.com\/event\/[\w-]+$/.test(url)) void shell.openExternal(url);
+    return { action: "deny" };
+  });
   window.webContents.on("will-navigate", (event) => event.preventDefault());
   if (app.isPackaged || process.argv.includes("--production"))
     void window.loadFile(path.join(__dirname, "../renderer/index.html"));
@@ -40,7 +62,7 @@ ipcMain.handle(
   async (event, graph: unknown): Promise<unknown> => {
     try {
       return await new Promise<unknown>((resolve, reject) => {
-        const socket = new WebSocket("ws://127.0.0.1:8000/ws/execute");
+        const socket = new WebSocket(`ws://${ENGINE_HOST}/ws/execute`);
         let settled = false;
         const fail = (message: string) => {
           if (settled) return;
@@ -67,12 +89,38 @@ ipcMain.handle(
         };
         socket.onerror = () =>
           fail(
-            "Cannot connect to Python engine. Restart the launcher (port 8000).",
+            `Cannot connect to Python engine at ${ENGINE_HOST}. Restart the launcher.`,
           );
         socket.onclose = () => {
           if (!settled) fail("Engine connection closed before completion.");
         };
       });
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : String(error) };
+    }
+  },
+);
+ipcMain.handle(
+  "engine:request",
+  async (_event, route: unknown, body: unknown): Promise<unknown> => {
+    if (typeof route !== "string" || !ENGINE_ROUTES.has(route))
+      return { error: "Route not allowed." };
+    try {
+      const response = await fetch(`http://${ENGINE_HOST}${route}`, {
+        method: body === undefined ? "GET" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: body === undefined ? undefined : JSON.stringify(body),
+        signal: AbortSignal.timeout(180000),
+      });
+      const value: unknown = await response.json();
+      if (!response.ok)
+        return {
+          error:
+            typeof value === "object" && value && "detail" in value
+              ? JSON.stringify((value as { detail: unknown }).detail)
+              : `HTTP ${response.status}`,
+        };
+      return value;
     } catch (error) {
       return { error: error instanceof Error ? error.message : String(error) };
     }

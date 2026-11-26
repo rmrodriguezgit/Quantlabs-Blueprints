@@ -4,15 +4,15 @@
   "entries": [
     {
       "id": "unit-9-cdcgan",
-      "title": "Unidad 9 ampliación · cDCGAN 1D",
+      "title": "Unidad 9 ampliación · cDCGAN 1D en herramientas",
       "area": "Modelos generativos",
-      "description": "Generador ConvTranspose1D y discriminador Conv1D con volatilidad, momentum y volumen causales; comparación de regímenes con idéntico ruido.",
+      "description": "Ventanas de retornos, condición causal (volatilidad + momentum), embedding de régimen, generador ConvTranspose1d y discriminador Conv1d.",
       "instructions": [
-        "Carga la plantilla. Pulsa Execute Blueprint para ver progreso, selección, métricas y gráficos debajo del lienzo.",
-        "Predeterminada: serie sintética reproducible, sin internet. Para datos reales, selecciona yfinance en SPY / Market Data.",
-        "Selecciona Learning Experiment para cambiar características, ventanas, épocas, costes y otras opciones. Las dimensiones de entrada se derivan de las características seleccionadas.",
-        "Guarda una copia en Personal o exporta JSON. Al importar se recuperan nodos, conexiones y parámetros; al ejecutar se reentrena.",
-        "SPY, SAN y JPM se entrenan conjuntamente; asset_b y asset_c son entradas opcionales para otros activos, alineados por fecha. Cambia cada fuente a yfinance para cotizaciones reales."
+        "Propósito: generar escenarios de retornos condicionados por régimen bajista / lateral / alcista y compararlos con el mismo ruido.",
+        "Datos de prueba: serie sintética reproducible (6 años, sin internet). Cambia SPY a yfinance para datos reales.",
+        "Cadena: SPY · synthetic / yfinance → 11 indicadores causales → 01 · Preparar retornos → 02 · Condiciones causales → 03 · Separar → 03 · Escalar con train → 04–08 · Embeddings, G, D y alternancia → 09 · Seleccionar con validación → 09 · Mismo ruido, tres regímenes → 10 · Evaluar colas y diversidad. Cada herramienta recibe el pin frame del paso anterior y entrega el suyo al siguiente.",
+        "Resultado esperado: selección por ruido fijo en VA, trayectorias por régimen con el mismo z y métricas de colas en test.",
+        "Pulsa Execute Blueprint. Cada herramienta publica su propio informe (tabla, métricas y gráficos) debajo del lienzo."
       ],
       "infographic": "unidad-9-cdcgan.png",
       "graph": {
@@ -21,8 +21,8 @@
             "id": "data",
             "type": "blueprint",
             "position": {
-              "x": 0,
-              "y": 180
+              "x": 40,
+              "y": 40
             },
             "data": {
               "kind": "source",
@@ -30,7 +30,7 @@
               "params": {
                 "source": "synthetic",
                 "ticker": "SPY",
-                "years": 5
+                "years": 6
               }
             }
           },
@@ -38,12 +38,12 @@
             "id": "features",
             "type": "blueprint",
             "position": {
-              "x": 300,
-              "y": 180
+              "x": 340,
+              "y": 40
             },
             "data": {
               "kind": "features",
-              "label": "11 causal indicators",
+              "label": "11 indicadores causales",
               "params": {
                 "lags": 0,
                 "use_rsi": true,
@@ -56,151 +56,114 @@
             }
           },
           {
-            "id": "experiment",
+            "id": "windows",
             "type": "blueprint",
             "position": {
-              "x": 620,
-              "y": 180
+              "x": 640,
+              "y": 40
             },
             "data": {
-              "kind": "study",
-              "label": "Unidad 9 ampliación · cDCGAN 1D",
+              "kind": "gen_windows",
+              "label": "01 · Preparar retornos",
               "params": {
-                "topic": "cdcgan",
-                "feature_columns": "LogReturn,Volatility,RSI,EMA,SMA,VWAP,MACD,MACDSignal,BBUpper,BBMiddle,BBLower",
-                "widths": "64,32",
-                "lookback": 1,
-                "train_ratio": 0.65,
-                "val_ratio": 0.15,
-                "epochs": 12,
-                "patience": 5,
-                "batch_size": 64,
-                "lr": 0.001,
-                "trials": 6,
-                "latent_dim": 4,
-                "horizon": 16,
-                "cost_bps": 5,
-                "threshold_bps": 0,
-                "seed": 42
+                "horizon": 16
               }
             }
           },
           {
-            "id": "chart-0",
+            "id": "condition",
             "type": "blueprint",
             "position": {
-              "x": 950,
-              "y": 0
+              "x": 940,
+              "y": 40
             },
             "data": {
-              "kind": "plot",
-              "label": "Resultado fuera de muestra",
+              "kind": "gen_condition",
+              "label": "02 · Condiciones causales",
               "params": {
-                "title": "Resultado fuera de muestra",
-                "plot_source": "auto",
-                "plot_columns": "",
-                "chart_type": "line",
-                "color": "Mint",
-                "study_chart": 0
+                "use_log_vol": true,
+                "use_momentum": true
               }
             }
           },
           {
-            "id": "chart-1",
+            "id": "split",
             "type": "blueprint",
             "position": {
-              "x": 950,
-              "y": 200
+              "x": 1240,
+              "y": 40
             },
             "data": {
-              "kind": "plot",
-              "label": "Validación / distribución",
+              "kind": "gen_split",
+              "label": "03 · Separar",
+              "params": {}
+            }
+          },
+          {
+            "id": "scale",
+            "type": "blueprint",
+            "position": {
+              "x": 1540,
+              "y": 40
+            },
+            "data": {
+              "kind": "gen_scale",
+              "label": "03 · Escalar con train",
+              "params": {}
+            }
+          },
+          {
+            "id": "dcgan",
+            "type": "blueprint",
+            "position": {
+              "x": 40,
+              "y": 260
+            },
+            "data": {
+              "kind": "gen_dcgan_train",
+              "label": "04–08 · Embeddings, G, D y alternancia",
               "params": {
-                "title": "Validación / distribución",
-                "plot_source": "auto",
-                "plot_columns": "",
-                "chart_type": "line",
-                "color": "Violet",
-                "study_chart": 1
+                "epochs": 40
               }
             }
           },
           {
-            "id": "asset-0",
+            "id": "select",
             "type": "blueprint",
             "position": {
-              "x": 0,
-              "y": 450
+              "x": 340,
+              "y": 260
             },
             "data": {
-              "kind": "source",
-              "label": "SAN",
-              "params": {
-                "source": "synthetic",
-                "ticker": "SAN",
-                "years": 5,
-                "seed": 43
-              }
+              "kind": "gen_select",
+              "label": "09 · Seleccionar con validación",
+              "params": {}
             }
           },
           {
-            "id": "features-0",
+            "id": "regimes",
             "type": "blueprint",
             "position": {
-              "x": 300,
-              "y": 450
+              "x": 640,
+              "y": 260
             },
             "data": {
-              "kind": "features",
-              "label": "SAN indicators",
-              "params": {
-                "lags": 0,
-                "use_rsi": true,
-                "use_ema": true,
-                "use_sma": true,
-                "use_macd": true,
-                "use_vwap": true,
-                "use_bb": true
-              }
+              "kind": "gen_regime_compare",
+              "label": "09 · Mismo ruido, tres regímenes",
+              "params": {}
             }
           },
           {
-            "id": "asset-1",
+            "id": "evaluate",
             "type": "blueprint",
             "position": {
-              "x": 0,
-              "y": 670
+              "x": 940,
+              "y": 260
             },
             "data": {
-              "kind": "source",
-              "label": "JPM",
-              "params": {
-                "source": "synthetic",
-                "ticker": "JPM",
-                "years": 5,
-                "seed": 44
-              }
-            }
-          },
-          {
-            "id": "features-1",
-            "type": "blueprint",
-            "position": {
-              "x": 300,
-              "y": 670
-            },
-            "data": {
-              "kind": "features",
-              "label": "JPM indicators",
-              "params": {
-                "lags": 0,
-                "use_rsi": true,
-                "use_ema": true,
-                "use_sma": true,
-                "use_macd": true,
-                "use_vwap": true,
-                "use_bb": true
-              }
+              "kind": "gen_evaluate",
+              "label": "10 · Evaluar colas y diversidad",
+              "params": {}
             }
           }
         ],
@@ -214,58 +177,68 @@
             "animated": true
           },
           {
-            "id": "features-experiment",
+            "id": "features-windows",
             "source": "features",
-            "target": "experiment",
+            "target": "windows",
             "sourceHandle": "frame",
             "targetHandle": "frame",
             "animated": true
           },
           {
-            "id": "experiment-chart-0",
-            "source": "experiment",
-            "target": "chart-0",
-            "sourceHandle": "tensor",
-            "targetHandle": "tensor",
-            "animated": true
-          },
-          {
-            "id": "experiment-chart-1",
-            "source": "experiment",
-            "target": "chart-1",
-            "sourceHandle": "tensor",
-            "targetHandle": "tensor",
-            "animated": true
-          },
-          {
-            "id": "asset-0-features-0",
-            "source": "asset-0",
-            "target": "features-0",
+            "id": "windows-condition",
+            "source": "windows",
+            "target": "condition",
             "sourceHandle": "frame",
             "targetHandle": "frame",
             "animated": true
           },
           {
-            "id": "conditional-0",
-            "source": "features-0",
-            "target": "experiment",
-            "sourceHandle": "frame",
-            "targetHandle": "asset_b"
-          },
-          {
-            "id": "asset-1-features-1",
-            "source": "asset-1",
-            "target": "features-1",
+            "id": "condition-split",
+            "source": "condition",
+            "target": "split",
             "sourceHandle": "frame",
             "targetHandle": "frame",
             "animated": true
           },
           {
-            "id": "conditional-1",
-            "source": "features-1",
-            "target": "experiment",
+            "id": "split-scale",
+            "source": "split",
+            "target": "scale",
             "sourceHandle": "frame",
-            "targetHandle": "asset_c"
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "scale-dcgan",
+            "source": "scale",
+            "target": "dcgan",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "dcgan-select",
+            "source": "dcgan",
+            "target": "select",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "select-regimes",
+            "source": "select",
+            "target": "regimes",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
+          },
+          {
+            "id": "regimes-evaluate",
+            "source": "regimes",
+            "target": "evaluate",
+            "sourceHandle": "frame",
+            "targetHandle": "frame",
+            "animated": true
           }
         ]
       }
