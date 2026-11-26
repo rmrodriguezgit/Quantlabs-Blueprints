@@ -4,7 +4,7 @@
   "entries": [
     {
       "id": "polymarket-laya-calibrated-5m",
-      "title": "Polymarket · Laya Signal → Calibrate → UP/DOWN 5m (por minuto)",
+      "title": "LAYA-02 · Polymarket · Laya Signal → Calibrate → UP/DOWN 5m (por minuto)",
       "area": "Polymarket · decisiones UP/DOWN",
       "description": "Laya responde por cada ventana de 5m resuelta en cada minuto (0:30, 1:30 … 4:30); Laya Calibrate ajusta un juego de pesos por minuto con los resultados reales y LAYA UP/DOWN usa el del minuto en curso, aprendiendo en línea por minuto.",
       "instructions": [

@@ -4,7 +4,7 @@
   "entries": [
     {
       "id": "laya-yfinance",
-      "title": "Laya-MLX · decisiones tipadas sobre yfinance",
+      "title": "LAYA-01 · Laya-MLX · decisiones tipadas sobre yfinance",
       "area": "Laya · decisiones tipadas",
       "description": "Laya responde tres preguntas por día (choice, score, noul); un ajuste logístico calibra sus pesos y un bucle de retroalimentación los corrige con cada resultado real.",
       "instructions": [
